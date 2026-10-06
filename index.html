@@ -99,6 +99,11 @@ body.console-hidden .dispatch{opacity:0;visibility:hidden;pointer-events:none;tr
 .console-show{position:fixed;right:14px;bottom:14px;z-index:26;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border-radius:999px;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13px;font-weight:800;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity .24s ease,transform .24s ease,visibility .24s ease;min-height:44px}
 body.console-hidden .console-show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
 .console-show:active{transform:scale(.96)}
+/* R4 画质自动降级提示：平时隐藏，sampleFps 触发降级时出现（与帧率显示开关无关），带手动恢复钮 */
+.quality-notice{position:fixed;top:122px;left:50%;transform:translateX(-50%);z-index:17;padding:9px 12px;border-radius:12px;display:none;align-items:center;gap:10px;max-width:92vw;font-size:12.5px;font-weight:700}
+.quality-notice.show{display:flex}
+.quality-notice .btn{padding:6px 11px;font-size:12px;white-space:nowrap}
+@media (max-width:900px){ .quality-notice{top:150px} }
 .console-dot{width:9px;height:9px;border-radius:50%;background:#8b9a92;flex:0 0 auto}
 .console-dot.run{background:var(--accent);box-shadow:0 0 0 4px rgba(47,191,143,.18)}
 .console-dot.co{background:var(--blue);box-shadow:0 0 0 4px rgba(96,165,250,.18)}
@@ -387,6 +392,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
   <div class="co-prog"><i id="coProg"></i></div>
 </div>
 
+<!-- ======= R4 画质降级提示（自动降级时出现，可手动恢复） ======= -->
+<div class="quality-notice glass" id="qualityNotice" role="status"><span id="qualityMsg">已自动降低画质保流畅</span><button class="btn" id="qualityRestoreBtn">恢复高画质</button></div>
+
 <!-- ======= TOUR CAPTION（巡游解说字幕，文案在 TOUR_STOPS） ======= -->
 <div class="tour-cap glass" id="tourCap">
   <div class="tc-main"><div class="tc-title" id="tcTitle">区域</div><div class="tc-text" id="tcText"></div></div>
@@ -560,6 +568,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">控制台整体隐藏（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>实现位置</b>：隐藏入口 = 调度台标题栏的 #dispatchHideBtn（✕ 隐藏）与底部控制条末尾的 #controlHideBtn（✕ 隐藏控制台）；逻辑 = [M5] 调度台绑定旁的 setConsoleHidden（window.__setConsoleHidden 可调试切换），只切 body.console-hidden 一个类，CSS 据此把 #dispatch 与 #controlBar 一起淡出/滑出 + visibility:hidden + pointer-events:none（完全消失、不占位、不拦画布手势），样式段在 CSS 的「console overall hide」注释块。唤回 = 右下角浮钮 #consoleShowBtn（🎛 控制台，仅隐藏时可见可点），其状态点/文案 #consoleDot/#consoleStatus 由 renderKpis 按 S.running/changeover 同步（运行中绿点/换型中蓝点/已暂停黄点/待机灰点）。与既有两套折叠划清：调度台 .closed（只折 body）与移动组 .move-collapsed（只折前进/后退）都不被本功能触碰，所以恢复时各自回到隐藏前状态。默认显示面板；隐藏只在会话内有效（不持久化），除唤回钮外任何操作（切机位/巡游/开数据抽屉/场景按钮程序化点 playBtn）都不会清掉该类把面板弹回；隐藏不影响仿真 step 与已设参数。</div></div>
       <div class="dcell wide"><div class="l">R1 工艺真实感（杀菌链动态 + 无菌守恒 + 灌装联动 + 批次衔接）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.sterilizeProcess[产品id] = { uhtTempC / holdSec / preheatC / coolOutC / homogP1 / homogP2 / flowFactor }（茶 137℃/4s·150/30bar、橙汁 136℃/6s·200/50bar、可乐 133℃/4s·120/25bar、矿泉水 85℃/2s·80/15bar 量级），CONFIG.asepticStockCap=30000 / asepticStockInit=4500（瓶当量）。<b>守恒链（step）</b>：杀菌处理 sterMove = min(队列, 额定×flowFactor×dt, 罐容剩余) → ASEPTIC.stock 上升；灌装拉料 feedMove = min(stock, 产线队列空间, 灌装总需求×1.25) 按各线空间占比分配 → stock 下降；stock=0 时产线队列见底触发 lineStatus 饥饿「无菌罐待料」，罐满时杀菌 stationStatus 为 BLOCKED。totalWip() 已含 stock，换产 startChangeover 清 stock 并按在制品口径报废计入旧产品成本（与调配清线一致），applyProduct 时 STER_FEED 重置，杜绝旧产品换产后继续灌出。<b>批次衔接</b>：STER_FEED 在 advanceBlendBatch 出料完成时更新为该批 {num, productId}，sterBatchInfo() 在出料阶段显示当前出料批、其余显示 STER_FEED；杀菌区信息卡（kind:aseptic）、杀菌工位卡、调配批次卡三处同源显示。<b>渲染</b>：D.sterFlow 五段（preheat/homog/uht/cooling/aseptic，各自管路材质+段灯，料色语义与调配管路一致：流动=料色脉冲、停=暗灰、CIP/换型时 UHT/无菌段显清洗蓝）；STER_DYN 显示值（tempC/preheatC/coolOutC/homogP1/homogP2）由 updateScene 向工艺目标趋近（温度慢 k≈0.45/s、压力快），待机回落（运行热待机保工艺温、无料均质无压、CIP 82℃、故障 70℃、暂停向 48℃、未开工 28℃），动态参数牌 D.sterPlates（UHT/均质/预热-冷却，makeDynPlate 画布纹理、文本不变不重绘）与信息卡同读 STER_DYN；无菌罐液位柱 D.asepticLiquids 按 asepticPerTankFrac 顺序充填（不再随机正弦，原料罐视管仍正弦）。<b>灌装联动</b>：每线 dyn.feedPipeMat/feedLampMat/feedPumpMat/feedWheel（供料支管/阀灯/泵灯/阀手轮，buildLine 内建），开阀条件 = 运行+在线+无故障+stock&gt;0.5+有瓶流；转速 rpm = 实际灌装速率（lastMove/lastDt）/800 驱动转盘/封盖塔/贴标辊/星轮（含冲瓶）/暂存转盘/输送带，停线故障即 0 同步停转；空瓶段（bx&lt;0.5）瓶子仅在 flow&gt;0.05 时显示，停线即断流，已灌段瓶子留带上（phase 冻结），产量计数仍走内核 produced 不受视觉瓶数影响。</div></div>
       <div class="dcell wide"><div class="l">R3 视觉真实感（光影体系 + 材质分级 + 天空远景）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.light = { exposure 曝光 / sunColor·sunIntensity 主光（工业冷白）/ hemiSky·hemiGround·hemiIntensity 半球光 / ambientIntensity / skyTop·skyHorizon·skyGround 天空渐变三段 / fogColor·fogNear·fogFar 远景雾 / silhouette 远景剪影色 / shadowTiers 阴影分级 { high 2048 / mid 1024 / low 0=关 } / envIntensity 环境反射强度 }；CONFIG.mats = 八档材质分级 { stainless 不锈钢罐体（粗糙 .22 / 金属 .85）/ steel 管道阀门 / machine 涂装机架 / frame 结构钢件 / plastic 塑料件 / glass 玻璃 / epoxy 环氧地坪 / concrete 水泥 }，M() 预设（STEEL/DARKSTEEL/MACH）与管路流动材质、GLASSMAT、办公室玻璃、地面都只从这两处取值，禁止在 builder 里再散写粗糙度/金属度魔法值。<b>光源结构</b>（buildScene）：半球光 + 方向光主光（PCFSoft 阴影，阴影相机范围按 CONFIG.factory 派生覆盖全厂 360×230，normalBias 0.02）+ 弱环境光；渲染器 sRGB 输出 + ACESFilmic，曝光读 CONFIG.light.exposure。阴影只由主要设备/建筑投射（建场末尾 traverse 把最大边 &lt;3.2 的小件 castShadow 关掉，地面/大平面只接收）。<b>环境反射</b>：buildScene 用程序渐变全景画布经 PMREM 生成 scene.environment，全场 Standard 材质共用、强度统一写 envMapIntensity = CONFIG.light.envIntensity——不锈钢的镜面感全靠它，若关掉环境反射必须同步调低 mats 的 metal 值，否则罐体会发黑。<b>阴影分级与降级</b>：初始档桌面 high / 移动 mid（window.__setShadowTier 可调试切换，切档自动释放旧 shadow.map 重建）；自适应降级链（loop 的 sampleFps）1 级 = 像素比 1.25 + 阴影降 mid，2 级 = 关阴影（low），只降不升。<b>天空与远景</b>：scene.background = 程序渐变画布纹理（顶空→地平线→地面雾色），fogColor 必须与 skyHorizon 同源否则厂界出色带；buildBackdrop 一圈低多边形剪影（北侧缓丘 / 南侧邻厂厂房+双烟囱 / 东侧水塔，MeshBasicMaterial 受雾衰减、无阴影），固定白天、无夜间模式。<b>地面</b>（buildShell）：一张分区颜色贴图（生产区深灰绿环氧 + 边界色带 / 仓储·月台水泥 / 黄色安全线与伸缩缝沿用）+ 一张同构粗糙度贴图（roughnessMap，环氧区半光、水泥区近全粗糙），均为程序画布、无外部图片；改分区范围改 buildShell 里的 epoxyRect 与 fz(34) 月台界线两处、颜色与粗糙度两张图同改。<b>玻璃与液体</b>：GLASSMAT（灌装护罩）/ 办公室玻璃 / 视镜玻璃管走 CONFIG.mats.glass；瓶液 bottleMat 降粗糙（0.16）+ 透明度 0.9 呈透光感，颜色仍由 __setProductColor 驱动；蒸汽/烟气粒子加了冷灰蓝染色（PointsMaterial color）并下调烟气不透明度，新光照下不发白刺眼；警示灯/信标保持发光材质（emissive）方案、不加真实点光源以保性能。</div></div>
+      <div class="dcell wide"><div class="l">R4 性能收官 + 全量回归（马拉松收官轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>四轮总览</b>：基线稳定版（控制台可隐藏）→ R1 工艺真实感（杀菌链分产品参数 / 无菌库存守恒 / 灌装转速联动 / 批次衔接）→ R2 仓储物流 + 公用工程联动（锅炉/空压/RO/冷库随负荷、仓库 FIFO 守恒、发货波次装车、原料罐车补给）→ R3 视觉真实感（CONFIG.light/mats 光影材质体系、阴影三档、天空雾与远景、PMREM 环境反射）→ R4 性能收官 + 全量回归（本节）。<b>版本与校验值</b>：各轮快照与 index.html 的 sha256 校验值登记在本地 <b>~/workspace/factory-sim-versions/VERSION_LOG.md</b>（v01 基线 / v02 R1 / v03 R2 / v04 R3），镜像 git 仓库 ~/workspace/factory-sim-repo 有对应标签 <b>v0.1.0–v0.4.0</b>；本轮 R4 代码即马拉松最终版，其快照与标签在收官交付时按同一规矩登记（v05 / v0.5.0）。<b>R4 性能修复</b>：① 粒子减量随画质档真实生效——CONFIG.perf.particleFactor { high 1 / mid 0.6 / low 0.3 }，__setShadowTier 同步 setDrawRange 并缩短 updateScene 的蒸汽/烟气粒子循环；② 自动降级不再静默——sampleFps 触发降级时无论帧率显示开关都写日志并弹出 #qualityNotice 提示条，「恢复高画质」钮（restoreQuality / window.__restoreQuality）一键回初始像素比+阴影+粒子档，恢复后仍可再次自动降级；③ 每帧零分配巡检——遮挡扇形射线（updateOcclusion）的临时向量/盒/命中点全部预分配复用、材质反查改 Map O(1)，resolveCollision 五向推离改标量比较（去数组+sort）；④ 渲染循环零 DOM——pushSample 只置 chartDirty 标志，产能曲线重绘节流到主循环既有 24 帧节奏，KPI/信息卡维持 8/24 帧分频；⑤ resize 改 rAF 合并节流；⑥ 材质去重——视管玻璃管全厂 5 处共用 SIGHTTUBE 一个实例（M() 缓存工厂与 GLASSMAT/SCREENMAT 共享模式此前已在用），瓶/箱/立柱/货架孔位/试剂瓶等高频对象继续 InstancedMesh、表针/液位/火焰只改引用属性不重建几何；⑦ step() 加异常 dt 守卫（NaN/≤0 直接跳步）。<b>R4 回归修复</b>：停机时切产品即时生效——此前暂停状态点确认换产，倒计时只在 step 推进、暂停永不走完会假死；现停机切产品走 startChangeover 结算清线 + completeChangeover 立即完成（结单/报废/换型费/清洗消耗与运行中换产同口径），运行中换产仍走确认→15 分钟倒计时全流程。<b>最终回归结论</b>：A 生产主链 / B 切产品（含停机即时生效）/ C 故障与 CIP / D 公用工程联动 / E 镜头与 UI / F 性能三档 / G 持久与边界——逐项结论见收官交付汇报（构建 + 审计探针实测）。<b>遗留项清单</b>：① 静态几何未做 BufferGeometry 合并——three r128 核心不含 BufferGeometryUtils，高频重复件已全部实例化，剩余一次性网格合并收益低、回归风险高，保留现状；② 巡游解说点 u 为弧长估算，个别点触发可漂移约 1 秒（既有可接受项）；③ 审计/无头环境的软件渲染帧率不代表真机，性能三档的真机帧率区间以实机为准，页面内有帧率显示与自动降级兜底；④ 移动端未设独立低端机档位，靠初始 mid 档 + 自动降级覆盖。除以上四项外无未修复功能缺陷。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
     <h3 style="margin-top:14px">常见改动怎么做</h3>
@@ -582,7 +591,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     <h3 style="margin-top:14px">已知限制</h3>
     <ul class="doclist">
       <li>单文件约 3100 行，ES5 风格（var / 函数）为兼容现有代码，接手重构时再统一到模块化构建，不要混写。</li>
-      <li>巡游解说点的 u 是按路点序号估算的弧长参数，改路线后个别点可能早/晚约 1 秒触发，属可接受漂移；自适应降级只降不升，画质恢复需刷新页面。</li>
+      <li>巡游解说点的 u 是按路点序号估算的弧长参数，改路线后个别点可能早/晚约 1 秒触发，属可接受漂移；自适应降级只降不升，但 R4 起已可手动恢复：降级时画面上方弹出提示条，点「恢复高画质」即回初始档（或控制台 window.__restoreQuality()），不必刷新页面。</li>
       <li>相机遮挡淡出基于材质级透明度，同一材质多处共用时会一起淡（罐体 / 货架 / 顶棚已按此设计）；北侧公用工程区建筑未纳入淡出清单，从北侧高位看厂内时需手动切顶棚。</li>
       <li>瓶子为实例化视觉流量，不与 queue 数值逐瓶对应；仓库箱数由 WH 入/出库守恒驱动（FIFO 窗口渲染）；工人为固定路线巡演，叉车/AGV/吊车由仓储活动门控待机，均不参与产能计算。</li>
       <li>移动端为可用级适配（面板折叠 / 点按拾取），未做专门的手势教程与低端机降级档。</li>
@@ -610,6 +619,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R2 联动：停产时锅炉火焰缩到小火/熄火、烟气变淡、空压全停、叉车/AGV 回停靠点待机、月台卡车静止待命；开 1 线空压 1 台运行、开 3 线 2 台并联且运行台灯绿+微振；调配进水阶段 RO 灯亮产水管变蓝、软水位降原水位缓降；杀菌满负荷时锅炉负荷趋近 100%、分汽缸表针与抽屉总览压力一致；原料液位压到 30% 以下（拉高供应耗用）后罐车到场卸料、液位回升且泵台灯亮；订单推进过 6,000 瓶节点后月台形成波次装车（车厢箱数渐增、货架从队头侧先清空）、装满离场新车进场；抽屉「公用工程状态」6 行与各区信息卡口径一致；重置后 UTIL/RAW/WH/SHIP 全回初值、货架回 26 箱</li>
       <li>R2 联动：停产时锅炉火焰缩到小火/熄火、烟气变淡、空压全停、叉车/AGV 回停靠点待机、月台卡车静止待命；开 1 线空压 1 台运行、开 3 线 2 台并联且运行台灯绿+微振；调配进水阶段 RO 灯亮产水管变蓝、软水位降原水位缓降；杀菌满负荷时锅炉负荷趋近 100%、分汽缸表针与抽屉总览压力一致；原料液位压到 30% 以下（拉高供应耗用）后罐车到场卸料、液位回升且泵台灯亮；订单推进过 6,000 瓶节点后月台形成波次装车（车厢箱数渐增、货架从队头侧先清空）、装满离场新车进场；抽屉「公用工程状态」6 行与各区信息卡口径一致；重置后 UTIL/RAW/WH/SHIP 全回初值、货架回 26 箱</li>
       <li>R3 视觉真实感：全厂俯瞰下不锈钢罐体有环境反射高光（非死灰/死黑）、环氧生产区地面带轻微反光且与水泥仓储/月台区一眼可分、黄色安全线对比足够；地平线有极淡远景剪影（缓丘/邻厂烟囱/水塔）且雾色与天空无断层色带；控制台切 window.__setShadowTier("high"/"mid"/"low") 三档阴影贴图/开关即时生效不报错，低帧率自动降级时阴影同步降 mid → 关；玻璃护罩/办公室窗半透明、瓶液透光、蒸汽烟气不发白；双面标识、遮挡淡出、镜头行为与 R1/R2 全部联动不变</li>
+      <li>R4 收官：三档画质下粒子数随档增减（high 全量 / mid 0.6 / low 0.3，控制台看 D.steam.geometry.drawRange）；帧率持续低于 45 时自动降级必弹提示条 + 写日志（与帧率显示开关无关），点「恢复高画质」像素比/阴影/粒子全回初始档；暂停状态切产品即时生效（结单/报废/换型费照计），运行中切产品仍走确认 + 15 分钟倒计时；长时间加速运行无 NaN、无负库存、无菌库存不越界；重置后含画质外全部状态回初值</li>
     </ul>
   </div>
 </aside>
@@ -752,6 +762,7 @@ var CONFIG = {
     pixelRatioCap: 1.75, mobilePixelRatioCap: 1.25, // 桌面/移动像素比上限（帧率友好优先于极致锐利）
     shadowMapSize: 2048, mobileShadowMapSize: 1024, // 旧版双档阴影贴图边长（R3 起仅作对照：阴影分级统一由 CONFIG.light.shadowTiers 管理，改档改那一处）
     lodDistance: 150, lodSkip: 3,                   // 相机距产线 > lodDistance 时，该线动画每 lodSkip 帧才更新一次（步长等比放大，速度不变）
+    particleFactor: { high: 1, mid: 0.6, low: 0.3 }, // R4：粒子保留比例随画质档（__setShadowTier 同步 setDrawRange + 缩短每帧粒子更新循环）
     lowFpsThreshold: 45, fpsSampleSeconds: 2        // 每 fpsSampleSeconds 采样一次帧率，低于阈值逐级降质（像素比→关阴影），只降不升
   },
   /* ---- R3 视觉真实感：光影体系 light + 材质分级 mats（改光影/材质只改这里，builder 禁止再散写魔法值） ----
@@ -1176,6 +1187,15 @@ PRODUCTS.forEach(function(p){
       renderAll();
       return;
     }
+    if(!S.running){
+      /* R4 回归 B 修复：停机时切产品即时生效——线已停，不再走 15 分钟停线倒计时（此前暂停时点确认，
+       * 倒计时只在 step 里推进、暂停永不走完，换产会假死到重新开工）。结单 / 清线报废 / 换型费 / 清洗消耗
+       * 与运行中换产同口径：startChangeover 负责结算清线，completeChangeover 立即完成并计费换新。 */
+      startChangeover(p);
+      completeChangeover();
+      log("停机状态切产品：免停线倒计时，已即时切换到「"+p.name+"」。","good");
+      return;
+    }
     pendingProduct = p;
     $("coTitle").textContent = "换产：" + product.name + " → " + p.name;
     $("coBody").innerHTML =
@@ -1196,14 +1216,16 @@ $("coConfirm").addEventListener("click", function(){
 });
 $("coModal").addEventListener("click", function(e){ if(e.target===this){ this.classList.remove("show"); pendingProduct=null; } });
 
-/* 产能曲线采样：每 CONFIG.sampleSteps 步聚合一次实际出瓶速度（瓶/时），供数据抽屉曲线与当前产能读数。 */
+/* 产能曲线采样：每 CONFIG.sampleSteps 步聚合一次实际出瓶速度（瓶/时），供数据抽屉曲线与当前产能读数。
+ * R4：采样只置 chartDirty 标志，曲线 DOM 重绘由主循环按既有 UI 节奏（每 24 帧）执行——禁止在 step 里直接碰 DOM。 */
+var chartDirty = false;
 function pushSample(produced, dtMin){
   sampleAcc += produced; sampleCount++;
   if(sampleCount>=CONFIG.sampleSteps){
     history.push((sampleAcc/(CONFIG.sampleSteps*dtMin))*60);
     if(history.length>CONFIG.historySamples) history.shift();
     sampleAcc=0; sampleCount=0;
-    drawChart();
+    chartDirty = true;
   }
 }
 /* ================= [M1] 仿真内核 · 主推进 step(dtMin) =================
@@ -1212,6 +1234,7 @@ function pushSample(produced, dtMin){
  * 每步顺序不可乱：先扣故障/CIP 计时，再算流量，最后结算良品/能耗/账本。
  * dtMin = 仿真分钟增量，由主循环按 CONFIG.simMinutesPerRealSecond × 倍速换算。 */
 function step(dtMin){
+  if(!(dtMin > 0) || !isFinite(dtMin)) return;   /* R4 边界守卫：异常 dt 直接跳步，杜绝 NaN 污染库存/账本 */
   S.simMin += dtMin;
   var fc = dtMin * (CONFIG.fixedCostPerHour/60);
   S.fixedCost += fc;
@@ -1520,6 +1543,8 @@ function M(color, rough, metal){
 }
 /* R3 材质分级：预设材质一律读 CONFIG.mats，禁止在此另写散值——STEEL = 不锈钢（罐体/罐壁，镜面感靠
  * buildScene 的 PMREM 环境反射）、DARKSTEEL = 结构钢件、MACH = 涂装机架设备面；其余为哑光/塑料/木纸类。 */
+/* R4 材质去重：视管玻璃管全厂 5 处共用一个实例（静态半透明玻璃，无任何逐机动态改色/改透明度），与 GLASSMAT 同思路懒建共享 */
+var SIGHTTUBE = new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 });
 var STEEL = M(0xd8dee2, CONFIG.mats.stainless.rough, CONFIG.mats.stainless.metal),
     DARKSTEEL = M(0x707880, CONFIG.mats.frame.rough, CONFIG.mats.frame.metal),
     MACH = M(0xdfe6e9, CONFIG.mats.machine.rough, CONFIG.mats.machine.metal),
@@ -1909,7 +1934,7 @@ function buildUpstream(){
     CY(g, 5.25, 5.25, 0.5, DARKSTEEL, tx, 0.3, tz);
     CY(g, 0.5, 0.5, 1.6, DARKSTEEL, tx, 15.9, tz);
     /* sight glass with liquid column */
-    var tube = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,11,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+    var tube = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,11,10), SIGHTTUBE);
     tube.position.set(tx, 6.6, tz+5.35); g.add(tube);
     var liqGeo = new THREE.BoxGeometry(0.24,1,0.24); liqGeo.translate(0,0.5,0);
     var liq = new THREE.Mesh(liqGeo, sightLiquidMat); liq.position.set(tx, 1.1, tz+5.35); g.add(liq);
@@ -2169,7 +2194,7 @@ function buildAsepticZone(){
     CY(g, 0.6, 0.6, 0.4, DARKSTEEL, tx+1.8, AH+1.1, AZ+1, 12);                       // 顶部人孔
     CY(g, 0.34, 0.34, 1.0, DARKSTEEL, tx, AH+0.9, AZ, 10);                        // 呼吸阀座
     CY(g, 0.7, 0.7, 1.7, DARKSTEEL, tx, AH*0.3, AZ+AR+0.1, 14);                    // 侧人孔（南面）
-    var tube2 = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,AH*0.82,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+    var tube2 = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,AH*0.82,10), SIGHTTUBE);
     tube2.position.set(tx+2.6, AH*0.42, AZ+AR+0.35); g.add(tube2);                // 液位视镜管（随罐高放大）
     var liqGeo2 = new THREE.BoxGeometry(0.26,1,0.26); liqGeo2.translate(0,0.5,0);
     var liq2 = new THREE.Mesh(liqGeo2, sightLiquidMat); liq2.position.set(tx+2.6, 1.2, AZ+AR+0.35); g.add(liq2);
@@ -2620,7 +2645,7 @@ function buildUtilities(){
   B(g, 36, 0.25, 21, CONC, -91, 0, -54).castShadow = false;
   CY(g, 3.1, 3.1, 7.2, STEEL, -102, 0.25, -54);                                   // 原水罐
   /* R2 原水罐液位视管：液柱由 UTIL.rawWaterLevel 驱动（RO 产水时下降、罐车补水不在此罐） */
-  var rwTube = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,5.6,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+  var rwTube = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,5.6,10), SIGHTTUBE);
   rwTube.position.set(-102, 3.2, -50.55); g.add(rwTube);
   var rwGeo = new THREE.BoxGeometry(0.2,1,0.2); rwGeo.translate(0,0.5,0);
   var rwLiq = new THREE.Mesh(rwGeo, new THREE.MeshStandardMaterial({ color:0x5b8dd9, roughness:0.3 })); rwLiq.position.set(-102, 0.55, -50.55); g.add(rwLiq);
@@ -2652,7 +2677,7 @@ function buildUtilities(){
   CY(g, 1.7, 1.7, 4.6, STEEL, -75.5, 0.25, -54);                                   // 软水罐
   CY(g, 1.85, 1.85, 0.4, DARKSTEEL, -75.5, 0.25, -54);
   /* R2 软水罐液位视管：UTIL.softWaterLevel 驱动（RO 产水升、调配进水降） */
-  var swTube = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,3.4,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+  var swTube = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,3.4,10), SIGHTTUBE);
   swTube.position.set(-75.5, 2.0, -52.15); g.add(swTube);
   var swGeo = new THREE.BoxGeometry(0.16,1,0.16); swGeo.translate(0,0.5,0);
   var swLiq = new THREE.Mesh(swGeo, new THREE.MeshStandardMaterial({ color:0x38bdf8, roughness:0.3 })); swLiq.position.set(-75.5, 0.45, -52.15); g.add(swLiq);
@@ -2799,7 +2824,7 @@ function buildCipStation(){
     ladder(g, td.x-2.0, -55, 0.25, 4.9, Math.PI/2);
     handwheel(g, td.x, 0.95, -52.9, 0.36, 0);
     /* 液位视管：液柱高度由 updateScene 在 CIP 运行时驱动起伏 */
-    var tube = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,3.6,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+    var tube = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,3.6,10), SIGHTTUBE);
     tube.position.set(td.x+1.4, 2.6, -53.05); g.add(tube);
     var liqGeo = new THREE.BoxGeometry(0.17,1,0.17); liqGeo.translate(0,0.5,0);
     var liq = new THREE.Mesh(liqGeo, new THREE.MeshStandardMaterial({ color:td.band, roughness:0.3 }));
@@ -3161,6 +3186,13 @@ function buildScene(){
   window.__setShadowTier = function(tier){
     var sz = CONFIG.light.shadowTiers[tier] || 0;
     window.__shadowTier = tier;
+    /* R4 粒子减量随档生效：保留比例读 CONFIG.perf.particleFactor——setDrawRange 限渲染数，
+     * updateScene 的粒子循环也按 window.__particleFactor 缩短（建场初期粒子未建时只存比例，建场末尾会重调本函数应用）。 */
+    window.__particleFactor = (CONFIG.perf.particleFactor && CONFIG.perf.particleFactor[tier]) || 1;
+    if(typeof D !== "undefined"){
+      if(D.steam && D.steam.geometry) D.steam.geometry.setDrawRange(0, Math.max(1, Math.floor(40 * window.__particleFactor)));
+      if(D.boilerSmoke && D.boilerSmoke.geometry) D.boilerSmoke.geometry.setDrawRange(0, Math.max(1, Math.floor(26 * window.__particleFactor)));
+    }
     if(!window.__sunLight) return;
     if(sz > 0){
       window.__sunLight.castShadow = true;
@@ -3196,6 +3228,7 @@ function buildScene(){
       if(Math.max(sz.x, sz.y, sz.z) < 3.2) o.castShadow = false;
     }
   });
+  window.__setShadowTier(window.__shadowTier);   /* R4：粒子系统此时已建好，重调一次让当前档的粒子保留比例（drawRange）真正落到几何上 */
 }
 window.__setProductColor = function(hex){
   if(bottleMat) bottleMat.color.set(hex);
@@ -3425,7 +3458,8 @@ function updateScene(dt, t){
     var pos = D.steam.geometry.attributes.position;
     var active = S.running && !S.changeover && stations[2].faultLeft<=0 && stations[2].cipLeft<=0;
     D.steam.material.opacity += ((active ? 0.34 : 0.07) - D.steam.material.opacity)*Math.min(1, dt*2);
-    for(var si=0; si<D.steamPos.length; si++){
+    var steamN = Math.max(1, Math.floor(D.steamPos.length * (window.__particleFactor || 1)));   /* R4：低档只更新/渲染前 steamN 个粒子 */
+    for(var si=0; si<steamN; si++){
       var p = D.steamPos[si];
       var cyc2 = (t*0.14 + p.off) % 1;
       pos.setXYZ(si, -25 + p.x + Math.sin(t*0.8+si)*0.4*cyc2, 12 + cyc2*6.5, -14 + p.z + Math.cos(t*0.6+si)*0.4*cyc2);
@@ -3485,7 +3519,8 @@ function updateScene(dt, t){
     var smokeT = 0.05 + UTIL.steamLoad*0.40;
     D.boilerSmoke.material.opacity += (smokeT - D.boilerSmoke.material.opacity)*Math.min(1, dt*2);
     var bpos = D.boilerSmoke.geometry.attributes.position;
-    for(var bi2=0; bi2<D.boilerSmokePos.length; bi2++){
+    var smokeN = Math.max(1, Math.floor(D.boilerSmokePos.length * (window.__particleFactor || 1)));   /* R4：同蒸汽粒子，低档减量 */
+    for(var bi2=0; bi2<smokeN; bi2++){
       var bp = D.boilerSmokePos[bi2];
       var bcyc = (t*(0.045 + UTIL.steamLoad*0.085) + bp.off) % 1;
       bpos.setXYZ(bi2, 13 + bp.x + bcyc*bcyc*7 + Math.sin(t*0.5+bi2)*0.5, 23.8 + bcyc*9, -58 + bp.z + Math.cos(t*0.4+bi2)*0.4*bcyc);
@@ -3696,16 +3731,13 @@ function resolveCollision(p){
     _cbox = COLLIDERS[ci];
     var ex = 1.8, ey = 0.8;
     if(p.x > _cbox.min.x-ex && p.x < _cbox.max.x+ex && p.y > _cbox.min.y-ey && p.y < _cbox.max.y+ey && p.z > _cbox.min.z-ex && p.z < _cbox.max.z+ex){
-      var pushes = [
-        { a:"x", d: p.x - (_cbox.min.x-ex), v: _cbox.min.x-ex },
-        { a:"x", d: (_cbox.max.x+ex) - p.x, v: _cbox.max.x+ex },
-        { a:"y", d: (_cbox.max.y+ey) - p.y, v: _cbox.max.y+ey },
-        { a:"z", d: p.z - (_cbox.min.z-ex), v: _cbox.min.z-ex },
-        { a:"z", d: (_cbox.max.z+ex) - p.z, v: _cbox.max.z+ex }
-      ];
-      pushes.sort(function(a,b){ return a.d - b.d; });
-      var push = pushes[0];
-      if(push.a === "x") p.x = push.v; else if(push.a === "y") p.y = push.v; else p.z = push.v;
+      /* R4：五向推离取最小者——标量比较代替每帧 new 数组 + sort（resolveCollision 每帧调用 2 次，命中才进此分支也要零分配） */
+      var bd = p.x - (_cbox.min.x-ex), ba = 0, bv = _cbox.min.x-ex;
+      var d2c = (_cbox.max.x+ex) - p.x; if(d2c < bd){ bd = d2c; ba = 0; bv = _cbox.max.x+ex; }
+      d2c = (_cbox.max.y+ey) - p.y;     if(d2c < bd){ bd = d2c; ba = 1; bv = _cbox.max.y+ey; }
+      d2c = p.z - (_cbox.min.z-ex);     if(d2c < bd){ bd = d2c; ba = 2; bv = _cbox.min.z-ex; }
+      d2c = (_cbox.max.z+ex) - p.z;     if(d2c < bd){ bd = d2c; ba = 2; bv = _cbox.max.z+ex; }
+      if(ba === 0) p.x = bv; else if(ba === 1) p.y = bv; else p.z = bv;
     }
   }
   return p;
@@ -3732,31 +3764,35 @@ function collectOccluders(){
   occRay = new THREE.Raycaster();
 }
 var _occDir = null, _occBlocked = null;
+/* R4 每帧零分配：遮挡扇形射线的临时向量/盒/命中点全部预分配复用（此前每 3 帧 new 十余个 Vector3/Box3）；
+ * 材质反查表 _occMatIx 在 collectOccluders 后按 OCC_MATS 顺序建一次，命中时 O(1) 查表，不再 filter 全表。 */
+var _occRight = null, _occUp = null, _occTP = null, _occHitP = null, _occSlab = null, _occWorldUp = null, _occOffs = [[0,0],[7,0],[-7,0],[0,5],[0,-5]], _occMatIx = null;
 function updateOcclusion(dt){
   if(!OCC_MESHES) collectOccluders();
   occFrame++;
   if(occFrame % 3 === 0){
-    if(!_occDir){ _occDir = new THREE.Vector3(); _occBlocked = {}; }
+    if(!_occDir){ _occDir = new THREE.Vector3(); _occBlocked = {}; _occRight = new THREE.Vector3(); _occUp = new THREE.Vector3(); _occTP = new THREE.Vector3(); _occHitP = new THREE.Vector3(); _occWorldUp = new THREE.Vector3(0,1,0);
+      _occSlab = new THREE.Box3(new THREE.Vector3(-151, CONFIG.factory.roofY-1.2, -59), new THREE.Vector3(151, CONFIG.factory.roofY+1.6, 59));
+      _occMatIx = new Map(); OCC_MATS.forEach(function(e, ix){ _occMatIx.set(e.mat, ix); }); }
     _occDir.subVectors(camTgt, camPos);
     var dist = _occDir.length();
     _occDir.normalize();
-    _occBlocked = {};
+    for(var bk in _occBlocked) delete _occBlocked[bk];
     /* 5-ray fan (centre + offsets): a beam grid counts as blocking even when the centre ray threads a gap */
-    var right = new THREE.Vector3().crossVectors(_occDir, new THREE.Vector3(0,1,0)).normalize();
-    var up2 = new THREE.Vector3().crossVectors(right, _occDir).normalize();
-    var offs = [[0,0],[7,0],[-7,0],[0,5],[0,-5]];
-    offs.forEach(function(of){
-      var tp = camTgt.clone().add(right.clone().multiplyScalar(of[0])).add(up2.clone().multiplyScalar(of[1]));
-      var dir2 = tp.sub(camPos); var d2 = dir2.length(); dir2.normalize();
-      occRay.set(camPos, dir2);
+    _occRight.crossVectors(_occDir, _occWorldUp).normalize();
+    _occUp.crossVectors(_occRight, _occDir).normalize();
+    for(var oi=0; oi<_occOffs.length; oi++){
+      var of = _occOffs[oi];
+      _occTP.copy(camTgt).addScaledVector(_occRight, of[0]).addScaledVector(_occUp, of[1]);
+      _occTP.sub(camPos); var d2 = _occTP.length(); _occTP.normalize();
+      occRay.set(camPos, _occTP);
       occRay.far = Math.max(0, d2 - 2.5);
       var hits = occRay.intersectObjects(OCC_MESHES, false);
-      hits.forEach(function(h){ if(h.object.material){ var ix = OCC_MATS.indexOf(OCC_MATS.filter(function(e){ return e.mat === h.object.material; })[0]); if(ix >= 0) _occBlocked[ix] = true; } });
-    });
+      for(var hi=0; hi<hits.length; hi++){ if(hits[hi].object.material){ var ix = _occMatIx.get(hits[hi].object.material); if(ix !== undefined) _occBlocked[ix] = true; } }
+    }
     /* whole-roof slab test: crossing the roof volume anywhere fades the roof, gaps between beams included */
-    var slab = new THREE.Box3(new THREE.Vector3(-151, CONFIG.factory.roofY-1.2, -59), new THREE.Vector3(151, CONFIG.factory.roofY+1.6, 59));
     occRay.set(camPos, _occDir); occRay.far = Math.max(0, dist - 2.5);
-    if(occRay.ray.intersectBox(slab, new THREE.Vector3())){
+    if(occRay.ray.intersectBox(_occSlab, _occHitP)){
       OCC_MATS.forEach(function(e, idx){ if(e.isRoof) _occBlocked[idx] = true; });
     }
     /* roof allowance by mode + camera position (auto: interior / low camera => roof gone) */
@@ -3932,10 +3968,18 @@ function initControls(){
   el.addEventListener("contextmenu", function(e){ e.preventDefault(); });
   /* 画布触摸拖动再拦截一层（全局守卫已在 body 后注册 document 捕获拦截，这里是画布本地兜底，配合 CSS touch-action:none） */
   el.addEventListener("touchmove", function(e){ e.preventDefault(); }, { passive:false });
+  /* R4：resize 节流——同一帧内多次 resize 只在下一帧合并处理一次，避免拖拽窗口时反复 setSize/投影重算 */
+  var resizeQueued = false;
   addEventListener("resize", function(){
-    camera.aspect = innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    if(resizeQueued) return;
+    resizeQueued = true;
+    requestAnimationFrame(function(){
+      resizeQueued = false;
+      if(!camera || !renderer) return;
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
   });
 }
 
@@ -4436,11 +4480,26 @@ function sampleFps(dt){
   if(fpsOn) $("fpsBtn").textContent = Math.round(fps) + " FPS";
   if(fps < CONFIG.perf.lowFpsThreshold && qualityLevel < 2){
     qualityLevel++;
-    if(qualityLevel === 1){ renderer.setPixelRatio(Math.min(devicePixelRatio||1, 1.25)); if(window.__setShadowTier) window.__setShadowTier("mid"); }   /* R3：1 级同时把阴影降到 mid 档（1024） */
-    if(qualityLevel === 2){ if(window.__setShadowTier) window.__setShadowTier("low"); else if(window.__sunLight) window.__sunLight.castShadow = false; }   /* R3：2 级关阴影（low 档） */
-    if(fpsOn) log("帧率偏低（约 "+Math.round(fps)+" FPS），已自动降一档画质保流畅（第 "+qualityLevel+" 级）。");
+    if(qualityLevel === 1){ renderer.setPixelRatio(Math.min(devicePixelRatio||1, 1.25)); if(window.__setShadowTier) window.__setShadowTier("mid"); }   /* R3：1 级同时把阴影降到 mid 档（1024）+ 粒子减到 0.6（R4） */
+    if(qualityLevel === 2){ if(window.__setShadowTier) window.__setShadowTier("low"); else if(window.__sunLight) window.__sunLight.castShadow = false; }   /* R3：2 级关阴影（low 档）+ 粒子减到 0.3（R4） */
+    /* R4：降级提示与帧率显示开关解耦——无论 fpsOn 与否都写日志并弹出 #qualityNotice（含手动恢复钮），不再静默降级 */
+    log("帧率偏低（约 "+Math.round(fps)+" FPS），已自动降一档画质保流畅（第 "+qualityLevel+" 级：像素比/阴影/粒子已下调）。可在画面上方提示条点「恢复高画质」手动恢复。");
+    var qn = $("qualityNotice");
+    if(qn){ $("qualityMsg").textContent = "帧率偏低，已自动降画质至第 "+qualityLevel+" 级保流畅"; qn.classList.add("show"); }
   }
 }
+/* R4 手动恢复画质：qualityLevel 归零 + 像素比回 CONFIG.perf 上限 + 阴影/粒子回初始档（桌面 high / 移动 mid）。
+ * 恢复后若帧率再次持续低于阈值仍会重新逐级降级（sampleFps 逻辑不变）。调试入口 window.__restoreQuality / __qualityLevel。 */
+function restoreQuality(){
+  qualityLevel = 0;
+  if(renderer) renderer.setPixelRatio(Math.min(devicePixelRatio||1, window.__isMobileGL ? CONFIG.perf.mobilePixelRatioCap : CONFIG.perf.pixelRatioCap));
+  if(window.__setShadowTier) window.__setShadowTier(window.__isMobileGL ? "mid" : "high");
+  var qn = $("qualityNotice"); if(qn) qn.classList.remove("show");
+  log("画质已手动恢复到初始档（像素比 / 阴影 / 粒子回升）。","good");
+}
+window.__restoreQuality = restoreQuality;
+window.__qualityLevel = function(){ return qualityLevel; };
+$("qualityRestoreBtn").addEventListener("click", restoreQuality);
 function loop(ts){
   requestAnimationFrame(loop);
   if(lastTs===null) lastTs = ts;
@@ -4455,7 +4514,10 @@ function loop(ts){
   renderer.render(scene, camera);
   uiTick++;
   if(uiTick % 8 === 0) renderKpis();
-  if(uiTick % 24 === 0 && !infoHover) renderInfo();
+  if(uiTick % 24 === 0){
+    if(chartDirty){ chartDirty = false; drawChart(); }   /* R4：曲线 DOM 重绘节流到此节奏，step 只置标志 */
+    if(!infoHover) renderInfo();
+  }
 }
 /* 异步建场（可验证性修复轮）：过去 buildScene() 在脚本尾部同步执行，而经典脚本会
  * 堵住 DOMContentLoaded——整场几千个对象的同步构建成了验收截图超时的第二个嫌疑。
