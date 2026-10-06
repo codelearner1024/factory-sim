@@ -523,6 +523,17 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell"><div class="l">蒸汽 · UHT 杀菌加热</div><div class="v mono" id="uSteam">0 kg · ¥0</div></div>
     </div>
 
+    <h3>公用工程状态（联动总览）</h3>
+    <p class="hint">辅助系统跟随生产负荷呼吸：锅炉负荷随杀菌用汽、空压台数随开线数、水处理随调配进水、冷库随入库节奏启停，数值与 3D 场景里的火焰/烟气/状态灯/液位同源（内核 UTIL/RAW/WH/SHIP，参数在 CONFIG.r2）。</p>
+    <div class="econ">
+      <div class="dcell"><div class="l">锅炉 · 蒸汽负荷</div><div class="v mono" id="usBoiler" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">空压站 · 运行台数 / 储气压力</div><div class="v mono" id="usAir" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">水处理 · RO / 原水 → 软水</div><div class="v mono" id="usWater" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">冷库 · 制冷 / 库温</div><div class="v mono" id="usCold" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">原料罐区 · 液位 / 罐车</div><div class="v mono" id="usRaw" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">仓储周转 · 入库 / 出库 / 库存</div><div class="v mono" id="usWh" style="font-size:13px">—</div></div>
+    </div>
+
     <h3>分产品记账</h3>
     <p class="hint">每个产品单独累计产量、收入、成本与利润，换产后不会用新价格追溯重算旧产量。成本含原料、水/电/蒸汽三项公用工程费（各按 CONFIG.utilities 单价）、固定费用与换型费。</p>
     <table class="ledger">
@@ -572,7 +583,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>单文件约 3100 行，ES5 风格（var / 函数）为兼容现有代码，接手重构时再统一到模块化构建，不要混写。</li>
       <li>巡游解说点的 u 是按路点序号估算的弧长参数，改路线后个别点可能早/晚约 1 秒触发，属可接受漂移；自适应降级只降不升，画质恢复需刷新页面。</li>
       <li>相机遮挡淡出基于材质级透明度，同一材质多处共用时会一起淡（罐体 / 货架 / 顶棚已按此设计）；北侧公用工程区建筑未纳入淡出清单，从北侧高位看厂内时需手动切顶棚。</li>
-      <li>瓶子为实例化视觉流量，不与 queue 数值逐瓶对应；仓库箱数按累计产量分档增长；工人 / AGV 为固定路线巡演，不参与产能计算。</li>
+      <li>瓶子为实例化视觉流量，不与 queue 数值逐瓶对应；仓库箱数由 WH 入/出库守恒驱动（FIFO 窗口渲染）；工人为固定路线巡演，叉车/AGV/吊车由仓储活动门控待机，均不参与产能计算。</li>
       <li>移动端为可用级适配（面板折叠 / 点按拾取），未做专门的手势教程与低端机降级档。</li>
     </ul>
     <h3 style="margin-top:14px">后续可扩展方向（V6 之后）</h3>
@@ -595,6 +606,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>布局放大轮：全厂俯瞰下厂区明显再大一圈（360×230）、杀菌链预热/均质/杀菌机组/冷却逐台分开（中心距 ≥20、长管段相连、四周有空地）、无菌罐罐距明显（19，罐间能走人）、调配罐距/货架巷道/月台车距同步放宽；点「杀菌无菌区」机位第一眼同时看到整排无菌罐与拉开的杀菌链；巡游 9 点路线不穿新设备、工人/AGV/叉车路线不穿罐体</li>
       <li>前进/后退最小化：点控制条「🧭 移动」钮可收起前进/后退钮组与提示行（只剩一颗小钮、不挡画面），再点展开且长按/W/S 移动照常；小屏打开默认收起、大屏默认展开</li>
       <li>R1 工艺真实感：运行中点无菌罐区信息卡——UHT 温度趋近当前产品目标（茶 137℃ 等）、均质压力有料时升到目标、无菌库存随杀菌上升/随灌装下降、三处卡片（杀菌区/杀菌工位/调配批次卡）在制批次一致；拉高灌装速度滑杆（上游供得上时）转盘明显转快，停单线则该线转盘/星轮/封盖塔全停且空瓶段断流；把供应/杀菌拉低耗空无菌库存后产线出「无菌罐待料」而不是继续出瓶；换产后无菌库存归零、新产品批次从 #1 重开、旧产品不再灌出</li>
+      <li>R2 联动：停产时锅炉火焰缩到小火/熄火、烟气变淡、空压全停、叉车/AGV 回停靠点待机、月台卡车静止待命；开 1 线空压 1 台运行、开 3 线 2 台并联且运行台灯绿+微振；调配进水阶段 RO 灯亮产水管变蓝、软水位降原水位缓降；杀菌满负荷时锅炉负荷趋近 100%、分汽缸表针与抽屉总览压力一致；原料液位压到 30% 以下（拉高供应耗用）后罐车到场卸料、液位回升且泵台灯亮；订单推进过 6,000 瓶节点后月台形成波次装车（车厢箱数渐增、货架从队头侧先清空）、装满离场新车进场；抽屉「公用工程状态」6 行与各区信息卡口径一致；重置后 UTIL/RAW/WH/SHIP 全回初值、货架回 26 箱</li>
+      <li>R2 联动：停产时锅炉火焰缩到小火/熄火、烟气变淡、空压全停、叉车/AGV 回停靠点待机、月台卡车静止待命；开 1 线空压 1 台运行、开 3 线 2 台并联且运行台灯绿+微振；调配进水阶段 RO 灯亮产水管变蓝、软水位降原水位缓降；杀菌满负荷时锅炉负荷趋近 100%、分汽缸表针与抽屉总览压力一致；原料液位压到 30% 以下（拉高供应耗用）后罐车到场卸料、液位回升且泵台灯亮；订单推进过 6,000 瓶节点后月台形成波次装车（车厢箱数渐增、货架从队头侧先清空）、装满离场新车进场；抽屉「公用工程状态」6 行与各区信息卡口径一致；重置后 UTIL/RAW/WH/SHIP 全回初值、货架回 26 箱</li>
     </ul>
   </div>
 </aside>
@@ -683,6 +696,23 @@ var CONFIG = {
   },
   asepticStockCap: 30000,       // 无菌罐群总可用库存上限（瓶当量，5 罐均分；满罐时杀菌段 BLOCKED 背压）
   asepticStockInit: 4500,       // 开局无菌罐预存量（瓶当量，约小半批，开工即可灌、随后靠杀菌续供）
+  /* ---- R2 仓储物流 + 公用工程联动参数（改联动阈值/节奏只改这里） ----
+   * steamStandbyLoad 待机保温负荷（0~1，UHT 满负荷处理时趋近 1）；steamPressureMPa 蒸汽总管压力显示带（分汽缸表同源）。
+   * airCompCount 空压机实体台数（buildUtilities 建 2 台）；airPressureMPa 储气压力合理带（运行台数/用气拉扯下在此带内波动）。
+   * roRatePerMin RO 产水速率（液位比例/仿真分钟）；waterDrawPerMin 调配进水阶段软水消耗速率；
+   * rawWaterInit/softWaterInit 水处理两罐初始液位比例。rawTankBottlesPerFull 原料罐区满罐折合可供应的瓶当量
+   * （供应流量按此折算消耗 RAW.level）；rawRefillThreshold 原料低位触发罐车到场阈值；tankerUnloadMinutes 罐车卸料时长；
+   * tankerRefillPerMin 卸料时液位回升速率。whCapacityCases 货架总箱位（= 货架实例数 108）；
+   * shipWaveOrderStep 每推进多少瓶订单进度形成一个发货波次节点；shipTruckCases 一车装箱数；shipRateCasesPerMin 波次装车速率；
+   * coldOnMin/coldOffMin 冷库制冷启停循环（仿真分钟，库存高/入库活跃时停机段缩短）。 */
+  r2: {
+    steamStandbyLoad: 0.12, steamPressureMPa: [0.82, 1.06],
+    airCompCount: 2, airPressureMPa: [0.66, 0.84],
+    roRatePerMin: 0.045, waterDrawPerMin: 0.07, rawWaterInit: 0.72, softWaterInit: 0.58,
+    rawTankInit: 0.66, rawTankBottlesPerFull: 260000, rawRefillThreshold: 0.30, tankerUnloadMinutes: 6, tankerRefillPerMin: 0.10,
+    whCapacityCases: 108, shipWaveOrderStep: 6000, shipTruckCases: 16, shipRateCasesPerMin: 3,
+    coldOnMin: 7, coldOffMin: 5
+  },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
    * 预热 preheatX → 均质 homogenizer（偏南 homogenizerZ，与链主线错开一台位）→ 管式杀菌 sterilizerSkidX → 冷却 coolingX，
@@ -829,6 +859,117 @@ function sterBatchInfo(){
   var st = (typeof curBlendStage === "function") ? curBlendStage() : null;
   if(st && st.id === "discharge" && typeof BP !== "undefined") return { num: BP.batch, productId: product.id, productName: product.name, phase: "调配出料中 → 杀菌接收" };
   return { num: STER_FEED.num, productId: STER_FEED.productId, productName: STER_FEED.productName, phase: "杀菌处理 / 无菌暂存中" };
+}
+
+/* ================= [M1] R2 · 公用工程 + 仓储物流联动状态（UTIL / RAW / WH / SHIP） =================
+ * 这一组是「辅助系统」的单一事实源，全部在 step() 末尾的 stepR2(dtMin, produced, sterMove, supMove) 里推进，
+ * 渲染层（锅炉火焰/烟气、空压灯、水位视管、冷库门、叉车/AGV 门控、卡车/罐车动线）与抽屉「公用工程状态」只读它们。
+ * UTIL = 公用工程显示/联动值（蒸汽负荷与总管压力、空压运行台数与储气压力、RO 运行与水处理两罐液位、冷库启停/库温/库门）；
+ * RAW  = 原料罐区聚合液位（6 罐同源）+ 罐车状态机（idle 待命在外 / unloading 在卸料泵台卸料 / departed 离场冷却）；
+ * WH   = 成品仓守恒（stockCases = inCases − outCases + 初始库存；head = FIFO 队头槽位，货架渲染按 [head, head+stock) 窗口取位）；
+ * SHIP = 发货波次（订单进度每过 shipWaveOrderStep 瓶形成一个可发运节点，空车在月台待命，波次激活后按速率装车，
+ *        装满 truckCases 即计一车次离场——卡车进出动画由渲染层按 SHIP.active / loadCases 驱动，本层只管箱数守恒）。 */
+var UTIL = { steamLoad: 0, steamPressure: 0.95, airRunning: 0, airPressure: 0.72, roRunning: false,
+             rawWaterLevel: CONFIG.r2.rawWaterInit, softWaterLevel: CONFIG.r2.softWaterInit,
+             coldRunning: false, coldUnitsRunning: 1, coldTemp: -21.5, coldDoor: 0 };
+var RAW = { level: CONFIG.r2.rawTankInit, tanker: "idle", tankerLeft: 0, arrivals: 0 };
+var WH = { inCases: 0, outCases: 0, stockCases: CONFIG.whBaseCases, producedCases: 0, head: 0, sinceProduce: 999 };
+var SHIP = { active: false, loadCases: 0, targetCases: 0, loadAcc: 0, trips: 0, nextWaveAt: CONFIG.r2.shipWaveOrderStep };
+function dockStatusText(){
+  if(SHIP.active) return "发货波次装车中 · "+Math.floor(SHIP.loadCases)+" / "+SHIP.targetCases+" 箱";
+  if(typeof D !== "undefined" && D.truck){
+    if(D.truck.rstate === "departing") return "卡车离场中（本车 "+SHIP.targetCases+" 箱）";
+    if(D.truck.rstate === "arriving") return "新车进场中";
+    if(D.truck.rstate === "away") return "等待下一辆卡车";
+  }
+  return WH.stockCases >= 8 && S.orderDone >= SHIP.nextWaveAt ? "波次待发 · 空车待命" : "空车待命 · 暂无发货波次";
+}
+/* R2 联动推进（step 末尾调用；produced/sterMove/supMove 是本步内核已结算的真实流量，禁止在此另算产量） */
+function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
+  var R = CONFIG.r2;
+  /* --- 锅炉/蒸汽：负荷由杀菌实际处理速率驱动（满负荷处理→1，运行无料→保温小火，停机→近 0），总管压力随负荷在带内浮动 --- */
+  var sterRate = dtMin > 0 ? sterMoveVal/dtMin : 0;
+  var sterCapNow = S.sterilize * sterProcOf(product).flowFactor;
+  var loadT;
+  if(S.changeover) loadT = 0.30;                                            /* 换型清线：CIP 冲洗用汽，中等负荷 */
+  else if(!S.running) loadT = S.everRan ? R.steamStandbyLoad*0.5 : 0.04;    /* 停机保压小火 / 冷态 */
+  else if(stations[2].cipLeft > 0) loadT = 0.45;                            /* CIP 加热 */
+  else if(sterRate > 10) loadT = Math.min(1, 0.35 + (sterCapNow > 0 ? sterRate/sterCapNow : 0)*0.65);
+  else loadT = R.steamStandbyLoad;                                          /* 运行热待机：只保温 */
+  UTIL.steamLoad += (loadT - UTIL.steamLoad) * Math.min(1, dtMin*0.8);
+  var pressT = R.steamPressureMPa[0] + UTIL.steamLoad * (R.steamPressureMPa[1]-R.steamPressureMPa[0]) + Math.sin(S.simMin*0.6)*0.008;
+  UTIL.steamPressure += (pressT - UTIL.steamPressure) * Math.min(1, dtMin*0.6);
+  /* --- 空压站：运行台数随在线产线数（1 线 1 台、2~3 线 2 台并联，停机 0 台）；储气压力在带内被供/用拉扯 --- */
+  var nLines = activeLines().length;
+  UTIL.airRunning = (S.running && !S.changeover) ? Math.min(R.airCompCount, nLines) : 0;
+  var airT = 0.70 + UTIL.airRunning*0.05 - nLines*0.018 + Math.sin(S.simMin*0.9)*0.006;
+  airT = Math.max(R.airPressureMPa[0], Math.min(R.airPressureMPa[1], airT));
+  UTIL.airPressure += (airT - UTIL.airPressure) * Math.min(1, dtMin*0.5);
+  /* --- 水处理：RO 在软水位不满或调配正在进水时产水；原水被 RO 消耗、软水被调配进水/定容消耗（方向守恒，不求逐升精确） --- */
+  var bStage = (typeof curBlendStage === "function") ? curBlendStage() : null;
+  var drawing = S.running && !S.changeover && bStage && bStage.source === "water";
+  UTIL.roRunning = S.running && !S.changeover && (UTIL.softWaterLevel < 0.88 || drawing);
+  if(UTIL.roRunning){
+    UTIL.rawWaterLevel = Math.max(0.05, UTIL.rawWaterLevel - R.roRatePerMin*0.7*dtMin);
+    UTIL.softWaterLevel = Math.min(0.98, UTIL.softWaterLevel + R.roRatePerMin*dtMin);
+  }
+  if(drawing) UTIL.softWaterLevel = Math.max(0.05, UTIL.softWaterLevel - R.waterDrawPerMin*dtMin);
+  UTIL.rawWaterLevel = Math.min(0.97, UTIL.rawWaterLevel + 0.012*dtMin);   /* 市政原水常压补水（慢于 RO 抽水：重载时原水仍净降、停产时缓慢回满） */
+  /* --- 原料罐区：供应流量按满罐折合量消耗聚合液位；跌破阈值触发罐车到场卸料（泵台联动，液位回升到高位离场） --- */
+  if(supMoveVal > 0) RAW.level = Math.max(0.03, RAW.level - supMoveVal / R.rawTankBottlesPerFull);
+  if(RAW.tanker === "idle"){
+    if(RAW.level < R.rawRefillThreshold){
+      RAW.tanker = "unloading"; RAW.tankerLeft = R.tankerUnloadMinutes; RAW.arrivals++;
+      log("原料罐区液位低至 "+Math.round(RAW.level*100)+"%（阈值 "+Math.round(R.rawRefillThreshold*100)+"%）：罐车到场，在卸料泵台卸料补仓。","bad");
+    }
+  } else if(RAW.tanker === "unloading"){
+    RAW.tankerLeft -= dtMin;
+    RAW.level = Math.min(0.96, RAW.level + R.tankerRefillPerMin*dtMin);
+    if(RAW.tankerLeft <= 0 || RAW.level >= 0.95){
+      RAW.tanker = "departed"; RAW.tankerLeft = 4;
+      log("罐车卸料完成，原料罐区液位回升至 "+Math.round(RAW.level*100)+"%，罐车离场。","good");
+    }
+  } else if(RAW.tanker === "departed"){
+    RAW.tankerLeft -= dtMin;
+    if(RAW.tankerLeft <= 0) RAW.tanker = "idle";
+  }
+  /* --- 成品仓：入库由实际产出驱动（每 whBottlesPerCase 瓶折 1 箱）；满仓时超出部分直接出库计出库数，库存不越过箱位上限 --- */
+  if(produced > 0) WH.sinceProduce = 0; else WH.sinceProduce += dtMin;
+  var pc = Math.floor(S.finished / CONFIG.whBottlesPerCase);
+  if(pc > WH.producedCases){
+    var add = pc - WH.producedCases; WH.producedCases = pc;
+    var roomC = Math.max(0, R.whCapacityCases - WH.stockCases);
+    var addC = Math.min(add, roomC);
+    WH.inCases += addC; WH.stockCases += addC;
+    if(add > addC){ WH.outCases += (add - addC); WH.head = (WH.head + (add - addC)) % R.whCapacityCases; }
+  }
+  /* --- 发货波次：订单进度到可发运节点 + 库存够装车 → 激活装车；装车按速率从 FIFO 队头出库，装满即一车次 --- */
+  if(!SHIP.active){
+    var waveReady = S.orderDone >= SHIP.nextWaveAt || (S.orderDone >= S.orderTarget && WH.stockCases >= 8);
+    if(waveReady && WH.stockCases >= 8 && !S.changeover){
+      SHIP.active = true; SHIP.loadAcc = 0; SHIP.loadCases = 0;
+      SHIP.targetCases = Math.min(R.shipTruckCases, WH.stockCases);
+      log("发货波次形成：订单进度 "+fmt(S.orderDone)+" 瓶达可发运节点，月台开始装车（本车 "+SHIP.targetCases+" 箱，库存按先进先出出库）。");
+    }
+  }
+  if(SHIP.active && !S.changeover){
+    SHIP.loadAcc += R.shipRateCasesPerMin * dtMin;
+    while(SHIP.loadAcc >= 1 && SHIP.loadCases < SHIP.targetCases && WH.stockCases > 0){
+      SHIP.loadAcc -= 1; SHIP.loadCases += 1;
+      WH.stockCases -= 1; WH.outCases += 1; WH.head = (WH.head + 1) % R.whCapacityCases;   /* FIFO：从最早入库侧（队头）先出 */
+    }
+    if(SHIP.loadCases >= SHIP.targetCases){
+      SHIP.active = false; SHIP.trips++;
+      SHIP.nextWaveAt += R.shipWaveOrderStep;
+      log("发货完成：第 "+SHIP.trips+" 车次发运 "+SHIP.targetCases+" 箱（累计出库 "+WH.outCases+" 箱），卡车离场、新车随后进场待命。","good");
+    }
+  }
+  /* --- 冷库：制冷按启停循环运行，入库活跃/库存高时停机段缩短（近似恒温控制）；库温在运行/停机间小幅摆动 --- */
+  var cyc = R.coldOnMin + (WH.stockCases > 55 || WH.sinceProduce < 2 ? R.coldOffMin*0.4 : R.coldOffMin);
+  UTIL.coldRunning = (S.simMin % cyc) < R.coldOnMin;
+  UTIL.coldUnitsRunning = UTIL.coldRunning ? (WH.stockCases > 55 ? 3 : 2) : 1;
+  var coldT = UTIL.coldRunning ? -22.3 : -19.2;
+  UTIL.coldTemp += (coldT - UTIL.coldTemp) * Math.min(1, dtMin*0.25);
 }
 
 /* ================= [M1] 仿真内核 · 上游共享工位 Station（各产线共用） =================
@@ -981,6 +1122,7 @@ function completeChangeover(){
   var he = CONFIG.utilities.changeoverEvent;
   chargeUtilities(ledger[np.id], he.waterM3, he.powerKwh, he.steamKg); // 换产 CIP 冲洗的水/蒸汽/电计入新产品账本（与换型费同口径）
   applyProduct(np);
+  SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;   /* R2：新订单的发货波次节点从头计（仓库成品库存不清，属已入库成品） */
   S.orderDone = 0; S.orderDoneLogged = false;
   log("换型完成！已切换到「"+np.name+"」，新订单开始计数（目标 "+fmt(S.orderTarget)+" 瓶），该产品单独记账。换产清洗消耗水 "+he.waterM3+" m³ · 蒸汽 "+he.steamKg+" kg · 电 "+he.powerKwh+" kWh 已计入其账本。","good");
   renderAll();
@@ -1048,6 +1190,7 @@ function step(dtMin){
     stations.forEach(function(st){ st.lastMove = 0; });
     lines.forEach(function(l){ l.lastMove = 0; });
     ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
+    stepR2(dtMin, 0, 0, 0);   /* R2：换型期间公用工程降到清线负荷、仓储波次冻结推进（stepR2 内部按状态判定） */
     if(S.changeover.left<=0) completeChangeover();
     pushSample(0, dtMin);
     return;
@@ -1145,6 +1288,7 @@ function step(dtMin){
   L.revenue += good * product.price;
   L.varCost += produced * product.cost;
 
+  stepR2(dtMin, produced, sterMove, supMove);   /* R2 联动推进：读本步已结算的真实流量驱动公用工程/仓储/发货/罐车 */
   pushSample(produced, dtMin);
 }
 
@@ -1231,6 +1375,15 @@ function renderKpis(){
   $("uWater").textContent = S.waterM3.toFixed(1)+" m³ · "+fmtMoney(S.waterM3*uu2.water.pricePerM3);
   $("uPower").textContent = fmt(S.powerKwh)+" kWh · "+fmtMoney(S.powerKwh*uu2.power.pricePerKwh);
   $("uSteam").textContent = (S.steamKg>=1000 ? (S.steamKg/1000).toFixed(2)+" t" : fmt(S.steamKg)+" kg") + " · " + fmtMoney(S.steamKg*uu2.steam.pricePerKg);
+  /* R2 公用工程状态总览（与场景同源 UTIL/RAW/WH/SHIP，一行一系统，不做大表格） */
+  if($("usBoiler")){
+    $("usBoiler").textContent = "负荷 "+Math.round(UTIL.steamLoad*100)+"% · 总管 "+UTIL.steamPressure.toFixed(2)+" MPa · "+(UTIL.steamLoad>0.6 ? "大火（杀菌用汽高峰）" : UTIL.steamLoad>0.25 ? "中火" : UTIL.steamLoad>0.08 ? "小火保温" : "待机保压");
+    $("usAir").textContent = "运行 "+UTIL.airRunning+" / "+CONFIG.r2.airCompCount+" 台 · 储气 "+UTIL.airPressure.toFixed(2)+" MPa";
+    $("usWater").textContent = (UTIL.roRunning ? "RO 产水中" : "RO 待机")+" · 原水 "+Math.round(UTIL.rawWaterLevel*100)+"% → 软水 "+Math.round(UTIL.softWaterLevel*100)+"%"+(curBlendStage() && curBlendStage().source==="water" && S.running ? " · 调配进水中" : "");
+    $("usCold").textContent = (UTIL.coldRunning ? "制冷运行 "+UTIL.coldUnitsRunning+" 台" : "停机保温 1 台")+" · 库温 "+UTIL.coldTemp.toFixed(1)+"℃ · 库存 "+WH.stockCases+" 箱";
+    $("usRaw").textContent = "液位 "+Math.round(RAW.level*100)+"% · "+(RAW.tanker==="unloading" ? "罐车卸料中（余 "+Math.ceil(RAW.tankerLeft)+" 分）" : RAW.tanker==="departed" ? "罐车离场中" : RAW.level < CONFIG.r2.rawRefillThreshold+0.05 ? "接近阈值 · 罐车待命" : "罐车待命")+" · 到场 "+RAW.arrivals+" 次";
+    $("usWh").textContent = "入库 "+WH.inCases+" · 出库 "+WH.outCases+" · 库存 "+WH.stockCases+" 箱 · 已发 "+SHIP.trips+" 车";
+  }
   $("eQuality").textContent = (product.quality*100).toFixed(1)+"%";
   var lbHtml = "";
   PRODUCTS.forEach(function(p){
@@ -1320,7 +1473,10 @@ var D = { blendLiquids:[], blendDiscs:[], agitators:[], sightLiquids:[], lineDyn
   /* R1 杀菌链可视注册：sterFlow[seg]={mat,lampMat} 分段管路/段灯（preheat/homog/uht/cooling/aseptic）；
    * asepticLiquids[] 无菌罐液位柱（按 ASEPTIC.stock 顺序充填驱动，不再随机正弦）；sterPlates 动态参数牌（UHT 温度/保持 + 均质压力，画布纹理低频重绘）；
    * STER_DYN 显示值在 updateScene 定义（向工艺目标趋近/待机回落） */
-  sterFlow:{}, asepticLiquids:[], sterPlates:{} };
+  sterFlow:{}, asepticLiquids:[], sterPlates:{},
+  /* R2 联动可视注册：utilDyn = 公用工程动态件（锅炉火焰/表针、空压灯与机组、水处理液位/RO 灯、冷库门/机组灯，由 updateScene 按 UTIL 驱动）；
+   * whCasePos/whTapePos = 货架箱位坐标（FIFO 窗口渲染用）；rawTanker = 原料罐车组（按 RAW.tanker 在卸料位/场外间滑动） */
+  utilDyn:{}, whCasePos:[], whTapePos:[], rawTanker:null };
 var clickables = [];
 var scene, camera, renderer, bottleMat, blendLiquidMat, sightLiquidMat;
 
@@ -1476,6 +1632,7 @@ function gaugeMesh(r){
   var body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.12, 20), DARKSTEEL); body.rotation.x = Math.PI/2; grp.add(body);
   var needle = new THREE.Mesh(new THREE.BoxGeometry(0.05, r*0.78, 0.03), new THREE.MeshBasicMaterial({ color:0xc0392b }));
   needle.geometry.translate(0, r*0.32, 0); needle.position.z = 0.1; needle.rotation.z = -0.7 + Math.random()*1.1; grp.add(needle);
+  grp.userData.needle = needle;   /* R2：动态仪表（分汽缸/储气压力）经此句柄驱动表针，静态表保持随机初位 */
   return grp;
 }
 function handwheel(parent, x, y, z, r, ry){
@@ -1735,6 +1892,10 @@ function buildUpstream(){
     handwheel(g, vx, 1.7, 24.05, 0.3, 0);
   });
   var unlPipe = CY(g, 0.15, 0.15, 14, M(0xc9a227,0.45,0.5), -70, 3.1, 20, 10); unlPipe.rotation.x = Math.PI/2; unlPipe.position.set(-70, 3.25, 20.5); // 卸料总管向北接罐区
+  /* R2 卸料泵台状态灯：罐车卸料中亮绿呼吸、待命灰（updateScene 按 RAW.tanker 驱动） */
+  var unlLampMat = new THREE.MeshStandardMaterial({ color:0x2c3430, emissive:0x8b9a92, emissiveIntensity:0.4, roughness:0.4 });
+  var unlLamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), unlLampMat); unlLamp.position.set(-70, 1.7, 29.6); g.add(unlLamp);
+  D.utilDyn.unloadLampMat = unlLampMat;
   /* pipe bridge from tank farm to blending */
   [-2.5, 2.5].forEach(function(pz){ CY(g, 0.16, 0.16, 10.5, DARKSTEEL, -102, 0, pz); CY(g, 0.16, 0.16, 10.5, DARKSTEEL, -62, 0, pz); });
   var pipeMat = M(0xc9a227,0.45,0.5);
@@ -1750,8 +1911,9 @@ function buildUpstream(){
   alarmTower(g, -64, 2.3, 8);
   D.stLamp.supply = lamp(g, -64, 3.9, 8, 0.3);
   hitbox(g, 56, 15, 62, -88, 0, 0, { kind:"st", id:"supply" });
-  /* tanker truck parked outside west wall */
-  var tk = new THREE.Group(); tk.position.set(-172, 0, 34); tk.rotation.y = Math.PI/2; g.add(tk);
+  /* R2 罐车：初始在场外待命（不凭空停在泵台），原料液位跌破阈值才到场卸料——位置由 updateScene 按 RAW.tanker 在卸料位 z=34 / 场外 z=150 间滑动 */
+  var tk = new THREE.Group(); tk.position.set(-172, 0, 150); tk.rotation.y = Math.PI/2; g.add(tk);
+  D.rawTanker = tk;
   var tankBody = CY(tk, 1.9, 1.9, 10, STEEL, 0, 1.2, -1); tankBody.rotation.x = Math.PI/2; tankBody.position.set(0, 3.1, -1);
   B(tk, 2.4, 2.2, 2.6, M(0x2b6cb0,0.5,0.3), 0, 0.9, 5.6);
   [[-1.1,3.9],[1.1,3.9],[-1.1,-3.4],[1.1,-3.4],[-1.1,-5.2],[1.1,-5.2]].forEach(function(wp){
@@ -2308,6 +2470,7 @@ function buildWarehouseDock(){
     dummy.position.set(rx, by+0.48, cz); dummy.rotation.set(0,0,0); dummy.updateMatrix();
     D.whCases.setMatrixAt(ci, dummy.matrix);
     D.whCases.setColorAt(ci, palette[ci % palette.length]);
+    D.whCasePos.push([rx, by+0.48, cz]);   /* R2：箱位按生成顺序即入库先后，FIFO 窗口渲染读此表 */
     ci++;
   } }); });
   D.whCases.count = D.whTarget;
@@ -2317,6 +2480,7 @@ function buildWarehouseDock(){
   var td2 = new THREE.Object3D(); var ti = 0;
   CONFIG.layout.rackX.forEach(function(rx){ [0.55, 3.55, 6.55].forEach(function(by){ for(var cz2=-24; cz2<=24; cz2+=4.4){
     td2.position.set(rx, by + 0.98, cz2); td2.rotation.set(0,0,0); td2.updateMatrix(); D.whTape.setMatrixAt(ti++, td2.matrix);
+    D.whTapePos.push([rx, by + 0.98, cz2]);
   } }); });
   D.whTape.count = D.whTarget; g.add(D.whTape);
   hitbox(g, 48, 11, 62, 100, 0, 0, { kind:"zone", id:"warehouse" });
@@ -2365,8 +2529,14 @@ function buildWarehouseDock(){
   /* 伸缩装车带：从 52 号门洞向车厢方向伸出的辊道带（装车时伸入车厢） */
   var beltOut = B(g, 1.4, 0.35, 7.5, DARKSTEEL, 68, 1.15, 44.5); beltOut.rotation.x = 0.06;
   for(var br=0; br<6; br++) CY(g, 0.07, 0.07, 1.3, STEEL, 68, 1.42, 41.4 + br*1.25, 8).rotation.z = Math.PI/2;
-  D.truck = { g: makeTruck(0xc2410c), bayX: 8, state:"away", t: 4 };
-  D.truck.g.position.set(8, 0, 100); scene.add(D.truck.g);
+  D.truck = { g: makeTruck(0xc2410c), bayX: 8, state:"waiting", t: 0, rstate:"waiting", rt: 0 };
+  D.truck.g.position.set(8, 0, 39.4); scene.add(D.truck.g);
+  /* R2 卡车装载可视：车厢内 8 个箱位按 SHIP.loadCases/targetCases 比例渐次出现，离场时随车走、空车进场时清空 */
+  D.truck.loadMeshes = [];
+  for(var lbx=0; lbx<8; lbx++){
+    var lbm = B(D.truck.g, 1.05, 0.68, 0.8, CARDB, lbx<4 ? -0.55 : 0.55, 1.35, 1.1 + (lbx%4)*1.15);
+    lbm.visible = false; D.truck.loadMeshes.push(lbm);
+  }
   hitbox(g, 86, 7, 10, 38, 0, 37, { kind:"zone", id:"dock" });
   /* forklifts */
   var fl1 = makeForklift();
@@ -2394,6 +2564,12 @@ function buildUtilities(){
   /* ---------- 水处理区（原水罐 / 过滤 / RO 反渗透 / 软水罐） ---------- */
   B(g, 36, 0.25, 21, CONC, -91, 0, -54).castShadow = false;
   CY(g, 3.1, 3.1, 7.2, STEEL, -102, 0.25, -54);                                   // 原水罐
+  /* R2 原水罐液位视管：液柱由 UTIL.rawWaterLevel 驱动（RO 产水时下降、罐车补水不在此罐） */
+  var rwTube = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,5.6,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+  rwTube.position.set(-102, 3.2, -50.55); g.add(rwTube);
+  var rwGeo = new THREE.BoxGeometry(0.2,1,0.2); rwGeo.translate(0,0.5,0);
+  var rwLiq = new THREE.Mesh(rwGeo, new THREE.MeshStandardMaterial({ color:0x5b8dd9, roughness:0.3 })); rwLiq.position.set(-102, 0.55, -50.55); g.add(rwLiq);
+  D.utilDyn.rawWaterLiq = rwLiq;
   var wdome = new THREE.Mesh(new THREE.SphereGeometry(3.1, 20, 10, 0, Math.PI*2, 0, Math.PI/2), STEEL);
   wdome.scale.y = 0.4; wdome.position.set(-102, 7.45, -54); g.add(wdome);
   ladder(g, -105.3, -54, 0.25, 7.2, Math.PI/2);
@@ -2413,16 +2589,32 @@ function buildUtilities(){
   CY(g, 0.42, 0.42, 1.1, M(0x2b6cb0,0.5,0.3), -88.6, 0.6, -52.6, 12).rotation.z = Math.PI/2; // 高压泵电机
   B(g, 0.9, 0.7, 0.9, DARKSTEEL, -88.6, 0.6, -55.6);
   controlCabinet(g, -80.2, 0.25, -51.8, 0, 0x60a5fa);
+  /* R2 RO 运行灯 + 产水管流动材质（独立材质不走 M 缓存，避免污染全场黄管） */
+  var roLampMat = new THREE.MeshStandardMaterial({ color:0x2c3430, emissive:0x8b9a92, emissiveIntensity:0.4, roughness:0.4 });
+  var roLamp = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), roLampMat); roLamp.position.set(-80.2, 2.85, -51.8); g.add(roLamp);
+  D.utilDyn.roLampMat = roLampMat;
+  D.utilDyn.roFlowMat = new THREE.MeshStandardMaterial({ color:0x707880, roughness:0.45, metalness:0.3, transparent:true, opacity:0.55, emissive:0x000000, emissiveIntensity:1 });
   CY(g, 1.7, 1.7, 4.6, STEEL, -75.5, 0.25, -54);                                   // 软水罐
   CY(g, 1.85, 1.85, 0.4, DARKSTEEL, -75.5, 0.25, -54);
+  /* R2 软水罐液位视管：UTIL.softWaterLevel 驱动（RO 产水升、调配进水降） */
+  var swTube = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,3.4,10), new THREE.MeshStandardMaterial({ color:0xdff2f8, transparent:true, opacity:0.35, roughness:0.1 }));
+  swTube.position.set(-75.5, 2.0, -52.15); g.add(swTube);
+  var swGeo = new THREE.BoxGeometry(0.16,1,0.16); swGeo.translate(0,0.5,0);
+  var swLiq = new THREE.Mesh(swGeo, new THREE.MeshStandardMaterial({ color:0x38bdf8, roughness:0.3 })); swLiq.position.set(-75.5, 0.45, -52.15); g.add(swLiq);
+  D.utilDyn.softWaterLiq = swLiq;
   var wp = CY(g, 0.16, 0.16, 27, pipeMat, -102, 3.4, -54, 10); wp.rotation.z = Math.PI/2; wp.position.set(-88.5, 3.56, -54); // 区内母管
-  var wpIn = CY(g, 0.18, 0.18, 12, pipeMat, -84, 2.6, -44.5, 10); wpIn.rotation.x = Math.PI/2; wpIn.position.set(-84, 2.78, -50.5); // 产水管向南进厂房
+  var wpIn = CY(g, 0.18, 0.18, 12, D.utilDyn.roFlowMat, -84, 2.6, -44.5, 10); wpIn.rotation.x = Math.PI/2; wpIn.position.set(-84, 2.78, -50.5); // 产水管向南进厂房（R2：RO 运行时显水蓝流动）
   hitbox(g, 36, 9, 21, -91, 0, -54, { kind:"zone", id:"water" });
 
   /* ---------- 空压站（空压机 ×2 / 冷干机 / 储气罐） ---------- */
   B(g, 22, 0.25, 19, CONC, -58, 0, -54).castShadow = false;
+  D.utilDyn.airComps = [];
   [-56.5, -51.5].forEach(function(cz, ci){
-    B(g, 3.4, 2.1, 2.6, M(0xe8b13c,0.55,0.15), -63, 0.25, cz);                    // 螺杆空压机箱体（黄）
+    var compBox = B(g, 3.4, 2.1, 2.6, M(0xe8b13c,0.55,0.15), -63, 0.25, cz);                    // 螺杆空压机箱体（黄）
+    /* R2 空压机状态灯：运行绿/停机灰，机组运行时箱体轻微振动（updateScene 按 UTIL.airRunning 驱动） */
+    var acLampMat = new THREE.MeshStandardMaterial({ color:0x2c3430, emissive:0x8b9a92, emissiveIntensity:0.4, roughness:0.4 });
+    var acLamp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), acLampMat); acLamp.position.set(-61.2, 2.62, cz); g.add(acLamp);
+    D.utilDyn.airComps.push({ box:compBox, basePosY:compBox.position.y, lampMat:acLampMat });
     B(g, 3.0, 0.5, 2.2, DARK, -63, 2.35, cz).castShadow = false;
     var cmotor = CY(g, 0.5, 0.5, 1.7, DARKSTEEL, -63, 2.85, cz, 14); cmotor.rotation.z = Math.PI/2; cmotor.position.set(-63, 3.32, cz); // 顶部电机
     var fan = new THREE.Mesh(new THREE.CircleGeometry(0.62, 20), M(0x23272b,0.9,0));
@@ -2433,6 +2625,7 @@ function buildUtilities(){
   });
   B(g, 2.0, 2.4, 1.8, MACH, -57.5, 0.25, -59);                                    // 冷干机
   var ag2 = gaugeMesh(0.24); ag2.position.set(-57.5, 2.0, -58.05); g.add(ag2);
+  D.utilDyn.airGauge = ag2;   /* R2：冷干机压力表复用为储气压力表，表针由 UTIL.airPressure 驱动 */
   /* 后处理过滤组（扩容细化）：三级过滤罐（粗/精/除菌）串联在冷干机后 */
   [-59.5, -57.5, -55.5].forEach(function(fx2, fi2){
     CY(g, 0.42, 0.42, 1.7, M([0x8a94a6,0x5b8dd9,0x2fbf8f][fi2],0.5,0.3), fx2, 0.25, -49.3, 12);
@@ -2454,13 +2647,21 @@ function buildUtilities(){
   CY(g, 0.8, 0.8, 1.6, DARK, 5.2, 2.8, -54, 16).rotation.z = Math.PI/2;            // 燃烧机
   var bfan = new THREE.Mesh(new THREE.CircleGeometry(0.55, 18), DARKSTEEL);
   bfan.position.set(6.05, 3.6, -54); bfan.rotation.y = Math.PI/2; g.add(bfan);
+  /* R2 炉膛火焰：燃烧机口的火焰盘，大小/亮度随 UTIL.steamLoad（大火冲天 ↔ 保温小火 ↔ 熄火只剩底色） */
+  var flameMat = new THREE.MeshStandardMaterial({ color:0xff7b24, emissive:0xff5a00, emissiveIntensity:0.4, roughness:0.6 });
+  var flame = new THREE.Mesh(new THREE.CircleGeometry(0.42, 18), flameMat);
+  flame.position.set(6.14, 3.6, -54); flame.rotation.y = Math.PI/2; g.add(flame);
+  D.utilDyn.flame = flame; D.utilDyn.flameMat = flameMat;
   var drum = CY(g, 0.62, 0.62, 2.6, STEEL, 0, 5.7, -54, 16); drum.rotation.z = Math.PI/2; drum.position.set(0, 6.25, -54); // 汽包（骑在锅炉顶部）
   CY(g, 0.2, 0.2, 1.2, M(0xd9c9a8,0.7,0.1), 0, 6.8, -54, 10);                     // 汽包 → 蒸汽总管立管
   var bg1 = gaugeMesh(0.4); bg1.position.set(-3.4, 4.6, -51.7); g.add(bg1);
+  D.utilDyn.boilerGauge = bg1;   /* R2：锅炉压力表与分汽缸表同源 UTIL.steamPressure */
   handwheel(g, -4.6, 3.4, -51.8, 0.4, 0); handwheel(g, 3.8, 2.2, -51.9, 0.34, 0);
   /* 分汽缸（扩容细化）：蒸汽经分汽缸稳压后分两路去 UHT 与 CIP */
   var sep = CY(g, 0.62, 0.62, 4.2, M(0xd9c9a8,0.7,0.1), 8.5, 2.2, -51, 14); sep.rotation.z = Math.PI/2; sep.position.set(8.5, 2.85, -51);
   [-1.4, 1.4].forEach(function(sx2){ CY(g, 0.11, 0.11, 1.6, M(0xd9c9a8,0.7,0.1), 8.5+sx2, 3.45, -51, 8); });
+  var sepGauge = gaugeMesh(0.3); sepGauge.position.set(8.5, 4.15, -51); g.add(sepGauge);
+  D.utilDyn.sepGauge = sepGauge;   /* R2：分汽缸压力表，表针 = UTIL.steamPressure（与锅炉表/抽屉总览同源） */
   B(g, 0.5, 2.2, 0.5, DARKSTEEL, 6.8, 0.25, -51).castShadow = false; B(g, 0.5, 2.2, 0.5, DARKSTEEL, 10.2, 0.25, -51).castShadow = false;
   controlCabinet(g, -7.6, 0.25, -49.5, 0, 0xf87171); alarmTower(g, -7.6, 2.55, -49.5);
   /* 烟囱：红白分段 + 航空障碍灯，顶部烟气粒子（updateScene 驱动） */
@@ -2489,20 +2690,30 @@ function buildUtilities(){
   B(g, 36, 8.6, 17, coldMat, 82, 0.25, -54);
   for(var rb=-16.5; rb<=16.5; rb+=2.36) B(g, 0.16, 8.6, 17.06, M(0xaebec4,0.65,0.2), 82+rb, 0.25, -54).castShadow = false; // 库板竖肋
   B(g, 37.5, 0.5, 18.5, DARKSTEEL, 82, 8.85, -54);                                 // 库顶
+  D.utilDyn.coldDoors = [];
   [74, 90].forEach(function(dx){                                                  // 保温门 ×2（南面）
-    B(g, 4.6, 5.2, 0.25, M(0x8fa5ad,0.5,0.3), dx, 0.25, -45.35);
+    var cdoor = B(g, 4.6, 5.2, 0.25, M(0x8fa5ad,0.5,0.3), dx, 0.25, -45.35);
+    D.utilDyn.coldDoors.push({ mesh:cdoor, baseX:dx, dir: dx < 82 ? -1 : 1 });   /* R2：库门按 UTIL.coldDoor 向两侧滑开（与制冷/出入库节奏大致同步） */
     B(g, 4.9, 0.3, 0.7, DARK, dx, 0.25, -45.1).castShadow = false;
     CY(g, 0.07, 0.07, 1.4, DARKSTEEL, dx+1.7, 2.2, -45.15, 8).castShadow = false;
   });
   B(g, 20, 0.18, 3.2, DARKSTEEL, 82, 5.9, -44.2).castShadow = false;              // 门楣雨棚
   var tempPlate = nameplateMesh("库内 −22℃", "COLD STORE · 低温周转", 3.4);
   tempPlate.position.set(82, 7.3, -45.32); g.add(tempPlate);
-  [70, 82, 94].forEach(function(ux){                                              // 制冷机组 ×3（库房北侧）：箱体 + 风机 + 冷媒管
+  D.utilDyn.coldUnits = [];
+  [70, 82, 94].forEach(function(ux, ui){                                              // 制冷机组 ×3（库房北侧）：箱体 + 风机 + 冷媒管
     B(g, 3.4, 2.3, 1.6, MACH, ux, 0.25, -64.5);
     var ufan = new THREE.Mesh(new THREE.CircleGeometry(0.78, 20), M(0x23272b,0.9,0));
     ufan.position.set(ux, 1.45, -65.32); ufan.rotation.y = Math.PI; g.add(ufan);
     var uring = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.06, 6, 22), DARKSTEEL);
     uring.position.set(ux, 1.45, -65.33); g.add(uring);
+    /* R2 制冷机组：风机叶轮（运行旋转）+ 状态灯，启停台数 = UTIL.coldUnitsRunning */
+    var spinner = new THREE.Group(); spinner.position.set(ux, 1.45, -65.36); g.add(spinner);
+    B(spinner, 1.35, 0.15, 0.04, DARKSTEEL, 0, -0.075, 0).castShadow = false;
+    var spin2 = B(spinner, 0.15, 1.35, 0.04, DARKSTEEL, -0.075, -0.675, 0); spin2.castShadow = false;
+    var cuLampMat = new THREE.MeshStandardMaterial({ color:0x2c3430, emissive:0x8b9a92, emissiveIntensity:0.4, roughness:0.4 });
+    var cuLamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), cuLampMat); cuLamp.position.set(ux+1.35, 2.75, -64.5); g.add(cuLamp);
+    D.utilDyn.coldUnits.push({ spinner:spinner, lampMat:cuLampMat });
     CY(g, 0.09, 0.09, 2.2, pipeMat, ux+1.2, 2.55, -63.6, 8).rotation.x = 0.7;
   });
   B(g, 3.4, 0.18, 2.6, WOOD, 68, 0.25, -42.5);                                     // 门前待转托盘 + 箱垛
@@ -2768,16 +2979,16 @@ function updateWorker(w, dt){
   w.armL.rotation.x = -sw * 0.38; w.armR.rotation.x = sw * 0.38;
   w.body.position.y = Math.abs(Math.cos(w.phase)) * 0.045;
 }
-function updateAgv(dt, t){
+function updateAgv(dt, t, active){
   var a = D.agv; if(!a) return;
   a.lidar.rotation.y += dt * 7;
   a.beaconMat.emissiveIntensity = 1.1 + Math.sin(t*6)*0.9; // 警示灯呼吸闪烁
-  if(a.wait > 0){ a.wait -= dt; return; }
+  if(a.wait > 0){ a.wait -= dt; if(!active && a.wait <= 0) a.wait = 1.2; return; }   /* R2：无入库活动时在停靠点待机 */
   var target = a.wps[a.seg];
   var dx = target.x - a.g.position.x, dz = target.z - a.g.position.z;
   var dist = Math.hypot(dx, dz);
   if(dist < 0.4){
-    if(a.pauseAt[a.seg]){ a.wait = 1.8; a.load.visible = !a.load.visible; }
+    if(a.pauseAt[a.seg]){ a.wait = 1.8; if(active) a.load.visible = !a.load.visible; }
     a.seg = (a.seg+1) % a.wps.length;
     return;
   }
@@ -3079,9 +3290,10 @@ function updateScene(dt, t){
       al.mesh.scale.y = Math.max(0.02, f * (CONFIG.asepticHeight*0.82 - 1.4));
     });
   })();
+  /* R2 原料罐区视管：6 罐同源 RAW.level（供应消耗缓降、罐车卸料回升），只留小幅罐间差，不再各自正弦乱跳 */
   D.sightLiquids.forEach(function(sl){
-    var lvl = 0.55 + 0.33*Math.sin(t*0.1 + sl.phase);
-    sl.mesh.scale.y = Math.max(0.6, lvl*10.2);   /* 液柱高度随扩容后的高罐视管放大 */
+    var lvl = RAW.level + 0.025*Math.sin(t*0.4 + sl.phase);
+    sl.mesh.scale.y = Math.max(0.4, Math.min(0.98, lvl)*10.2);
   });
   setLamp(D.stLamp.supply, stationStatus(stations[0]).key, t);
   setLamp(D.stLamp.blend, stationStatus(stations[1]).key, t);
@@ -3098,12 +3310,26 @@ function updateScene(dt, t){
     }
     pos.needsUpdate = true;
   }
-  /* --- warehouse fill（视觉分档：基数 + 产量/whBottlesPerCase，上限 whExtraCases，参数在 CONFIG） --- */
-  D.whTarget = CONFIG.whBaseCases + Math.min(CONFIG.whExtraCases, Math.floor(S.finished/CONFIG.whBottlesPerCase));
-  if(D.whCases) D.whCases.count = D.whTarget;
-  if(D.whTape) D.whTape.count = D.whTarget;
-  /* --- crane --- */
-  if(D.crane){
+  /* --- R2 仓库 FIFO 窗口渲染：库存箱占据箱位环上的 [WH.head, WH.head+stock) 窗口——
+   * 入库在队尾追加、出库从队头（最早批次侧）清空，先进先出肉眼可辨；stock/head 变化时才重排实例矩阵 --- */
+  D.whTarget = WH.stockCases;
+  if(D.whCases && D.whCasePos.length){
+    var whKey = WH.stockCases + "|" + WH.head;
+    if(D.whSyncKey !== whKey){
+      D.whSyncKey = whKey;
+      for(var wi=0; wi<WH.stockCases; wi++){
+        var wp2 = D.whCasePos[(WH.head + wi) % D.whCasePos.length];
+        dummy3.position.set(wp2[0], wp2[1], wp2[2]); dummy3.rotation.set(0,0,0); dummy3.scale.set(1,1,1); dummy3.updateMatrix();
+        D.whCases.setMatrixAt(wi, dummy3.matrix);
+        var wt2 = D.whTapePos[(WH.head + wi) % D.whTapePos.length];
+        if(wt2){ dummy3.position.set(wt2[0], wt2[1], wt2[2]); dummy3.updateMatrix(); D.whTape.setMatrixAt(wi, dummy3.matrix); }
+      }
+      D.whCases.count = WH.stockCases; D.whCases.instanceMatrix.needsUpdate = true;
+      if(D.whTape){ D.whTape.count = WH.stockCases; D.whTape.instanceMatrix.needsUpdate = true; }
+    }
+  }
+  /* --- crane（R2 门控：仓库有出入库活动时才作业，无活动时停在原地待机） --- */
+  if(D.crane && (WH.sinceProduce < 3 || SHIP.active)){
     D.crane.bridge.position.x = Math.sin(t*0.06)*64;
     var tz2 = Math.sin(t*0.11)*22;
     D.crane.trolley.position.z = tz2;
@@ -3114,8 +3340,9 @@ function updateScene(dt, t){
     D.crane.cable.position.z = tz2;
   }
   /* roof / wall / rack fading is handled by the camera occlusion system (updateCamera) */
-  /* --- forklifts --- */
-  D.forklifts.forEach(function(fl){ updateForklift(fl, dt); });
+  /* --- forklifts（R2 门控：叉车 1 跟入库/波次活动，叉车 2 只跟发货波次；无活动时到停靠点待机，不无故忙碌） --- */
+  var whActive = WH.sinceProduce < 2.5 || SHIP.active;
+  D.forklifts.forEach(function(fl, fi){ updateForklift(fl, dt, fi === 0 ? whActive : SHIP.active); });
   /* --- delivery truck --- */
   updateTruck(dt);
   /* --- V5 CIP 站可视状态：完全派生自内核（杀菌 cipLeft / 换型 / CIP 开关），本站不存业务状态 --- */
@@ -3128,31 +3355,73 @@ function updateScene(dt, t){
       L2.mesh.scale.y += (target - L2.mesh.scale.y)*Math.min(1, dt*3);
     });
   }
-  /* --- V5 巡检工人 + AGV 动线 --- */
+  /* --- V5 巡检工人 + AGV 动线（R2：AGV 只在有入库活动时送托盘，无产出时停靠待机） --- */
   D.workers.forEach(function(w){ updateWorker(w, dt); });
-  updateAgv(dt, t);
-  /* --- V5 锅炉烟囱烟气（常开，随风轻摆） --- */
+  updateAgv(dt, t, WH.sinceProduce < 2.5 || SHIP.active);
+  /* --- R2 锅炉烟气：量与升速随 UTIL.steamLoad（满负荷浓烟快升、待机保温淡烟、停机近无烟） --- */
   if(D.boilerSmoke){
+    var smokeT = 0.05 + UTIL.steamLoad*0.40;
+    D.boilerSmoke.material.opacity += (smokeT - D.boilerSmoke.material.opacity)*Math.min(1, dt*2);
     var bpos = D.boilerSmoke.geometry.attributes.position;
     for(var bi2=0; bi2<D.boilerSmokePos.length; bi2++){
       var bp = D.boilerSmokePos[bi2];
-      var bcyc = (t*0.09 + bp.off) % 1;
+      var bcyc = (t*(0.045 + UTIL.steamLoad*0.085) + bp.off) % 1;
       bpos.setXYZ(bi2, 13 + bp.x + bcyc*bcyc*7 + Math.sin(t*0.5+bi2)*0.5, 23.8 + bcyc*9, -58 + bp.z + Math.cos(t*0.4+bi2)*0.4*bcyc);
     }
     bpos.needsUpdate = true;
   }
+  /* --- R2 公用工程视觉驱动（只读 UTIL/RAW/WH/SHIP）：锅炉火焰+双表针 / 空压灯+振动+储气表 / 水处理液位+RO 灯管 / 冷库机组+库门 / 罐车与卸料灯 --- */
+  (function(){
+    var U = D.utilDyn; if(!U) return;
+    if(U.flameMat){
+      U.flameMat.emissiveIntensity = 0.25 + UTIL.steamLoad*2.8 + Math.sin(t*11)*0.25*UTIL.steamLoad;
+      if(U.flame){ var fs = 0.55 + UTIL.steamLoad*0.85 + Math.sin(t*13)*0.07; U.flame.scale.set(fs, fs, fs); }
+    }
+    var steamNeedle = -0.85 + Math.max(0, Math.min(1, (UTIL.steamPressure - 0.78)/0.34))*1.7;
+    if(U.sepGauge && U.sepGauge.userData.needle) U.sepGauge.userData.needle.rotation.z = steamNeedle;
+    if(U.boilerGauge && U.boilerGauge.userData.needle) U.boilerGauge.userData.needle.rotation.z = steamNeedle;
+    if(U.airComps) U.airComps.forEach(function(ac, i){
+      var run = i < UTIL.airRunning;
+      ac.lampMat.emissive.set(run ? 0x2fbf8f : 0x8b9a92); ac.lampMat.emissiveIntensity = run ? 1.7 : 0.35;
+      ac.box.position.y = ac.basePosY + (run ? Math.sin(t*43 + i*2.1)*0.028 : 0);   /* 运行振动（排气感来自灯闪+振动，不另加粒子） */
+    });
+    if(U.airGauge && U.airGauge.userData.needle) U.airGauge.userData.needle.rotation.z = -0.85 + Math.max(0, Math.min(1, (UTIL.airPressure - 0.60)/0.30))*1.7;
+    if(U.rawWaterLiq) U.rawWaterLiq.scale.y = Math.max(0.1, UTIL.rawWaterLevel*5.2);
+    if(U.softWaterLiq) U.softWaterLiq.scale.y = Math.max(0.1, UTIL.softWaterLevel*3.1);
+    if(U.roLampMat){ U.roLampMat.emissive.set(UTIL.roRunning ? 0x2fbf8f : 0x8b9a92); U.roLampMat.emissiveIntensity = UTIL.roRunning ? 1.7 : 0.35; }
+    if(U.roFlowMat){
+      if(UTIL.roRunning){ U.roFlowMat.color.set(0x38bdf8); U.roFlowMat.emissive.set(0x38bdf8); U.roFlowMat.emissiveIntensity = 0.9 + Math.sin(t*8)*0.35; U.roFlowMat.opacity = 0.95; }
+      else { U.roFlowMat.color.set(0x707880); U.roFlowMat.emissive.set(0x000000); U.roFlowMat.opacity = 0.55; }
+    }
+    if(U.coldUnits) U.coldUnits.forEach(function(cu, i){
+      var run = i < UTIL.coldUnitsRunning;
+      cu.lampMat.emissive.set(run ? 0x60a5fa : 0x8b9a92); cu.lampMat.emissiveIntensity = run ? 1.6 : 0.35;
+      if(run) cu.spinner.rotation.z -= dt*7;
+    });
+    var doorT = (UTIL.coldRunning && (WH.sinceProduce < 1.5 || SHIP.active)) ? 1 : 0;   /* 库门与制冷+出入库节奏大致同步 */
+    UTIL.coldDoor += (doorT - UTIL.coldDoor) * Math.min(1, dt*2);
+    if(U.coldDoors) U.coldDoors.forEach(function(cd){ cd.mesh.position.x = cd.baseX + cd.dir * UTIL.coldDoor * 2.1; });
+    if(D.rawTanker){
+      var tz3 = RAW.tanker === "unloading" ? 34 : 150;
+      D.rawTanker.position.z += (tz3 - D.rawTanker.position.z) * Math.min(1, dt*0.7);
+    }
+    if(U.unloadLampMat){
+      var unl = RAW.tanker === "unloading";
+      U.unloadLampMat.emissive.set(unl ? 0x2fbf8f : 0x8b9a92);
+      U.unloadLampMat.emissiveIntensity = unl ? 1.5 + Math.sin(t*7)*0.6 : 0.35;
+    }
+  })();
 }
-function updateForklift(fl, dt){
+function updateForklift(fl, dt, active){
   fl.fork.position.y += (fl.forkTarget - fl.fork.position.y)*Math.min(1, dt*3);
-  if(fl.wait > 0){ fl.wait -= dt; return; }
+  if(fl.wait > 0){ fl.wait -= dt; if(!active && fl.wait <= 0) fl.wait = 0.8; return; }   /* R2：无活动时在停靠点待机，不再循环空跑 */
   var target = fl.wps[fl.seg];
   var dx = target.x - fl.g.position.x, dz = target.z - fl.g.position.z;
   var dist = Math.hypot(dx, dz);
   if(dist < 0.5){
     if(fl.pauseAt[fl.seg]){
       fl.wait = 1.5;
-      fl.carried.visible = !fl.carried.visible;
-      fl.forkTarget = fl.carried.visible ? 1.0 : 0.1;
+      if(active){ fl.carried.visible = !fl.carried.visible; fl.forkTarget = fl.carried.visible ? 1.0 : 0.1; }   /* 装卸动作只在真有出入库活动时发生 */
     }
     fl.seg = (fl.seg+1) % fl.wps.length;
     return;
@@ -3165,17 +3434,32 @@ function updateForklift(fl, dt){
   fl.g.position.z += Math.cos(fl.g.rotation.y) * sp * dt;
 }
 function updateTruck(dt){
+  /* R2 发货波次驱动：内核 SHIP 只管箱数守恒，本函数管卡车进出场动画状态机（渲染侧 rstate）。
+   * waiting 空车在 8 号位待命（安静）→ SHIP.active 时 loading（车厢箱数随装车进度渐增）→ 装满后 departing 离场
+   * → away 等待 → arriving 新车进场 → 回 waiting。无波次时永远停在 waiting，不乱跑。 */
   var tr = D.truck; if(!tr) return;
-  tr.t -= dt;
-  if(tr.state === "away"){ tr.g.position.z = 100; if(tr.t<=0){ tr.state="in"; } }
-  else if(tr.state === "in"){
-    tr.g.position.z = Math.max(39.4, tr.g.position.z - dt*8);
-    if(tr.g.position.z <= 39.4){ tr.state="dwell"; tr.t = 16; }
-  }
-  else if(tr.state === "dwell"){ if(tr.t<=0){ tr.state="out"; } }
-  else if(tr.state === "out"){
+  if(tr.rstate === undefined){ tr.rstate = "waiting"; tr.rt = 0; }
+  if(tr.rstate === "waiting"){
+    tr.g.position.set(tr.bayX, 0, 39.4);
+    if(SHIP.active) tr.rstate = "loading";
+  } else if(tr.rstate === "loading"){
+    tr.g.position.set(tr.bayX, 0, 39.4);
+    if(!SHIP.active) tr.rstate = "departing";
+  } else if(tr.rstate === "departing"){
     tr.g.position.z += dt*11;
-    if(tr.g.position.z >= 100){ tr.state="away"; tr.t = 9; }
+    if(tr.g.position.z >= 100){ tr.rstate = "away"; tr.rt = 7; }
+  } else if(tr.rstate === "away"){
+    tr.g.position.z = 100; tr.rt -= dt;
+    if(tr.rt <= 0) tr.rstate = "arriving";
+  } else if(tr.rstate === "arriving"){
+    tr.g.position.z = Math.max(39.4, tr.g.position.z - dt*8);
+    if(tr.g.position.z <= 39.4) tr.rstate = "waiting";
+  }
+  if(tr.loadMeshes){
+    var frac = SHIP.targetCases > 0 ? SHIP.loadCases/SHIP.targetCases : 0;
+    var showN = (tr.rstate === "loading") ? Math.round(frac*tr.loadMeshes.length)
+              : (tr.rstate === "departing" || tr.rstate === "away") ? tr.loadMeshes.length : 0;
+    tr.loadMeshes.forEach(function(m, i){ m.visible = i < showN; });
   }
 }
 
@@ -3654,6 +3938,11 @@ function renderInfo(){
       rows += rowHtml("CIP 清洗", S.cipOn ? "已开启（每 "+CONFIG.cipIntervalMinutes+" 分钟清洗 "+CONFIG.cipDurationMinutes+" 分钟）" : "未开启");
     }
     if(s2.id==="blend"){ rows += rowHtml("调配罐", S.tanks+" 台启用"); rows += rowHtml("当前批次", "#"+BP.batch+" · "+curBlendStage().name+"（点任一调配罐看批次卡）"); }
+    if(s2.id==="supply"){
+      rows += rowHtml("原料罐区液位", Math.round(RAW.level*100)+"%（低位阈值 "+Math.round(CONFIG.r2.rawRefillThreshold*100)+"%）");
+      rows += rowHtml("罐车补料", RAW.tanker==="unloading" ? "卸料中 · 余 "+Math.ceil(RAW.tankerLeft)+" 分（泵台灯亮）" : RAW.tanker==="departed" ? "罐车离场中" : "待命 · 累计到场 "+RAW.arrivals+" 次");
+      rows += rowHtml("水处理联动", UTIL.roRunning ? "RO 产水中 · 软水 "+Math.round(UTIL.softWaterLevel*100)+"%" : "RO 待机 · 软水 "+Math.round(UTIL.softWaterLevel*100)+"%");
+    }
     $("infoRows").innerHTML = rows;
     if(s2.faultLeft>0 || (s2.id==="sterilize" && s2.cipLeft>0)){
       $("infoBtns").innerHTML = '<button class="btn" id="infoRepair" style="border-color:var(--red);color:var(--red)">🔧 立即维修 / 疏通</button>';
@@ -3667,19 +3956,22 @@ function renderInfo(){
       rowHtml("货架", "3 排 × 3 层") +
       rowHtml("分拣复核", "复核工位 + 扫码拱门（货架西侧）") +
       rowHtml("缠绕", "托盘缠绕膜机（出库前缠膜）") +
-      rowHtml("已存箱数", fmt(D.whTarget)+" 箱") +
+      rowHtml("已存箱数", fmt(WH.stockCases)+" 箱（FIFO 先进先出）") +
+      rowHtml("累计入库 / 出库", fmt(WH.inCases)+" 箱 / "+fmt(WH.outCases)+" 箱") +
+      rowHtml("已发车次", SHIP.trips+" 车"+(SHIP.active ? " · 正在装车 "+Math.floor(SHIP.loadCases)+"/"+SHIP.targetCases+" 箱" : "")) +
       rowHtml("全厂累计成品", fmt(S.finished)+" 瓶") +
-      rowHtml("搬运", "2 台叉车循环出入库");
+      rowHtml("搬运", "叉车/AGV 随出入库活动启停，无产出时待机");
     $("infoBtns").innerHTML = "";
   } else if(sel.kind === "zone" && sel.id === "dock"){
-    var tr = D.truck;
-    var tstat = !tr ? "—" : tr.state==="dwell" ? "卡车装货中" : tr.state==="in" ? "卡车倒车入库中" : tr.state==="out" ? "卡车离场中" : "等待下一辆卡车";
+    var tstat = dockStatusText();
     $("infoTitle").textContent = "装卸月台";
     $("infoStatus").textContent = "● " + tstat;
     $("infoStatus").style.color = STATUS_COLORS.run;
     $("infoRows").innerHTML =
-      rowHtml("月台位", "3 个（2 台常驻装货 + 1 台循环 · 车距 30 · 68 号位带伸缩装车带）") +
+      rowHtml("月台位", "3 个（2 台常驻装货 + 1 台波次循环 · 车距 30 · 68 号位带伸缩装车带）") +
       rowHtml("当前状态", tstat) +
+      rowHtml("发货波次", "订单每推进 "+fmt(CONFIG.r2.shipWaveOrderStep)+" 瓶形成一波 · 每车 "+CONFIG.r2.shipTruckCases+" 箱") +
+      rowHtml("累计发运", SHIP.trips+" 车 · "+fmt(WH.outCases)+" 箱（库存 "+fmt(WH.stockCases)+" 箱）") +
       rowHtml("全厂累计成品", fmt(S.finished)+" 瓶");
     $("infoBtns").innerHTML = "";
   } else if(sel.kind === "zone" && sel.id === "cip"){
@@ -3701,24 +3993,30 @@ function renderInfo(){
     $("infoStatus").style.color = STATUS_COLORS.run;
     $("infoRows").innerHTML =
       rowHtml("流程", "原水罐 → 砂/碳过滤 → RO 反渗透 → 软水罐") +
-      rowHtml("产水去向", "调配用水 / CIP 热水 / 锅炉补水") +
-      rowHtml("原水罐液位", "视管实时显示（西侧罐群）");
+      rowHtml("RO 状态", UTIL.roRunning ? "产水中（软水位不满或调配进水）" : "待机（软水位充足）") +
+      rowHtml("原水罐液位", Math.round(UTIL.rawWaterLevel*100)+"%（RO 产水消耗）") +
+      rowHtml("软水罐液位", Math.round(UTIL.softWaterLevel*100)+"%（调配进水/定容消耗）") +
+      rowHtml("产水去向", "调配用水 / CIP 热水 / 锅炉补水");
     $("infoBtns").innerHTML = "";
   } else if(sel.kind === "zone" && sel.id === "air"){
     $("infoTitle").textContent = "空压站 · 公用工程";
-    $("infoStatus").textContent = "● 压缩空气供应中";
+    $("infoStatus").textContent = "● " + (UTIL.airRunning > 0 ? "运行 "+UTIL.airRunning+" 台 · 储气 "+UTIL.airPressure.toFixed(2)+" MPa" : "待机 · 储气 "+UTIL.airPressure.toFixed(2)+" MPa");
     $("infoStatus").style.color = STATUS_COLORS.run;
     $("infoRows").innerHTML =
-      rowHtml("机组", "螺杆空压机 ×2 + 冷干机") +
-      rowHtml("储气", "立式储气罐 ×1 · 稳压供气") +
+      rowHtml("机组", "螺杆空压机 ×"+CONFIG.r2.airCompCount+" + 冷干机（台数随开线数）") +
+      rowHtml("运行台数", UTIL.airRunning+" 台"+(UTIL.airRunning >= 2 ? "（并联供气）" : UTIL.airRunning === 1 ? "（单台供气）" : "（停机）")) +
+      rowHtml("储气压力", UTIL.airPressure.toFixed(2)+" MPa（带 "+CONFIG.r2.airPressureMPa[0]+"–"+CONFIG.r2.airPressureMPa[1]+"）") +
       rowHtml("用气点", "吹瓶 / 气动阀 / 贴标机气缸");
     $("infoBtns").innerHTML = "";
   } else if(sel.kind === "zone" && sel.id === "boiler"){
     $("infoTitle").textContent = "锅炉 · 蒸汽站";
-    $("infoStatus").textContent = "● " + (S.running && !S.changeover ? "蒸汽供应中（UHT 加热）" : "待机保压");
+    $("infoStatus").textContent = "● " + (UTIL.steamLoad > 0.25 ? "蒸汽供应中（UHT 加热）" : "待机保压 · 小火保温");
     $("infoStatus").style.color = STATUS_COLORS.run;
     $("infoRows").innerHTML =
       rowHtml("设备", "卧式锅炉 ×1 + 汽包 + 23 米烟囱") +
+      rowHtml("蒸汽负荷", Math.round(UTIL.steamLoad*100)+"%（随杀菌实际用汽）") +
+      rowHtml("总管压力", UTIL.steamPressure.toFixed(2)+" MPa（分汽缸表同源）") +
+      rowHtml("烟气", UTIL.steamLoad > 0.6 ? "浓（满负荷燃烧）" : UTIL.steamLoad > 0.15 ? "中等" : "淡（小火/待机）") +
       rowHtml("蒸汽总管", "沿北墙上方 → 南下至 UHT 杀菌区") +
       rowHtml("安全", "房前黄黑警戒围栏 + 消防点位");
     $("infoBtns").innerHTML = "";
@@ -3734,11 +4032,13 @@ function renderInfo(){
     $("infoBtns").innerHTML = "";
   } else if(sel.kind === "zone" && sel.id === "coldstore"){
     $("infoTitle").textContent = "冷库 · 低温周转";
-    $("infoStatus").textContent = "● 库内 −22℃ · 制冷机组运行";
+    $("infoStatus").textContent = "● 库内 "+UTIL.coldTemp.toFixed(1)+"℃ · " + (UTIL.coldRunning ? "制冷运行 "+UTIL.coldUnitsRunning+" 台" : "停机保温中");
     $("infoStatus").style.color = STATUS_COLORS.run;
     $("infoRows").innerHTML =
-      rowHtml("库房", "保温库板房 · 双保温门") +
-      rowHtml("制冷机组", "×3（北侧）· 冷媒管入户") +
+      rowHtml("库房", "保温库板房 · 双保温门（随制冷/出入库开合）") +
+      rowHtml("制冷机组", "×3（北侧）· 当前运行 "+UTIL.coldUnitsRunning+" 台 · 启停循环 "+CONFIG.r2.coldOnMin+" 开 / "+CONFIG.r2.coldOffMin+" 停") +
+      rowHtml("库温", UTIL.coldTemp.toFixed(1)+"℃（运行降温 / 停机回温）") +
+      rowHtml("联动", "成品库存 "+WH.stockCases+" 箱 · 入库活跃时停机段缩短") +
       rowHtml("用途", "包材与成品低温周转");
     $("infoBtns").innerHTML = "";
   }
@@ -3944,6 +4244,14 @@ $("resetBtn").addEventListener("click", function(){
   stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
   lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.lastMove=0; });
   ASEPTIC.stock = CONFIG.asepticStockInit; ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
+  /* R2 联动状态全量复位（与 S/账本同口径回初值，货架 FIFO 窗口随 WH 复位自动重排） */
+  UTIL.steamLoad = 0; UTIL.steamPressure = 0.95; UTIL.airRunning = 0; UTIL.airPressure = 0.72; UTIL.roRunning = false;
+  UTIL.rawWaterLevel = CONFIG.r2.rawWaterInit; UTIL.softWaterLevel = CONFIG.r2.softWaterInit;
+  UTIL.coldRunning = false; UTIL.coldUnitsRunning = 1; UTIL.coldTemp = -21.5; UTIL.coldDoor = 0;
+  RAW.level = CONFIG.r2.rawTankInit; RAW.tanker = "idle"; RAW.tankerLeft = 0; RAW.arrivals = 0;
+  WH.inCases = 0; WH.outCases = 0; WH.stockCases = CONFIG.whBaseCases; WH.producedCases = 0; WH.head = 0; WH.sinceProduce = 999;
+  SHIP.active = false; SHIP.loadCases = 0; SHIP.targetCases = 0; SHIP.loadAcc = 0; SHIP.trips = 0; SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;
+  if(D.truck){ D.truck.rstate = "waiting"; D.truck.rt = 0; }
   applyProduct(PRODUCTS[0]);
   $("log").innerHTML = "";
   log("工厂已重置，回到第 1 天 08:00 待机状态。");
