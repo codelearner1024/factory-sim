@@ -37,7 +37,7 @@ body{margin:0;padding:0;position:fixed;inset:0;width:100%;height:100%;height:100
 /* 可滚容器保留自身方向的原生滚动（抽屉/调度台纵滚、KPI 条横滚、控制条小屏纵滚），其余 chrome 一律 touch-action:none */
 .drawer-body,.dispatch,.control-bar{touch-action:pan-y}
 .kpi-strip{touch-action:pan-x}
-.topbar,.co-banner,.hint-chip,.info-card,.tour-cap,.modal-overlay,.console-show{touch-action:none}
+.topbar,.co-banner,.hint-chip,.info-card,.tour-cap,.modal-overlay,.panel-show,.show-stack{touch-action:none}
 body{background:var(--bg);color:var(--ink);font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer}
 .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
@@ -79,26 +79,35 @@ button{font-family:inherit;cursor:pointer}
 .co-banner .co-row .mono{color:var(--amber)}
 .co-prog{height:6px;background:rgba(255,255,255,.14);border-radius:99px;margin-top:7px;overflow:hidden}
 .co-prog i{display:block;height:100%;background:var(--amber);width:0%;transition:width .4s}
+/* R6 排空预约态：横幅转蓝边区分「预约中（生产不停）」与琥珀色「换型中（已停线）」 */
+.co-banner.reserved{border-color:var(--blue);background:rgba(10,32,54,.88)}
+.co-banner.reserved .co-row .mono{color:var(--blue)}
+.co-banner.reserved .co-prog i{background:var(--blue)}
+.res-cancel{display:none;margin-top:8px;border:1px solid var(--glass-line);background:rgba(255,255,255,.06);color:var(--ink);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700}
+.co-banner.reserved .res-cancel{display:inline-block}
 
 /* ---------- hint ---------- */
 .hint-chip{position:fixed;right:12px;bottom:86px;z-index:12;padding:7px 12px;border-radius:999px;font-size:11.5px;color:var(--muted);font-weight:600}
 
-/* ---------- console overall hide (this round) ----------
-   body.console-hidden hides BOTH the dispatch panel and the bottom control bar together:
-   opacity/visibility/transform transition for a smooth fade/slide, pointer-events:none so
-   the hidden panels leave no residue, take no space and never intercept canvas gestures.
-   Only the small #consoleShowBtn floating pill (bottom-right, clear of the control bar's
-   centre and of the move toggle inside it) stays. The move group's .move-collapsed state
-   and the dispatch .closed state live on their own elements and are untouched by this
-   body class, so restoring the console returns each to its pre-hide state. Logic:
-   setConsoleHidden in [M5] (window.__setConsoleHidden for debugging). Default: shown. */
+/* ---------- panel independent hide (R6 修正：控制台与调度台独立隐藏，不再关联) ----------
+   每块面板一个 body 类、一个隐藏入口、一个唤回钮，互不影响：
+   body.dispatch-hidden 只藏右侧调度台 #dispatch，唤回钮 #dispatchShowBtn；
+   body.control-hidden 只藏底部控制台 #controlBar，唤回钮 #consoleShowBtn（带状态点）。
+   两颗唤回钮同住右下角 .show-stack 纵向堆叠，各自按自己的 body 类显隐，全隐藏时两颗都在、
+   各唤各的，不存在“一唤全回”。隐藏 = opacity/visibility/transform 过渡 + pointer-events:none，
+   完全消失、不占位、不拦画布手势。调度台 .closed 折叠、移动组 .move-collapsed 折叠仍是各自
+   元素上的独立状态，本机制不碰，恢复时各回隐藏前状态。逻辑：setDispatchHidden /
+   setControlHidden in [M5]（window.__setDispatchHidden / __setControlHidden 可调试）。
+   旧 body.console-hidden 已废除（R6 前它把两块绑在一起，正是本轮要修的错误）。默认：全显示。 */
 .control-bar{transition:opacity .24s ease,transform .24s ease,visibility .24s ease}
 .dispatch{transition:opacity .24s ease,transform .24s ease,visibility .24s ease}
-body.console-hidden .control-bar{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-50%) translateY(18px)}
-body.console-hidden .dispatch{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(18px)}
-.console-show{position:fixed;right:14px;bottom:14px;z-index:26;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border-radius:999px;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13px;font-weight:800;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity .24s ease,transform .24s ease,visibility .24s ease;min-height:44px}
-body.console-hidden .console-show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
-.console-show:active{transform:scale(.96)}
+body.control-hidden .control-bar{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-50%) translateY(18px)}
+body.dispatch-hidden .dispatch{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(18px)}
+.show-stack{position:fixed;right:14px;bottom:14px;z-index:26;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
+.panel-show{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border-radius:999px;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13px;font-weight:800;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity .24s ease,transform .24s ease,visibility .24s ease;min-height:44px}
+.panel-show:active{transform:scale(.96)}
+body.dispatch-hidden .panel-show.dispatch-show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
+body.control-hidden .panel-show.console-show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
 /* R4 画质自动降级提示：平时隐藏，sampleFps 触发降级时出现（与帧率显示开关无关），带手动恢复钮 */
 .quality-notice{position:fixed;top:122px;left:50%;transform:translateX(-50%);z-index:17;padding:9px 12px;border-radius:12px;display:none;align-items:center;gap:10px;max-width:92vw;font-size:12.5px;font-weight:700}
 .quality-notice.show{display:flex}
@@ -295,7 +304,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 }
 @media (prefers-reduced-motion: reduce){
   .drawer{transition:none}
-  .control-bar,.dispatch,.console-show{transition:none}
+  .control-bar,.dispatch,.panel-show{transition:none}
   .build-loading .bl-dot{animation:none}
 }
 </style>
@@ -390,6 +399,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 <div class="co-banner" id="coBanner">
   <div class="co-row"><span id="coText">🔧 换型中</span><span class="mono" id="coLeft"></span></div>
   <div class="co-prog"><i id="coProg"></i></div>
+  <button class="res-cancel" id="resCancelBtn" title="取消排空换型预约，继续生产当前产品">取消预约</button>
 </div>
 
 <!-- ======= R4 画质降级提示（自动降级时出现，可手动恢复） ======= -->
@@ -414,9 +424,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 
 <!-- ======= DISPATCH PANEL ======= -->
 <aside class="dispatch glass" id="dispatch">
-  <h3><span>调度台</span><span class="dispatch-actions"><button class="dispatch-hide" id="dispatchHideBtn" title="隐藏控制台：调度台与底部控制条一起收起，只留右下角唤回钮" aria-label="隐藏控制台">✕ 隐藏</button><button id="dispatchToggle" aria-label="折叠">–</button></span></h3>
+  <h3><span>调度台</span><span class="dispatch-actions"><button class="dispatch-hide" id="dispatchHideBtn" title="只隐藏调度台（控制台不受影响），唤回钮在右下角" aria-label="隐藏调度台">✕ 隐藏</button><button id="dispatchToggle" aria-label="折叠">–</button></span></h3>
   <div class="body">
-    <div class="sec-label">产品（运行中切换 = 停线换型）</div>
+    <div class="sec-label">产品（运行中切换可选立即换型 / 排空后换型）</div>
     <div class="products" id="products"></div>
     <div class="sec-label">产线参数</div>
     <div class="ctl">
@@ -479,11 +489,14 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
   <div class="ops-hint">拖动旋转 · 滚轮缩放 · 右键平移 · ⬆⬇ 按钮（长按）或 W/S 键前后移动</div>
   <button class="btn" id="roofBtn">🏠 顶棚：自动</button>
   <button class="btn" id="resetBtn">↺ 重置</button>
-  <button class="btn panel-hide-btn" id="controlHideBtn" title="隐藏控制台：调度台与底部控制条一起收起，只留右下角唤回钮" aria-label="隐藏控制台">✕ 隐藏控制台</button>
+  <button class="btn panel-hide-btn" id="controlHideBtn" title="只隐藏控制台（调度台不受影响），唤回钮在右下角" aria-label="隐藏控制台">✕ 隐藏控制台</button>
 </div>
 
-<!-- ======= CONSOLE SHOW (唤回钮：控制台隐藏时才出现，右下角) ======= -->
-<button class="console-show" id="consoleShowBtn" title="显示控制台" aria-label="显示控制台"><span class="console-dot" id="consoleDot"></span>🎛 控制台<span class="console-status" id="consoleStatus">待机</span></button>
+<!-- ======= PANEL SHOW (唤回钮 · R6 独立：每块面板一颗，只在自己被隐藏时出现，右下角堆叠) ======= -->
+<div class="show-stack">
+  <button class="panel-show dispatch-show" id="dispatchShowBtn" title="显示调度台（只显示调度台）" aria-label="显示调度台">📋 调度台</button>
+  <button class="panel-show console-show" id="consoleShowBtn" title="显示控制台（只显示控制台）" aria-label="显示控制台"><span class="console-dot" id="consoleDot"></span>🎛 控制台<span class="console-status" id="consoleStatus">待机</span></button>
+</div>
 
 <!-- ======= DATA DRAWER ======= -->
 <aside class="drawer" id="drawer" aria-label="数据面板">
@@ -574,11 +587,12 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell"><div class="l">巡游解说改法</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">文案集中在 M4 的 TOUR_STOPS（u=曲线位置 0~1、dwell=停留秒数、title/text）。改文案只改该数组；改路线改 buildTour 的 pts/tgts 并同步核对 u 顺序。停留/触发逻辑在 updateCamera，字幕 DOM 是 #tourCap，跳过/退出按钮在 M5 绑定。</div></div>
       <div class="dcell"><div class="l">性能开关位置</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">预算全在 CONFIG.perf：像素比上限（桌面/移动）、LOD 距离与降频、降级阈值（阴影分级 R3 起在 CONFIG.light.shadowTiers，初始档桌面 high / 移动 R5 起为低端档 eco 512，参数组 CONFIG.perf.mobileLow）。移动端判定在 buildScene 内（isMobileGL / __perfTier）。真机读数在数据抽屉「真机性能」四格（R5）。帧率显示：顶栏「帧率」按钮，默认关，开启后读数写在按钮上；帧率持续低于阈值会自动逐级降质（像素比→关阴影，只降不升，逻辑在 loop 的 sampleFps）。瓶/箱/货架孔位/试剂瓶均为 InstancedMesh，勿改回逐个 Mesh。</div></div>
       <div class="dcell wide"><div class="l">字体 / 顶栏 / 建场时机（可验证性修复轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>字体加载方案 = 异步加载 + 系统回退（非自托管）</b>：Google Fonts 样式表改用 preload + onload 切 rel 异步引入（URL 带 display=swap），已移出加载关键路径；font-family 回退栈写清为 Noto Sans SC → PingFang SC / Hiragino Sans GB / Microsoft YaHei → system-ui，等宽为 JetBrains Mono → ui-monospace / SFMono / Menlo / Consolas。字体域名完全不可达时页面按系统字体直接渲染、数秒内可达 DOMContentLoaded，字体晚到只平滑替换字形；牌面 canvas 文字同样按该回退栈绘制。<b>顶栏小屏布局</b>：标题区 flex 可收缩、标题/副标题单行省略号截断，按钮组不收缩；≤900px 全面收紧内边距，≤560px 再收一档，≤420px 隐藏诊断用的「帧率」按钮（非关键按钮，≥421px 恢复）以保「数据」按钮与标题完整在视口内；底部控制条的分段控件（机位含「杀菌无菌区」、前进/后退、ops-hint）小屏允许换行、控制条仅纵向可滚且滚得到底，横向不溢出。<b>建场时机</b>：buildScene() 已移至 DOMContentLoaded 后经 rAF + setTimeout 异步执行（bootFactory，耗时打 console.info），建场期间显示「工厂搭建中…」加载态、建好自动移除，勿改回脚本尾部同步执行。</div></div>
-      <div class="dcell wide"><div class="l">控制台整体隐藏（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>实现位置</b>：隐藏入口 = 调度台标题栏的 #dispatchHideBtn（✕ 隐藏）与底部控制条末尾的 #controlHideBtn（✕ 隐藏控制台）；逻辑 = [M5] 调度台绑定旁的 setConsoleHidden（window.__setConsoleHidden 可调试切换），只切 body.console-hidden 一个类，CSS 据此把 #dispatch 与 #controlBar 一起淡出/滑出 + visibility:hidden + pointer-events:none（完全消失、不占位、不拦画布手势），样式段在 CSS 的「console overall hide」注释块。唤回 = 右下角浮钮 #consoleShowBtn（🎛 控制台，仅隐藏时可见可点），其状态点/文案 #consoleDot/#consoleStatus 由 renderKpis 按 S.running/changeover 同步（运行中绿点/换型中蓝点/已暂停黄点/待机灰点）。与既有两套折叠划清：调度台 .closed（只折 body）与移动组 .move-collapsed（只折前进/后退）都不被本功能触碰，所以恢复时各自回到隐藏前状态。默认显示面板；隐藏只在会话内有效（不持久化），除唤回钮外任何操作（切机位/巡游/开数据抽屉/场景按钮程序化点 playBtn）都不会清掉该类把面板弹回；隐藏不影响仿真 step 与已设参数。</div></div>
+      <div class="dcell wide"><div class="l">控制台整体隐藏（R5 前旧口径 · 已被 R6 独立隐藏取代，见 R6 节）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>⚠ 本节记录的是旧实现，R6 起不再成立</b>：当时隐藏入口 = 调度台标题栏的 #dispatchHideBtn（✕ 隐藏）与底部控制条末尾的 #controlHideBtn（✕ 隐藏控制台）；逻辑 = [M5] 调度台绑定旁的 setConsoleHidden，只切 body.console-hidden 一个类，CSS 据此把 #dispatch 与 #controlBar 一起淡出/滑出 + visibility:hidden + pointer-events:none（完全消失、不占位、不拦画布手势），样式段在 CSS 的「console overall hide」注释块。此「关联隐藏」正是 R6 用户点名修正的错误，现行口径一律以下方 R6 节为准。唤回 = 右下角浮钮 #consoleShowBtn（🎛 控制台，仅隐藏时可见可点），其状态点/文案 #consoleDot/#consoleStatus 由 renderKpis 按 S.running/changeover 同步（运行中绿点/换型中蓝点/已暂停黄点/待机灰点）。与既有两套折叠划清：调度台 .closed（只折 body）与移动组 .move-collapsed（只折前进/后退）都不被本功能触碰，所以恢复时各自回到隐藏前状态。默认显示面板；隐藏只在会话内有效（不持久化），除唤回钮外任何操作（切机位/巡游/开数据抽屉/场景按钮程序化点 playBtn）都不会清掉该类把面板弹回；隐藏不影响仿真 step 与已设参数。</div></div>
       <div class="dcell wide"><div class="l">R1 工艺真实感（杀菌链动态 + 无菌守恒 + 灌装联动 + 批次衔接）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.sterilizeProcess[产品id] = { uhtTempC / holdSec / preheatC / coolOutC / homogP1 / homogP2 / flowFactor }（茶 137℃/4s·150/30bar、橙汁 136℃/6s·200/50bar、可乐 133℃/4s·120/25bar、矿泉水 85℃/2s·80/15bar 量级），CONFIG.asepticStockCap=30000 / asepticStockInit=4500（瓶当量）。<b>守恒链（step）</b>：杀菌处理 sterMove = min(队列, 额定×flowFactor×dt, 罐容剩余) → ASEPTIC.stock 上升；灌装拉料 feedMove = min(stock, 产线队列空间, 灌装总需求×1.25) 按各线空间占比分配 → stock 下降；stock=0 时产线队列见底触发 lineStatus 饥饿「无菌罐待料」，罐满时杀菌 stationStatus 为 BLOCKED。totalWip() 已含 stock，换产 startChangeover 清 stock 并按在制品口径报废计入旧产品成本（与调配清线一致），applyProduct 时 STER_FEED 重置，杜绝旧产品换产后继续灌出。<b>批次衔接</b>：STER_FEED 在 advanceBlendBatch 出料完成时更新为该批 {num, productId}，sterBatchInfo() 在出料阶段显示当前出料批、其余显示 STER_FEED；杀菌区信息卡（kind:aseptic）、杀菌工位卡、调配批次卡三处同源显示。<b>渲染</b>：D.sterFlow 五段（preheat/homog/uht/cooling/aseptic，各自管路材质+段灯，料色语义与调配管路一致：流动=料色脉冲、停=暗灰、CIP/换型时 UHT/无菌段显清洗蓝）；STER_DYN 显示值（tempC/preheatC/coolOutC/homogP1/homogP2）由 updateScene 向工艺目标趋近（温度慢 k≈0.45/s、压力快），待机回落（运行热待机保工艺温、无料均质无压、CIP 82℃、故障 70℃、暂停向 48℃、未开工 28℃），动态参数牌 D.sterPlates（UHT/均质/预热-冷却，makeDynPlate 画布纹理、文本不变不重绘）与信息卡同读 STER_DYN；无菌罐液位柱 D.asepticLiquids 按 asepticPerTankFrac 顺序充填（不再随机正弦，原料罐视管仍正弦）。<b>灌装联动</b>：每线 dyn.feedPipeMat/feedLampMat/feedPumpMat/feedWheel（供料支管/阀灯/泵灯/阀手轮，buildLine 内建），开阀条件 = 运行+在线+无故障+stock&gt;0.5+有瓶流；转速 rpm = 实际灌装速率（lastMove/lastDt）/800 驱动转盘/封盖塔/贴标辊/星轮（含冲瓶）/暂存转盘/输送带，停线故障即 0 同步停转；空瓶段（bx&lt;0.5）瓶子仅在 flow&gt;0.05 时显示，停线即断流，已灌段瓶子留带上（phase 冻结），产量计数仍走内核 produced 不受视觉瓶数影响。</div></div>
       <div class="dcell wide"><div class="l">R3 视觉真实感（光影体系 + 材质分级 + 天空远景）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.light = { exposure 曝光 / sunColor·sunIntensity 主光（工业冷白）/ hemiSky·hemiGround·hemiIntensity 半球光 / ambientIntensity / skyTop·skyHorizon·skyGround 天空渐变三段 / fogColor·fogNear·fogFar 远景雾 / silhouette 远景剪影色 / shadowTiers 阴影分级 { high 2048 / mid 1024 / low 0=关 } / envIntensity 环境反射强度 }；CONFIG.mats = 八档材质分级 { stainless 不锈钢罐体（粗糙 .22 / 金属 .85）/ steel 管道阀门 / machine 涂装机架 / frame 结构钢件 / plastic 塑料件 / glass 玻璃 / epoxy 环氧地坪 / concrete 水泥 }，M() 预设（STEEL/DARKSTEEL/MACH）与管路流动材质、GLASSMAT、办公室玻璃、地面都只从这两处取值，禁止在 builder 里再散写粗糙度/金属度魔法值。<b>光源结构</b>（buildScene）：半球光 + 方向光主光（PCFSoft 阴影，阴影相机范围按 CONFIG.factory 派生覆盖全厂 360×230，normalBias 0.02）+ 弱环境光；渲染器 sRGB 输出 + ACESFilmic，曝光读 CONFIG.light.exposure。阴影只由主要设备/建筑投射（建场末尾 traverse 把最大边 &lt;3.2 的小件 castShadow 关掉，地面/大平面只接收）。<b>环境反射</b>：buildScene 用程序渐变全景画布经 PMREM 生成 scene.environment，全场 Standard 材质共用、强度统一写 envMapIntensity = CONFIG.light.envIntensity——不锈钢的镜面感全靠它，若关掉环境反射必须同步调低 mats 的 metal 值，否则罐体会发黑。<b>阴影分级与降级</b>：初始档桌面 high / 移动 mid（window.__setShadowTier 可调试切换，切档自动释放旧 shadow.map 重建）；自适应降级链（loop 的 sampleFps）1 级 = 像素比 1.25 + 阴影降 mid，2 级 = 关阴影（low），只降不升。<b>天空与远景</b>：scene.background = 程序渐变画布纹理（顶空→地平线→地面雾色），fogColor 必须与 skyHorizon 同源否则厂界出色带；buildBackdrop 一圈低多边形剪影（北侧缓丘 / 南侧邻厂厂房+双烟囱 / 东侧水塔，MeshBasicMaterial 受雾衰减、无阴影），固定白天、无夜间模式。<b>地面</b>（buildShell）：一张分区颜色贴图（生产区深灰绿环氧 + 边界色带 / 仓储·月台水泥 / 黄色安全线与伸缩缝沿用）+ 一张同构粗糙度贴图（roughnessMap，环氧区半光、水泥区近全粗糙），均为程序画布、无外部图片；改分区范围改 buildShell 里的 epoxyRect 与 fz(34) 月台界线两处、颜色与粗糙度两张图同改。<b>玻璃与液体</b>：GLASSMAT（灌装护罩）/ 办公室玻璃 / 视镜玻璃管走 CONFIG.mats.glass；瓶液 bottleMat 降粗糙（0.16）+ 透明度 0.9 呈透光感，颜色仍由 __setProductColor 驱动；蒸汽/烟气粒子加了冷灰蓝染色（PointsMaterial color）并下调烟气不透明度，新光照下不发白刺眼；警示灯/信标保持发光材质（emissive）方案、不加真实点光源以保性能。</div></div>
       <div class="dcell wide"><div class="l">R4 性能收官 + 全量回归（马拉松收官轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>四轮总览</b>：基线稳定版（控制台可隐藏）→ R1 工艺真实感（杀菌链分产品参数 / 无菌库存守恒 / 灌装转速联动 / 批次衔接）→ R2 仓储物流 + 公用工程联动（锅炉/空压/RO/冷库随负荷、仓库 FIFO 守恒、发货波次装车、原料罐车补给）→ R3 视觉真实感（CONFIG.light/mats 光影材质体系、阴影三档、天空雾与远景、PMREM 环境反射）→ R4 性能收官 + 全量回归（本节）。<b>版本与校验值</b>：各轮快照与 index.html 的 sha256 校验值登记在本地 <b>~/workspace/factory-sim-versions/VERSION_LOG.md</b>（v01 基线 / v02 R1 / v03 R2 / v04 R3），镜像 git 仓库 ~/workspace/factory-sim-repo 有对应标签 <b>v0.1.0–v0.4.0</b>；本轮 R4 代码即马拉松最终版，其快照与标签在收官交付时按同一规矩登记（v05 / v0.5.0）。<b>R4 性能修复</b>：① 粒子减量随画质档真实生效——CONFIG.perf.particleFactor { high 1 / mid 0.6 / low 0.3 }，__setShadowTier 同步 setDrawRange 并缩短 updateScene 的蒸汽/烟气粒子循环；② 自动降级不再静默——sampleFps 触发降级时无论帧率显示开关都写日志并弹出 #qualityNotice 提示条，「恢复高画质」钮（restoreQuality / window.__restoreQuality）一键回初始像素比+阴影+粒子档，恢复后仍可再次自动降级；③ 每帧零分配巡检——遮挡扇形射线（updateOcclusion）的临时向量/盒/命中点全部预分配复用、材质反查改 Map O(1)，resolveCollision 五向推离改标量比较（去数组+sort）；④ 渲染循环零 DOM——pushSample 只置 chartDirty 标志，产能曲线重绘节流到主循环既有 24 帧节奏，KPI/信息卡维持 8/24 帧分频；⑤ resize 改 rAF 合并节流；⑥ 材质去重——视管玻璃管全厂 5 处共用 SIGHTTUBE 一个实例（M() 缓存工厂与 GLASSMAT/SCREENMAT 共享模式此前已在用），瓶/箱/立柱/货架孔位/试剂瓶等高频对象继续 InstancedMesh、表针/液位/火焰只改引用属性不重建几何；⑦ step() 加异常 dt 守卫（NaN/≤0 直接跳步）。<b>R4 回归修复</b>：停机时切产品即时生效——此前暂停状态点确认换产，倒计时只在 step 推进、暂停永不走完会假死；现停机切产品走 startChangeover 结算清线 + completeChangeover 立即完成（结单/报废/换型费/清洗消耗与运行中换产同口径），运行中换产仍走确认→15 分钟倒计时全流程。<b>最终回归结论</b>：A 生产主链 / B 切产品（含停机即时生效）/ C 故障与 CIP / D 公用工程联动 / E 镜头与 UI / F 性能三档 / G 持久与边界——逐项结论见收官交付汇报（构建 + 审计探针实测）。<b>遗留项清单</b>：① 静态几何未做 BufferGeometry 合并——three r128 核心不含 BufferGeometryUtils，高频重复件已全部实例化，剩余一次性网格合并收益低、回归风险高，保留现状；② 巡游解说点 u 为弧长估算，个别点触发可漂移约 1 秒（既有可接受项）；③ 审计/无头环境的软件渲染帧率不代表真机，性能三档的真机帧率区间以实机为准，页面内有帧率显示与自动降级兜底；④ 移动端未设独立低端机档位，靠初始 mid 档 + 自动降级覆盖。除以上四项外无未修复功能缺陷。</div></div>
-      <div class="dcell wide"><div class="l">R5 遗留清理 + 真机仪表（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>总览</b>：不动 R1–R4 功能与联动逻辑，专清 R4 遗留清单四项 + 给数据抽屉加真机仪表；全部新参数进 CONFIG（perf.mobileLow / light.shadowTiers.eco / perf.particleFactor.eco）。<b>① 静态几何合并（遗留 ① 已清）</b>：three r128 核心确无 BufferGeometryUtils，故自研 mergeStaticGroup（buildScene 前 R5 一节）：范围只限 D.staticGroups 登记的纯静态根组——远景剪影 / 标识牌面 / 安全标识 / 质检实验室 / 地面导向（组内无任何每帧位姿/可见性更新、组根恒等变换）；按材质签名分桶（贴图按 uuid、其余按类型+颜色+自发光+粗糙/金属+不透明），每桶几何转非索引、烘焙 matrixWorld 后拼接 position/normal/uv，一桶一 Mesh，cast/receive 取来源并集。hitbox（clickables/colorWrite=false）、InstancedMesh 自动跳过；属性集不一致整桶放弃。混合动态组（产线/公用工程/仓库等含转盘/液位/灯/车辆）不合并——高频重复件此前已全部实例化，强行合并会冻死动态件位姿，收益不抵风险（此判断即 R4 保留现状的理由，本轮以「纯静态组全合」方式落地）。合并前后网格数由 mergeAllStaticGroups 在建场时实测、写入 D.mergeStats / window.__mergeStats，控制台有同口径日志（[factory] R5 静态合并：登记组网格 X → Y）；draw call 总数以数据抽屉「真机性能」格的 renderer.info 读数为准，合并组每桶省下的网格即等量 draw call。<b>② 巡游漂移（遗留 ② 已清）</b>：旧 u 按路点序号手估、而 getPointAt 是弧长参数，各段路长悬殊导致约 1 秒早/晚触发。修法：TOUR_STOPS 每站加 wp（路点序号），buildTour 后 alignTourStops() 查曲线弧长表 getLengths(2000)，以 t=wp/N 处的累计弧长占比回填精确 u（误差 &lt;0.0005 → &lt;0.04 秒）；updateCamera 触发时再把 tourT 吸附到 u 并重算机位，消除帧步进过冲。实测 u 值在 window.__tourStopUs。改路线只改 pts 与 wp 对应，勿再手写 u。<b>③ 移动端独立低端档（遗留 ④ 已清）</b>：CONFIG.perf.mobileLow = { pixelRatioCap:1.0, shadowTier:"eco"(512，light.shadowTiers 新增), lodDistance:110 } + particleFactor.eco=0.3；buildScene 一次判定（pointer:coarse 或视口 &lt;820）定版 window.__perfTier/__basePixelCap/__baseShadowTier/__baseLodDistance，桌面三档（high/mid/low）行为不变。自动降级以本档为锚：移动链 eco→关阴影→像素比 0.85，桌面链不变；restoreQuality 回设备档基准（不再另写设备判断）。<b>④ 真机仪表（遗留 ③ 的页面侧落地）</b>：数据抽屉顶部「真机性能」四格——近 60 帧均值帧率（loop 内 perfPushFrame 帧时环，只做数组操作）、设备档/阴影档/降级级数、当前像素比、上一帧 draw call（renderer.info.render.calls），由 renderKpis 按既有 8 帧节奏填写，渲染循环内零 DOM。调试入口 window.__perfSnapshot()（含 merge 与 tourStopUs）。无头/软件渲染帧率仍不代表真机（遗留 ③ 的环境部分无法由页面消除），但真机读数从此可在页面内直接读取反馈。<b>遗留清单更新</b>：<s>① 静态几何未合并</s>（本轮纯静态组已合并，混合组按上述理由保留）；<s>② 巡游 u 漂移约 1 秒</s>（已按弧长精确对齐）；<s>④ 移动端无独立低端档</s>（mobileLow 已落地）；③ 无头帧率不代表真机——保留为环境说明，页面侧已补真机仪表。本轮新发现：建场走查与合并实测见交付汇报。</div></div>
+      <div class="dcell wide"><div class="l">R5 遗留清理 + 真机仪表（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>总览</b>：不动 R1–R4 功能与联动逻辑，专清 R4 遗留清单四项 + 给数据抽屉加真机仪表；全部新参数进 CONFIG（perf.mobileLow / light.shadowTiers.eco / perf.particleFactor.eco）。<b>① 静态几何合并（遗留 ① 已清）</b>：three r128 核心确无 BufferGeometryUtils，故自研 mergeStaticGroup（buildScene 前 R5 一节）：范围只限 D.staticGroups 登记的纯静态根组——远景剪影 / 标识牌面 / 安全标识 / 质检实验室 / 地面导向（组内无任何每帧位姿/可见性更新、组根恒等变换）；按材质签名分桶（贴图按 uuid、其余按类型+颜色+自发光+粗糙/金属+不透明），每桶几何转非索引、烘焙 matrixWorld 后拼接 position/normal/uv，一桶一 Mesh，cast/receive 取来源并集。hitbox（clickables/colorWrite=false）、InstancedMesh 自动跳过；属性集不一致整桶放弃。混合动态组（产线/公用工程/仓库等含转盘/液位/灯/车辆）不合并——高频重复件此前已全部实例化，强行合并会冻死动态件位姿，收益不抵风险（此判断即 R4 保留现状的理由，本轮以「纯静态组全合」方式落地）。合并前后网格数由 mergeAllStaticGroups 在建场时实测、写入 D.mergeStats / window.__mergeStats，控制台有同口径日志（[factory] R5 静态合并：登记组网格 X → Y）；draw call 总数以数据抽屉「真机性能」格的 renderer.info 读数为准，合并组每桶省下的网格即等量 draw call。<b>② 巡游漂移（遗留 ② 已清）</b>：旧 u 按路点序号手估、而 getPointAt 是弧长参数，各段路长悬殊导致约 1 秒早/晚触发。修法：TOUR_STOPS 每站加 wp（路点序号），buildTour 后 alignTourStops() 查曲线弧长表 getLengths(2000)，以 t=wp/N 处的累计弧长占比回填精确 u（误差 &lt;0.0005 → &lt;0.04 秒）；updateCamera 触发时再把 tourT 吸附到 u 并重算机位，消除帧步进过冲。实测 u 值在 window.__tourStopUs。改路线只改 pts 与 wp 对应，勿再手写 u。<b>③ 移动端独立低端档（遗留 ④ 已清）</b>：CONFIG.perf.mobileLow = { pixelRatioCap:1.0, shadowTier:"eco"(512，light.shadowTiers 新增), lodDistance:110 } + particleFactor.eco=0.3；buildScene 一次判定（pointer:coarse 或视口 &lt;820）定版 window.__perfTier/__basePixelCap/__baseShadowTier/__baseLodDistance，桌面三档（high/mid/low）行为不变。自动降级以本档为锚：移动链 eco→关阴影→像素比 0.85，桌面链不变；restoreQuality 回设备档基准（不再另写设备判断）。<b>④ 真机仪表（遗留 ③ 的页面侧落地）</b>：数据抽屉顶部「真机性能」四格——近 60 帧均值帧率（loop 内 perfPushFrame 帧时环，只做数组操作）、设备档/阴影档/降级级数、当前像素比、上一帧 draw call（renderer.info.render.calls），由 renderKpis 按既有 8 帧节奏填写，渲染循环内零 DOM。调试入口 window.__perfSnapshot()（含 merge 与 tourStopUs）。无头/软件渲染帧率仍不代表真机（遗留 ③ 的环境部分无法由页面消除），但真机读数从此可在页面内直接读取反馈。<b>遗留清单更新</b>（R6 注：本节中「控制台整体隐藏」的旧口径已被 R6 独立隐藏取代，见下方 R6 节；本节其余内容不变）：<s>① 静态几何未合并</s>（本轮纯静态组已合并，混合组按上述理由保留）；<s>② 巡游 u 漂移约 1 秒</s>（已按弧长精确对齐）；<s>④ 移动端无独立低端档</s>（mobileLow 已落地）；③ 无头帧率不代表真机——保留为环境说明，页面侧已补真机仪表。本轮新发现：建场走查与合并实测见交付汇报。</div></div>
+      <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
     <h3 style="margin-top:14px">常见改动怎么做</h3>
@@ -631,6 +645,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R3 视觉真实感：全厂俯瞰下不锈钢罐体有环境反射高光（非死灰/死黑）、环氧生产区地面带轻微反光且与水泥仓储/月台区一眼可分、黄色安全线对比足够；地平线有极淡远景剪影（缓丘/邻厂烟囱/水塔）且雾色与天空无断层色带；控制台切 window.__setShadowTier("high"/"mid"/"low") 三档阴影贴图/开关即时生效不报错，低帧率自动降级时阴影同步降 mid → 关；玻璃护罩/办公室窗半透明、瓶液透光、蒸汽烟气不发白；双面标识、遮挡淡出、镜头行为与 R1/R2 全部联动不变</li>
       <li>R4 收官：三档画质下粒子数随档增减（high 全量 / mid 0.6 / low 0.3，控制台看 D.steam.geometry.drawRange）；帧率持续低于 45 时自动降级必弹提示条 + 写日志（与帧率显示开关无关），点「恢复高画质」像素比/阴影/粒子全回初始档；暂停状态切产品即时生效（结单/报废/换型费照计），运行中切产品仍走确认 + 15 分钟倒计时；长时间加速运行无 NaN、无负库存、无菌库存不越界；重置后含画质外全部状态回初值</li>
       <li>R5 遗留清理：控制台读 window.__mergeStats——登记的 5 个纯静态组合并后网格数明显下降且各区外观/位置与 R4 一致（牌面文字双面正向、实验室玻璃/货架不动）；window.__tourStopUs 为弧长精算值（不再是 0.10/0.20 手估），巡游全程 9 站均在对应区域停留上字幕、停留时长与 dwell 一致；移动视口（或触屏）打开时 window.__perfTier="mobileLow"、像素比 ≤1.0、阴影档 eco，桌面为 desktop/high；数据抽屉「真机性能」四格有数（帧率 60 帧均值 / 档位 / 像素比 / draw call），开始生产后帧率格随之更新；自动降级与「恢复高画质」在移动档下回到 eco 基准而非 mid</li>
+      <li>R6 独立隐藏 + 排空换型：只藏调度台时控制台纹丝不动（body 只有 dispatch-hidden、#dispatch computed visibility=hidden 而 #controlBar 可见、唤回只有 #dispatchShowBtn 可点），反之亦然；两块全藏后点 #dispatchShowBtn 只回调度台、控制台仍藏；排空换型——生产中点产品→弹窗选「排空后换型（预约）」→横幅转蓝显示预约目标与在制剩余且产量继续涨、无菌库存单调下降，totalWip≤1 时自动进 15 分钟换型、结算小结含「排空换型：在制报废 X 瓶」、换型完成新产品生效且新单从 0；预约后横幅「取消预约」可取消且供料恢复（window.__getReservation() 回 null）；预约后改走立即换型立即停线且预约清除；停机时点「排空后换型」直接即时切换不傻等；重置后 __getReservation() 为 null</li>
     </ul>
   </div>
 </aside>
@@ -642,7 +657,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     <p id="coBody"></p>
     <div class="modal-btns">
       <button class="btn" id="coCancel">再想想</button>
-      <button class="btn primary" id="coConfirm">确认换产</button>
+      <button class="btn" id="coDrain" title="不停线：当前产品灌装排空后自动换型，在制报废≈0">排空后换型（预约）</button>
+      <button class="btn primary" id="coConfirm">立即换型</button>
     </div>
   </div>
 </div>
@@ -755,6 +771,10 @@ var CONFIG = {
   blendPerTank: 240,            // 每台调配罐贡献的调配速度（瓶/分）× 产品 blendFactor
   changeoverMinutes: 15,        // 真实换产停线时长
   changeoverFee: 1500,          // 换型费，计入新产品账本
+  /* R6 排空换型（预约换型）：预约后停新料注入，调配/杀菌队列 + 无菌库存 + 产线在制全部顺流
+   * 灌装成成品，totalWip 降到 epsilonBottles 以下即自动执行换型（清洗时长/换型费仍走上面两项，
+   * 排空省的是料不是清洗）。口径详见交接文档 R6 节与 reserveChangeover/step 的注释。 */
+  drainChangeover: { epsilonBottles: 1 },
   repairFee: 800,               // 点选抢修单次费用，计入当前产品账本
   fixedCostPerHour: 1450,       // 全厂固定成本（元/仿真小时）：人工+折旧，停线/换型期间照走
   /* 公用工程三分账（V6 修复：原来只有一个 energyKwh 却按电价折算水/蒸汽，单位与计价失真）。
@@ -1078,6 +1098,9 @@ var S = {
   faultsOn:true, cipOn:false,
   finished:0, rejected:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0,
   orderDone:0, everRan:false, changeover:null, lastSettle:"",
+  /* R6 排空换型预约：null 或 { to:目标产品, fromName, startWip:预约时在制总量, startFinished:预约时累计产量 }。
+   * 非空即「已预约」：step 停新料注入、顺流排空，totalWip ≤ CONFIG.drainChangeover.epsilonBottles 时自动执行换型。 */
+  reservation:null,
   selected:null, orderDoneLogged:false
 };
 var history = [], sampleAcc = 0, sampleCount = 0;
@@ -1155,27 +1178,67 @@ function applyProduct(p){
   $("eCost").textContent = "¥" + p.cost.toFixed(2);
   if(window.__setProductColor) window.__setProductColor(p.color);
 }
-function startChangeover(np){
+function startChangeover(np, opts){
+  opts = opts || {};
+  /* R6：立即换型覆盖预约——从任何入口走立即换型，先清掉排空预约（预约转立即的唯一出口在此收口） */
+  if(S.reservation && !opts.drained){
+    log("排空换型预约（→「"+S.reservation.to.name+"」）已取消，改为立即换型。");
+    S.reservation = null;
+  }
+  var drained = !!opts.drained;
+  var drainedInfo = opts.drainedInfo || null;   /* { produced:预约期间灌装完成的瓶数, startWip:预约时在制 } */
   var L = curL();
   var wip = totalWip();
   var completed = S.orderDone >= S.orderTarget;
-  S.lastSettle = "上一订单（"+product.name+"）已结单：完成 "+fmt(S.orderDone)+" / "+fmt(S.orderTarget)+" 瓶"+(completed ? "（已达标 ✓）" : "（未完成，剩余 "+fmt(S.orderTarget-S.orderDone)+" 瓶作废）");
+  S.lastSettle = "上一订单（"+product.name+"）已结单：完成 "+fmt(S.orderDone)+" / "+fmt(S.orderTarget)+" 瓶"+(completed ? "（已达标 ✓）" : "（未完成，剩余 "+fmt(S.orderTarget-S.orderDone)+" 瓶作废）")
+    + (drained ? " · 排空换型：在制报废 "+fmt(wip)+" 瓶（排空后余量；预约期间已把在制灌装完成 "+fmt(drainedInfo?drainedInfo.produced:0)+" 瓶，未停线报废）" : "");
   log("换产结单：「"+product.name+"」订单完成 "+fmt(S.orderDone)+" / "+fmt(S.orderTarget)+" 瓶"+(completed?"，已达标。":"，未完成部分作废。"), completed?"good":"");
   if(wip>0){
     L.rejected += wip;
     L.varCost += wip*product.cost;
     S.rejected += wip;
-    log("清线：全厂在制品共 "+fmt(wip)+" 瓶全部报废，已按 ¥"+product.cost.toFixed(2)+"/瓶计入「"+product.name+"」成本。","bad");
+    log(drained
+      ? "排空收尾：排空后仅余 "+fmt(wip)+" 瓶残量无法成瓶，已按 ¥"+product.cost.toFixed(2)+"/瓶计入「"+product.name+"」成本（排空换型的报废只有这一项）。"
+      : "清线：全厂在制品共 "+fmt(wip)+" 瓶全部报废，已按 ¥"+product.cost.toFixed(2)+"/瓶计入「"+product.name+"」成本。", drained ? "" : "bad");
+  } else if(drained){
+    log("排空收尾：在制报废 0 瓶——无菌库存与产线在制已全部灌装成成品。","good");
   }
   stations.forEach(function(st){ st.queue=0; st.lastMove=0; });
   lines.forEach(function(l){ l.queue=0; l.capQ=0; l.lastMove=0; });
   ASEPTIC.stock = 0; ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0; /* R1：无菌罐存量随清线一并报废（wip 已含它，见 totalWip），杜绝旧产品换产后继续灌出 */
-  S.changeover = { to:np, fromName:product.name, left:CO_MINUTES, total:CO_MINUTES };
-  log("开始换型：全线停线清线 → CIP 冲洗 → 换模调机，预计 "+CO_MINUTES+" 分钟。换型费 ¥"+fmt(CO_FEE)+" 将计入新产品「"+np.name+"」的账本。");
+  S.changeover = { to:np, fromName:product.name, left:CO_MINUTES, total:CO_MINUTES, drained:drained };
+  log((drained ? "排空完成，自动开始换型" : "开始换型")+"：全线停线清线 → CIP 冲洗 → 换模调机，预计 "+CO_MINUTES+" 分钟。换型费 ¥"+fmt(CO_FEE)+" 将计入新产品「"+np.name+"」的账本。");
   renderAll();
 }
+/* ================= R6 排空换型（预约换型） =================
+ * 口径（与交接文档 R6 节一致，全站唯一）：
+ *  - 预约 = reserveChangeover(np)：仅运行中且确有可排空对象时成立；停机 / 未开工 / 在制≈0 时
+ *    不在此预约——调用方分别走既有「停机即时换型」/「未开工直换配方」，不会傻等。
+ *  - 预约期间 step() 的行为：原料供应停注新料（supMove=0），调配批次时钟冻结（不开新批）；
+ *    已进入系统的旧料——调配队列 → 杀菌队列 → 无菌罐库存 → 产线队列 → 封盖队列——全部顺流
+ *    灌装成成品计入旧单。即「未出调配罐的料」不单独报废：它随队列顺流成瓶，排空口径统一。
+ *  - 触发：step 每步末检查 totalWip() ≤ CONFIG.drainChangeover.epsilonBottles → 自动
+ *    startChangeover(to, {drained:true})，随后走既有 15 分钟停线清洗 + 换型费（省料不省清洗）。
+ *  - 故障/CIP/暂停：预约原样保留，流量停则排空暂停，恢复后继续（step 不推进时天然冻结）。
+ *    无在线产线时同理暂停排空，开线后继续。
+ *  - 取消：cancelReservation()（横幅按钮）；改立即：startChangeover 非 drained 入口自动清预约。 */
+function reserveChangeover(np){
+  S.reservation = { to:np, fromName:product.name, startWip:totalWip(), startFinished:S.finished };
+  log("已预约排空换型：「"+product.name+"」→「"+np.name+"」。生产不停：停止进新料，现有无菌库存 "+fmt(ASEPTIC.stock)+" 瓶、在制合计 "+fmt(S.reservation.startWip)+" 瓶全部灌装成成品后，自动停线换型（清洗 "+CO_MINUTES+" 分钟、换型费 ¥"+fmt(CO_FEE)+" 不变，省的是料）。横幅可随时取消预约。","good");
+  renderAll();
+}
+function cancelReservation(src){
+  if(!S.reservation) return;
+  var toName = S.reservation.to.name;
+  S.reservation = null;
+  log("排空换型预约（→「"+toName+"」）已取消"+(src==="reset"?"（重置）":"")+"，继续生产「"+product.name+"」，原料供应恢复注入。");
+  renderAll();
+}
+window.__getReservation = function(){ return S.reservation; };
+window.__cancelReservation = function(){ cancelReservation(); };
 function completeChangeover(){
   var np = S.changeover.to;
+  var wasDrained = !!S.changeover.drained;
   S.changeover = null;
   ledger[np.id].coCost += CO_FEE;
   var he = CONFIG.utilities.changeoverEvent;
@@ -1183,7 +1246,7 @@ function completeChangeover(){
   applyProduct(np);
   SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;   /* R2：新订单的发货波次节点从头计（仓库成品库存不清，属已入库成品） */
   S.orderDone = 0; S.orderDoneLogged = false;
-  log("换型完成！已切换到「"+np.name+"」，新订单开始计数（目标 "+fmt(S.orderTarget)+" 瓶），该产品单独记账。换产清洗消耗水 "+he.waterM3+" m³ · 蒸汽 "+he.steamKg+" kg · 电 "+he.powerKwh+" kWh 已计入其账本。","good");
+  log("换型完成！已切换到「"+np.name+"」，新订单开始计数（目标 "+fmt(S.orderTarget)+" 瓶），该产品单独记账。换产清洗消耗水 "+he.waterM3+" m³ · 蒸汽 "+he.steamKg+" kg · 电 "+he.powerKwh+" kWh 已计入其账本。"+(wasDrained?"（本次为排空换型：结算小结见数据抽屉订单区，在制报废按排空后余量如实列出。）":""),"good");
   renderAll();
 }
 var prodWrap = $("products");
@@ -1203,23 +1266,27 @@ PRODUCTS.forEach(function(p){
       renderAll();
       return;
     }
+    if(S.reservation && p.id===S.reservation.to.id){ log("已预约排空换型到「"+p.name+"」，正在排空（在制剩 "+fmt(totalWip())+" 瓶）。要改主意：点横幅「取消预约」，或点其他产品改走立即换型。"); return; }
     if(!S.running){
-      /* R4 回归 B 修复：停机时切产品即时生效——线已停，不再走 15 分钟停线倒计时（此前暂停时点确认，
-       * 倒计时只在 step 里推进、暂停永不走完，换产会假死到重新开工）。结单 / 清线报废 / 换型费 / 清洗消耗
-       * 与运行中换产同口径：startChangeover 负责结算清线，completeChangeover 立即完成并计费换新。 */
+      /* R4 回归 B 修复 + R6 边界：停机时切产品即时生效——线已停，不再走 15 分钟停线倒计时（此前暂停时点确认，
+       * 倒计时只在 step 里推进、暂停永不走完，换产会假死到重新开工）。这同时是「停机时预约排空」的退化口径：
+       * 停机无流量可排，不设预约、不傻等，直接即时换型（若此前有预约，startChangeover 会先清掉它）。
+       * 结单 / 清线报废 / 换型费 / 清洗消耗与运行中换产同口径。 */
       startChangeover(p);
       completeChangeover();
       log("停机状态切产品：免停线倒计时，已即时切换到「"+p.name+"」。","good");
       return;
     }
     pendingProduct = p;
-    $("coTitle").textContent = "换产：" + product.name + " → " + p.name;
+    var wipNow = totalWip();
+    var rateNow = Math.max(1, activeLines().reduce(function(a,l){ return a + (l.on ? l.fillRate() : 0); }, 0));
+    var drainMin = Math.max(1, Math.ceil(wipNow / rateNow));
+    $("coTitle").textContent = "换产：" + product.name + " → " + p.name + (S.reservation ? "（已有预约 →「"+S.reservation.to.name+"」，本次选择将覆盖它）" : "");
     $("coBody").innerHTML =
-      "真实工厂换产不能一键切换。确认后将：<br>" +
-      "· <b>全厂停线换型约 "+CO_MINUTES+" 分钟</b>（清线 → CIP → 换模调机），期间零产出、固定成本照走；<br>" +
-      "· 在制品 <b>"+fmt(totalWip())+" 瓶</b>清线报废，计入「"+product.name+"」成本；<br>" +
-      "· 当前订单先结单：已完成 <b>"+fmt(S.orderDone)+" / "+fmt(S.orderTarget)+" 瓶</b>，未完成部分作废；<br>" +
-      "· 换型费 <b>¥"+fmt(CO_FEE)+"</b>计入「"+p.name+"」账本，之后新产品<b>单独记账</b>。";
+      "两种换法，选一个：<br>" +
+      "· <b>立即换型</b>：马上<b>全厂停线换型约 "+CO_MINUTES+" 分钟</b>（清线 → CIP → 换模调机），期间零产出、固定成本照走；在制品 <b>"+fmt(wipNow)+" 瓶</b>清线报废，计入「"+product.name+"」成本；<br>" +
+      "· <b>排空后换型（预约）</b>：生产不停，停进新料，把无菌库存与在制共 <b>"+fmt(wipNow)+" 瓶</b>全部灌装成成品（按当前灌装速度约 <b>"+drainMin+" 分钟</b>，几千瓶一会儿就灌完），<b>在制报废 ≈ 0</b>，排空那一刻自动停线换型；清洗时长与换型费不变（省料不省清洗），预约可随时在横幅取消；<br>" +
+      "· 两种方式都会先结当前订单：已完成 <b>"+fmt(S.orderDone)+" / "+fmt(S.orderTarget)+" 瓶</b>（排空方式在排空完成、自动换型那一刻结算，预约期间灌完的瓶子仍计入本单）；未完成部分作废；换型费 <b>¥"+fmt(CO_FEE)+"</b>计入「"+p.name+"」账本，之后新产品<b>单独记账</b>。";
     $("coModal").classList.add("show");
   });
   prodWrap.appendChild(b);
@@ -1228,8 +1295,21 @@ document.documentElement.style.setProperty("--product", product.color);
 $("coCancel").addEventListener("click", function(){ $("coModal").classList.remove("show"); pendingProduct=null; });
 $("coConfirm").addEventListener("click", function(){
   $("coModal").classList.remove("show");
-  if(pendingProduct){ var np = pendingProduct; pendingProduct=null; startChangeover(np); }
+  if(pendingProduct){ var np = pendingProduct; pendingProduct=null; startChangeover(np); }   /* 立即换型：startChangeover 内自动清除已有预约 */
 });
+$("coDrain").addEventListener("click", function(){
+  $("coModal").classList.remove("show");
+  if(!pendingProduct) return;
+  var np = pendingProduct; pendingProduct=null;
+  /* R6 退化口径：无可排空对象（在制≈0）或此刻已停机 → 不设预约，直接即时换型，不傻等 */
+  if(!S.running || totalWip() <= CONFIG.drainChangeover.epsilonBottles){
+    startChangeover(np); completeChangeover();
+    log("没有可排空的在制（或正停机），排空换型退化为即时换型：已直接切换到「"+np.name+"」。","good");
+    return;
+  }
+  reserveChangeover(np);
+});
+$("resCancelBtn").addEventListener("click", function(){ cancelReservation(); });
 $("coModal").addEventListener("click", function(e){ if(e.target===this){ this.classList.remove("show"); pendingProduct=null; } });
 
 /* 产能曲线采样：每 CONFIG.sampleSteps 步聚合一次实际出瓶速度（瓶/时），供数据抽屉曲线与当前产能读数。
@@ -1268,7 +1348,8 @@ function step(dtMin){
   }
 
   var ster = stations[2];
-  advanceBlendBatch(dtMin);   /* 调配批次时钟与生产同步推进（换型时已在上方 return，不推进） */
+  var draining = !!S.reservation;   /* R6 排空预约中：停新料、冻批次时钟、顺流排空（见 reserveChangeover 口径） */
+  if(!draining) advanceBlendBatch(dtMin);   /* 调配批次时钟与生产同步推进（换型/排空预约时冻结：不开新批，当前批随队列顺流成瓶） */
   stations.forEach(function(st){
     if(st.faultLeft>0){ st.faultLeft = Math.max(0, st.faultLeft-dtMin); }
   });
@@ -1339,7 +1420,7 @@ function step(dtMin){
   blend.lastMove = blendMove; blend.lastCap = blendCap; blend.lastDt = dtMin;
   /* supply -> blend queue */
   var supCap = supply.faultLeft>0 ? 0 : supply.rateFn();
-  var supMove = Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue));
+  var supMove = draining ? 0 : Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue));   /* R6：排空期停注新料，否则在制永远排不空 */
   blend.queue += supMove;
   supply.lastMove = supMove; supply.lastCap = supCap; supply.lastDt = dtMin;
   supply.done += supMove; blend.done += blendMove; ster.done += sterMove;
@@ -1361,6 +1442,15 @@ function step(dtMin){
 
   stepR2(dtMin, produced, sterMove, supMove);   /* R2 联动推进：读本步已结算的真实流量驱动公用工程/仓储/发货/罐车 */
   pushSample(produced, dtMin);
+
+  /* R6 排空触发：本步结算后在制（含无菌库存/各队列/产线）降到阈值以下 → 灌装完成这一刻自动换型。
+   * 故障/暂停时 step 不推进或流量为 0，totalWip 不降，预约自然保留、恢复后继续排空，不需要额外状态。 */
+  if(S.reservation && S.running && totalWip() <= CONFIG.drainChangeover.epsilonBottles){
+    var res = S.reservation;
+    S.reservation = null;
+    log("灌装排空完成：无菌库存与在制已全部成瓶（预约期间共灌装 "+fmt(S.finished - res.startFinished)+" 瓶），自动执行换型 →「"+res.to.name+"」。","good");
+    startChangeover(res.to, { drained:true, drainedInfo:{ produced: S.finished - res.startFinished, startWip: res.startWip } });
+  }
 }
 
 /* ================= [M1] 仿真内核 · 派生指标（只读，供 UI 与渲染） =================
@@ -1426,6 +1516,8 @@ function renderKpis(){
   var bnName, bnSub, bnCls;
   if(S.changeover){
     bnName = "换型中"; bnSub = S.changeover.fromName+" → "+S.changeover.to.name+" · 剩余 "+Math.ceil(S.changeover.left)+" 分钟"; bnCls = "warn";
+  } else if(S.reservation){
+    bnName = "排空换型预约中"; bnSub = "→ "+S.reservation.to.name+" · 在制剩 "+fmt(totalWip())+" 瓶，排空后自动换型"; bnCls = "warn";
   } else if(S.running && bn){
     bnName = bn.name; bnSub = bn.fault ? "故障停机中 · 全线受阻" : fmt(bn.rate)+" 瓶/分 · 积压 "+fmt(bn.queue)+" 瓶"; bnCls = bn.fault ? "bad" : "warn";
   } else {
@@ -1467,11 +1559,21 @@ function renderKpis(){
   $("ledgerBody").innerHTML = lbHtml;
   if(S.changeover){
     $("coBanner").classList.add("show");
+    $("coBanner").classList.remove("reserved");
     $("coText").textContent = "🔧 换型中：" + S.changeover.fromName + " → " + S.changeover.to.name + "（全厂停线 · 清线 / CIP / 换模）";
     $("coLeft").textContent = "剩余 " + Math.ceil(S.changeover.left) + " 分钟";
     $("coProg").style.width = ((1 - S.changeover.left/S.changeover.total)*100) + "%";
+  } else if(S.reservation){
+    /* R6 排空预约横幅（蓝）：生产不停，进度 = 在制排空比例；取消钮只在此态显示（CSS .reserved 控制） */
+    var resWip = totalWip();
+    $("coBanner").classList.add("show");
+    $("coBanner").classList.add("reserved");
+    $("coText").textContent = "📌 已预约排空换型：" + S.reservation.fromName + " → " + S.reservation.to.name + "（生产不停 · 停进新料，灌装排空后自动换型）";
+    $("coLeft").textContent = "在制剩 " + fmt(resWip) + " 瓶 · 无菌库存 " + fmt(ASEPTIC.stock) + " 瓶";
+    $("coProg").style.width = (S.reservation.startWip > 0 ? Math.min(100, Math.max(0, (1 - resWip/S.reservation.startWip)*100)) : 100) + "%";
   } else {
     $("coBanner").classList.remove("show");
+    $("coBanner").classList.remove("reserved");
   }
   var pctDone = Math.min(100, S.orderDone/S.orderTarget*100);
   $("orderProg").style.width = pctDone+"%";
@@ -1486,16 +1588,17 @@ function renderKpis(){
     if(!S.orderDoneLogged){ S.orderDoneLogged=true; log("订单完成！本单共 "+fmt(S.orderDone)+" 瓶。当前产品累计利润 "+fmtMoney(ledgerProfit(curL()))+"，全厂总利润 "+fmtMoney(profit)+"。","good"); }
   } else {
     $("doneBanner").classList.remove("show");
-    $("orderEta").textContent = S.changeover ? "换型中，暂停计数" : rate>10 ? "预计还需 "+Math.max(1,Math.ceil((S.orderTarget-S.orderDone)/rate*60))+" 分钟" : "等待产能爬坡";
+    $("orderEta").textContent = S.changeover ? "换型中，暂停计数" : S.reservation ? "已预约排空换型 →「"+S.reservation.to.name+"」，排空后自动换型并结单" : rate>10 ? "预计还需 "+Math.max(1,Math.ceil((S.orderTarget-S.orderDone)/rate*60))+" 分钟" : "等待产能爬坡";
   }
   var day = Math.floor(S.simMin/1440)+1;
   var hh = String(Math.floor((S.simMin%1440)/60)).padStart(2,"0");
   var mm = String(Math.floor(S.simMin%60)).padStart(2,"0");
   $("clock").innerHTML = "第 "+day+" 天 <span>·</span> "+hh+":"+mm;
-  /* 控制台唤回钮状态（隐藏时也能一眼看出线在不在跑）：与 S 同步，renderKpis 每轮刷新 */
+  /* 控制台唤回钮状态（隐藏时也能一眼看出线在不在跑）：与 S 同步，renderKpis 每轮刷新；仅属控制台这颗钮，调度台唤回钮无状态点、互不影响（R6 独立隐藏） */
   var cDot = $("consoleDot"), cSt = $("consoleStatus");
   if(cDot && cSt){
     if(S.changeover){ cDot.className = "console-dot co"; cSt.textContent = "换型中"; }
+    else if(S.reservation){ cDot.className = "console-dot co"; cSt.textContent = "排空预约中"; }
     else if(S.running){ cDot.className = "console-dot run"; cSt.textContent = "运行中"; }
     else if(S.everRan || S.finished>0){ cDot.className = "console-dot pause"; cSt.textContent = "已暂停"; }
     else { cDot.className = "console-dot"; cSt.textContent = "待机"; }
@@ -4394,26 +4497,41 @@ $("dispatchToggle").addEventListener("click", function(){
 });
 if(innerWidth < 900) { $("dispatch").classList.add("closed"); $("dispatchToggle").textContent = "+"; }
 
-/* 控制台整体隐藏/唤回（本轮，与 dispatch 的 .closed 折叠、控制条的 .move-collapsed 折叠是三件不同的事）：
- * setConsoleHidden 只切 body.console-hidden 一个类——CSS 据此把 #dispatch 与 #controlBar 一起
- * 淡出/滑出 + visibility:hidden + pointer-events:none（完全消失、不占位、不拦画布手势），
- * 右下角只留 #consoleShowBtn 唤回钮（带状态点，文案由 renderKpis 同步）。
- * 它不碰 .closed / .move-collapsed，所以恢复时调度台折叠态与移动组展开态都回到隐藏前；
- * 也不写任何存储——默认显示，隐藏只在本次会话内有效，且除唤回钮外没有任何操作会清掉这个类
- * （切机位/巡游/开数据抽屉都不会把面板自动弹回来）。隐藏瞬间清 moveDir，避免长按移动中隐藏后镜头续走。 */
-var consoleHidden = false;
-function setConsoleHidden(h){
-  consoleHidden = !!h;
-  if(consoleHidden && typeof moveDir !== "undefined") moveDir = 0;
-  document.body.classList.toggle("console-hidden", consoleHidden);
+/* 面板独立隐藏/唤回（R6 修正：控制台与调度台解耦，不再关联隐藏——R6 前 setConsoleHidden
+ * 用一个 body.console-hidden 类把两块一起藏、一个钮一起唤回，正是用户点名的错误，已废除）：
+ *  - 调度台：setDispatchHidden 只切 body.dispatch-hidden，CSS 只藏 #dispatch，唤回钮只有
+ *    #dispatchShowBtn（右下角堆叠区）；入口 = 调度台标题栏 #dispatchHideBtn。
+ *  - 控制台（底部控制条）：setControlHidden 只切 body.control-hidden，CSS 只藏 #controlBar，
+ *    唤回钮只有 #consoleShowBtn（带状态点，文案由 renderKpis 同步）；入口 = 控制条末尾
+ *    #controlHideBtn。隐藏瞬间清 moveDir（移动钮在控制条里，避免隐藏后镜头续走）——此副作用
+ *    只属控制台，隐藏调度台绝不触发它。
+ *  - 相机移动条的 .move-collapsed（只折前进/后退）、调度台 .closed（只折 body）仍是各自元素
+ *    上的独立状态，本机制不碰；小屏调度台默认 .closed、移动组默认收起的规则按面板独立生效不变。
+ *  - 两块状态各自存会话内变量（dispatchHidden / controlHidden），不写存储；除各自唤回钮外
+ *    任何操作（切机位/巡游/开数据抽屉/程序化点 playBtn）都不会清掉对方或自己的隐藏类。
+ *  - 全隐藏时两颗唤回钮同时可达（.show-stack 堆叠），点哪颗只回哪块，不存在“一唤全回”。 */
+var dispatchHidden = false, controlHidden = false;
+function setDispatchHidden(h){
+  dispatchHidden = !!h;
+  document.body.classList.toggle("dispatch-hidden", dispatchHidden);
+  var sb = $("dispatchShowBtn");
+  if(sb) sb.setAttribute("aria-hidden", String(!dispatchHidden));
+}
+function setControlHidden(h){
+  controlHidden = !!h;
+  if(controlHidden && typeof moveDir !== "undefined") moveDir = 0;
+  document.body.classList.toggle("control-hidden", controlHidden);
   var sb = $("consoleShowBtn");
-  if(sb) sb.setAttribute("aria-hidden", String(!consoleHidden));
+  if(sb) sb.setAttribute("aria-hidden", String(!controlHidden));
   renderKpis();
 }
-$("dispatchHideBtn").addEventListener("click", function(){ setConsoleHidden(true); });
-$("controlHideBtn").addEventListener("click", function(){ setConsoleHidden(true); });
-$("consoleShowBtn").addEventListener("click", function(){ setConsoleHidden(false); });
-window.__setConsoleHidden = setConsoleHidden; /* 供验收/调试直接切换，与 __setMoveCollapsed 同惯例 */
+$("dispatchHideBtn").addEventListener("click", function(){ setDispatchHidden(true); });
+$("dispatchShowBtn").addEventListener("click", function(){ setDispatchHidden(false); });
+$("controlHideBtn").addEventListener("click", function(){ setControlHidden(true); });
+$("consoleShowBtn").addEventListener("click", function(){ setControlHidden(false); });
+window.__setDispatchHidden = setDispatchHidden; /* 供验收/调试直接切换，与 __setMoveCollapsed 同惯例 */
+window.__setControlHidden = setControlHidden;
+window.__setConsoleHidden = function(h){ setDispatchHidden(h); setControlHidden(h); }; /* 旧调试名保留为兼容别名（同时切两块，仅调试用）；UI 入口已无任何共用开关 */
 
 $("playBtn").addEventListener("click", function(){
   S.running = !S.running;
@@ -4555,7 +4673,7 @@ $("cipTgl").addEventListener("click", function(){
 });
 $("resetBtn").addEventListener("click", function(){
   S.finished=0; S.rejected=0; S.waterM3=0; S.powerKwh=0; S.steamKg=0; S.fixedCost=0; S.simMin=8*60; S.orderDoneLogged=false;
-  S.orderDone=0; S.everRan=false; S.changeover=null; S.lastSettle=""; pendingProduct=null;
+  S.orderDone=0; S.everRan=false; S.changeover=null; S.lastSettle=""; pendingProduct=null; S.reservation=null; /* R6：重置须清排空预约（静默清，不走 cancelReservation 的日志口径，下面统一写重置日志） */
   $("coModal").classList.remove("show");
   PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0 }; });
   history=[]; sampleAcc=0; sampleCount=0;
