@@ -547,6 +547,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell"><div class="l">性能开关位置</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">预算全在 CONFIG.perf：像素比上限（桌面/移动）、阴影贴图、LOD 距离与降频、降级阈值。移动端默认低一档（buildScene 内 isMobileGL）。帧率显示：顶栏「帧率」按钮，默认关，开启后读数写在按钮上；帧率持续低于阈值会自动逐级降质（像素比→关阴影，只降不升，逻辑在 loop 的 sampleFps）。瓶/箱/货架孔位/试剂瓶均为 InstancedMesh，勿改回逐个 Mesh。</div></div>
       <div class="dcell wide"><div class="l">字体 / 顶栏 / 建场时机（可验证性修复轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>字体加载方案 = 异步加载 + 系统回退（非自托管）</b>：Google Fonts 样式表改用 preload + onload 切 rel 异步引入（URL 带 display=swap），已移出加载关键路径；font-family 回退栈写清为 Noto Sans SC → PingFang SC / Hiragino Sans GB / Microsoft YaHei → system-ui，等宽为 JetBrains Mono → ui-monospace / SFMono / Menlo / Consolas。字体域名完全不可达时页面按系统字体直接渲染、数秒内可达 DOMContentLoaded，字体晚到只平滑替换字形；牌面 canvas 文字同样按该回退栈绘制。<b>顶栏小屏布局</b>：标题区 flex 可收缩、标题/副标题单行省略号截断，按钮组不收缩；≤900px 全面收紧内边距，≤560px 再收一档，≤420px 隐藏诊断用的「帧率」按钮（非关键按钮，≥421px 恢复）以保「数据」按钮与标题完整在视口内；底部控制条的分段控件（机位含「杀菌无菌区」、前进/后退、ops-hint）小屏允许换行、控制条仅纵向可滚且滚得到底，横向不溢出。<b>建场时机</b>：buildScene() 已移至 DOMContentLoaded 后经 rAF + setTimeout 异步执行（bootFactory，耗时打 console.info），建场期间显示「工厂搭建中…」加载态、建好自动移除，勿改回脚本尾部同步执行。</div></div>
       <div class="dcell wide"><div class="l">控制台整体隐藏（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>实现位置</b>：隐藏入口 = 调度台标题栏的 #dispatchHideBtn（✕ 隐藏）与底部控制条末尾的 #controlHideBtn（✕ 隐藏控制台）；逻辑 = [M5] 调度台绑定旁的 setConsoleHidden（window.__setConsoleHidden 可调试切换），只切 body.console-hidden 一个类，CSS 据此把 #dispatch 与 #controlBar 一起淡出/滑出 + visibility:hidden + pointer-events:none（完全消失、不占位、不拦画布手势），样式段在 CSS 的「console overall hide」注释块。唤回 = 右下角浮钮 #consoleShowBtn（🎛 控制台，仅隐藏时可见可点），其状态点/文案 #consoleDot/#consoleStatus 由 renderKpis 按 S.running/changeover 同步（运行中绿点/换型中蓝点/已暂停黄点/待机灰点）。与既有两套折叠划清：调度台 .closed（只折 body）与移动组 .move-collapsed（只折前进/后退）都不被本功能触碰，所以恢复时各自回到隐藏前状态。默认显示面板；隐藏只在会话内有效（不持久化），除唤回钮外任何操作（切机位/巡游/开数据抽屉/场景按钮程序化点 playBtn）都不会清掉该类把面板弹回；隐藏不影响仿真 step 与已设参数。</div></div>
+      <div class="dcell wide"><div class="l">R1 工艺真实感（杀菌链动态 + 无菌守恒 + 灌装联动 + 批次衔接）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.sterilizeProcess[产品id] = { uhtTempC / holdSec / preheatC / coolOutC / homogP1 / homogP2 / flowFactor }（茶 137℃/4s·150/30bar、橙汁 136℃/6s·200/50bar、可乐 133℃/4s·120/25bar、矿泉水 85℃/2s·80/15bar 量级），CONFIG.asepticStockCap=30000 / asepticStockInit=4500（瓶当量）。<b>守恒链（step）</b>：杀菌处理 sterMove = min(队列, 额定×flowFactor×dt, 罐容剩余) → ASEPTIC.stock 上升；灌装拉料 feedMove = min(stock, 产线队列空间, 灌装总需求×1.25) 按各线空间占比分配 → stock 下降；stock=0 时产线队列见底触发 lineStatus 饥饿「无菌罐待料」，罐满时杀菌 stationStatus 为 BLOCKED。totalWip() 已含 stock，换产 startChangeover 清 stock 并按在制品口径报废计入旧产品成本（与调配清线一致），applyProduct 时 STER_FEED 重置，杜绝旧产品换产后继续灌出。<b>批次衔接</b>：STER_FEED 在 advanceBlendBatch 出料完成时更新为该批 {num, productId}，sterBatchInfo() 在出料阶段显示当前出料批、其余显示 STER_FEED；杀菌区信息卡（kind:aseptic）、杀菌工位卡、调配批次卡三处同源显示。<b>渲染</b>：D.sterFlow 五段（preheat/homog/uht/cooling/aseptic，各自管路材质+段灯，料色语义与调配管路一致：流动=料色脉冲、停=暗灰、CIP/换型时 UHT/无菌段显清洗蓝）；STER_DYN 显示值（tempC/preheatC/coolOutC/homogP1/homogP2）由 updateScene 向工艺目标趋近（温度慢 k≈0.45/s、压力快），待机回落（运行热待机保工艺温、无料均质无压、CIP 82℃、故障 70℃、暂停向 48℃、未开工 28℃），动态参数牌 D.sterPlates（UHT/均质/预热-冷却，makeDynPlate 画布纹理、文本不变不重绘）与信息卡同读 STER_DYN；无菌罐液位柱 D.asepticLiquids 按 asepticPerTankFrac 顺序充填（不再随机正弦，原料罐视管仍正弦）。<b>灌装联动</b>：每线 dyn.feedPipeMat/feedLampMat/feedPumpMat/feedWheel（供料支管/阀灯/泵灯/阀手轮，buildLine 内建），开阀条件 = 运行+在线+无故障+stock&gt;0.5+有瓶流；转速 rpm = 实际灌装速率（lastMove/lastDt）/800 驱动转盘/封盖塔/贴标辊/星轮（含冲瓶）/暂存转盘/输送带，停线故障即 0 同步停转；空瓶段（bx&lt;0.5）瓶子仅在 flow&gt;0.05 时显示，停线即断流，已灌段瓶子留带上（phase 冻结），产量计数仍走内核 produced 不受视觉瓶数影响。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
     <h3 style="margin-top:14px">常见改动怎么做</h3>
@@ -593,6 +594,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>防刷新强拦截轮：分别从①画布中央 ②顶栏 ③底部控制条 三个起点向下拖动，预期均只转镜头/无响应、绝不出现浏览器刷新指示或页面重载；数据抽屉内部可正常上下滚、滚到顶后再下拉也不刷新（全局守卫 + body fixed + overscroll:none 三层）</li>
       <li>布局放大轮：全厂俯瞰下厂区明显再大一圈（360×230）、杀菌链预热/均质/杀菌机组/冷却逐台分开（中心距 ≥20、长管段相连、四周有空地）、无菌罐罐距明显（19，罐间能走人）、调配罐距/货架巷道/月台车距同步放宽；点「杀菌无菌区」机位第一眼同时看到整排无菌罐与拉开的杀菌链；巡游 9 点路线不穿新设备、工人/AGV/叉车路线不穿罐体</li>
       <li>前进/后退最小化：点控制条「🧭 移动」钮可收起前进/后退钮组与提示行（只剩一颗小钮、不挡画面），再点展开且长按/W/S 移动照常；小屏打开默认收起、大屏默认展开</li>
+      <li>R1 工艺真实感：运行中点无菌罐区信息卡——UHT 温度趋近当前产品目标（茶 137℃ 等）、均质压力有料时升到目标、无菌库存随杀菌上升/随灌装下降、三处卡片（杀菌区/杀菌工位/调配批次卡）在制批次一致；拉高灌装速度滑杆（上游供得上时）转盘明显转快，停单线则该线转盘/星轮/封盖塔全停且空瓶段断流；把供应/杀菌拉低耗空无菌库存后产线出「无菌罐待料」而不是继续出瓶；换产后无菌库存归零、新产品批次从 #1 重开、旧产品不再灌出</li>
     </ul>
   </div>
 </aside>
@@ -667,6 +669,20 @@ var CONFIG = {
   asepticHeight: 16,            // 无菌罐直筒高度（旧版 11.5 → 16，约 1.4 倍；含封头总高约 18）
   asepticCapacityM3: 105,       // 单罐公称容量 m³：由旧版 38 m³ 按 (4.8/3.4)²×(16/11.5)≈2.77 派生取整，铭牌/信息卡读此值
   sterilizerTubes: 8,           // 管式杀菌机组管束根数（旧版 6 → 8，机组长度同步加长，见 buildAsepticZone）
+  /* ---- R1 工艺真实感：杀菌链分产品工艺参数 + 无菌罐库存守恒（改工艺/库存只改这里） ----
+   * sterilizeProcess[产品id]：uhtTempC 杀菌温度 / holdSec 保持时间 / preheatC 预热出口 / coolOutC 冷却出口 /
+   * homogP1·homogP2 均质一/二级压力（bar）/ flowFactor 流量系数（乘到杀菌额定产能上：果汁带果肉慢、矿泉水快）。
+   * 显示值（STER_DYN）由 updateScene 向目标值趋近：运行杀菌时升到工艺值，待机回落到保温/常温，不是贴死静态字。
+   * asepticStockCap/Init：无菌罐群可用库存（瓶当量，1 瓶≈0.5L 折算的仿真库存，非铭牌公称 m³）；
+   * 守恒链：调配出料→杀菌队列→杀菌处理→ASEPTIC.stock 上升→灌装从 stock 拉料下降；stock=0 时灌装线饥饿待料。 */
+  sterilizeProcess: {
+    lemon:  { uhtTempC:137, holdSec:4, preheatC:95, coolOutC:25, homogP1:150, homogP2:30, flowFactor:1.00 },
+    orange: { uhtTempC:136, holdSec:6, preheatC:92, coolOutC:22, homogP1:200, homogP2:50, flowFactor:0.92 },
+    cola:   { uhtTempC:133, holdSec:4, preheatC:88, coolOutC:20, homogP1:120, homogP2:25, flowFactor:1.05 },
+    water:  { uhtTempC:85,  holdSec:2, preheatC:60, coolOutC:18, homogP1:80,  homogP2:15, flowFactor:1.20 }
+  },
+  asepticStockCap: 30000,       // 无菌罐群总可用库存上限（瓶当量，5 罐均分；满罐时杀菌段 BLOCKED 背压）
+  asepticStockInit: 4500,       // 开局无菌罐预存量（瓶当量，约小半批，开工即可灌、随后靠杀菌续供）
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
    * 预热 preheatX → 均质 homogenizer（偏南 homogenizerZ，与链主线错开一台位）→ 管式杀菌 sterilizerSkidX → 冷却 coolingX，
@@ -795,6 +811,25 @@ function activeStages(p){
   return CONFIG.blendProcess.stages.filter(function(st){ return !st.source || st.source==="out" || have[st.source]; });
 }
 function stageDuration(st, p){ return st.id==="mix" ? recipeOf(p).mixMinutes : st.dur; }
+function sterProcOf(p){ return CONFIG.sterilizeProcess[(p||product).id] || CONFIG.sterilizeProcess.lemon; }
+/* ================= [M1] R1 · 无菌库存 ASEPTIC + 杀菌在制批次 STER_FEED =================
+ * ASEPTIC.stock（瓶当量）是杀菌→灌装之间唯一的物料库存：杀菌处理往里加、灌装拉料往外扣，
+ * 渲染层液位与信息卡只读它，禁止在别处另存一份「无菌量」。换产时随清线一并报废（见 startChangeover），
+ * 保证不会出现换产后旧产品还从无菌罐灌出的漏洞。
+ * STER_FEED = 最近一支出料完成、正由杀菌链处理/已入无菌罐的调配批次（advanceBlendBatch 出料完成时更新），
+ * 杀菌区信息卡与调配批次卡据此显示「正在处理第几批 · 什么产品」。 */
+var ASEPTIC = { stock: CONFIG.asepticStockInit, lastFeed: 0, lastDt: 1, lastSterMove: 0 };
+var STER_FEED = { num: 1, productId: "lemon", productName: "冰红茶" };
+function asepticFrac(){ return CONFIG.asepticStockCap > 0 ? Math.min(1, Math.max(0, ASEPTIC.stock / CONFIG.asepticStockCap)) : 0; }
+function asepticPerTankFrac(ti){
+  var per = CONFIG.asepticStockCap / Math.max(1, CONFIG.asepticCount);
+  return Math.min(1, Math.max(0, (ASEPTIC.stock - ti * per) / per)); /* 顺序充填/取用：第 1 罐先满、先用 */
+}
+function sterBatchInfo(){
+  var st = (typeof curBlendStage === "function") ? curBlendStage() : null;
+  if(st && st.id === "discharge" && typeof BP !== "undefined") return { num: BP.batch, productId: product.id, productName: product.name, phase: "调配出料中 → 杀菌接收" };
+  return { num: STER_FEED.num, productId: STER_FEED.productId, productName: STER_FEED.productName, phase: "杀菌处理 / 无菌暂存中" };
+}
 
 /* ================= [M1] 仿真内核 · 上游共享工位 Station（各产线共用） =================
  * Station 字段：queue 待处理量 / done 累计处理 / faultLeft 剩余故障分钟 /
@@ -867,6 +902,7 @@ function advanceBlendBatch(dtMin){
     BP.idx++;
     if(BP.idx >= L.length){
       BP.idx = 0; BP.batch++;
+      STER_FEED = { num: BP.batch-1, productId: product.id, productName: product.name }; /* R1：该批出料完成，转由杀菌链处理（杀菌区信息卡据此显示） */
       log("调配批次 #"+(BP.batch-1)+" 完成出料 → 待杀菌缓冲罐，新批次 #"+BP.batch+" 开始（"+product.name+" · "+recipeOf(product).batchL+" L/批）。","good");
     } else if(doneStage.id === "mix"){
       log("调配批次 #"+BP.batch+" 搅拌完成，进入取样静置（糖度/酸度检测，呼应质检实验室）。");
@@ -886,6 +922,7 @@ function ingredientStatus(ing){
 }
 function totalWip(){
   var w = stations.reduce(function(a,s){ return a+s.queue; }, 0);
+  w += ASEPTIC.stock; /* R1：无菌罐库存也是在制品，换产清线报废与 KPI 在制品都要把它算进去 */
   lines.forEach(function(l){ w += l.queue + l.capQ; });
   return w;
 }
@@ -910,6 +947,7 @@ var pendingProduct = null;
 function applyProduct(p){
   product = p;
   resetBlendBatch();   /* 换产品 = 换配方，调配批次从新配方第一阶段重开 */
+  STER_FEED = { num: 1, productId: p.id, productName: p.name }; /* R1：杀菌在制批次同步换到新产品，旧批次已在换产清线时报废 */
   document.querySelectorAll(".prod").forEach(function(x){ x.classList.toggle("on", x.dataset.pid===p.id); });
   document.documentElement.style.setProperty("--product", p.color);
   $("orderName").textContent = p.full;
@@ -931,6 +969,7 @@ function startChangeover(np){
   }
   stations.forEach(function(st){ st.queue=0; st.lastMove=0; });
   lines.forEach(function(l){ l.queue=0; l.capQ=0; l.lastMove=0; });
+  ASEPTIC.stock = 0; ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0; /* R1：无菌罐存量随清线一并报废（wip 已含它，见 totalWip），杜绝旧产品换产后继续灌出 */
   S.changeover = { to:np, fromName:product.name, left:CO_MINUTES, total:CO_MINUTES };
   log("开始换型：全线停线清线 → CIP 冲洗 → 换模调机，预计 "+CO_MINUTES+" 分钟。换型费 ¥"+fmt(CO_FEE)+" 将计入新产品「"+np.name+"」的账本。");
   renderAll();
@@ -1008,6 +1047,7 @@ function step(dtMin){
     S.changeover.left = Math.max(0, S.changeover.left - dtMin);
     stations.forEach(function(st){ st.lastMove = 0; });
     lines.forEach(function(l){ l.lastMove = 0; });
+    ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
     if(S.changeover.left<=0) completeChangeover();
     pushSample(0, dtMin);
     return;
@@ -1053,18 +1093,29 @@ function step(dtMin){
     var move = Math.min(l.queue, cap*dtMin, Math.max(0, LINE_Q_CAP - l.capQ + PACK_RATE*dtMin));
     l.queue -= move; l.capQ += move; l.lastMove = move; l.lastCap = cap; l.lastDt = dtMin;
   });
-  /* sterilize output splits across active, non-faulted lines */
+  /* R1 物料守恒链：杀菌处理 → 无菌罐库存（ASEPTIC.stock）→ 灌装拉料，三段分开结算，不再杀菌直灌产线。
+   * 杀菌段产能 = 额定 × 当前产品 flowFactor（CONFIG.sterilizeProcess）；无菌罐满则杀菌背压停转（BLOCKED）。
+   * 灌装段只能从 stock 拉料：stock=0 时产线队列见底 → lineStatus 饥饿待料，绝不无料无限灌装。 */
   var feed = lines.filter(function(l){ return l.on && l.faultLeft<=0; });
   var sterDown = ster.faultLeft>0 || ster.cipLeft>0;
-  var sterCap = sterDown ? 0 : ster.rateFn();
-  var sterMove = Math.min(ster.queue, sterCap*dtMin);
-  if(feed.length && sterMove>0){
-    var room = feed.reduce(function(a,l){ return a + Math.max(0, LINE_Q_CAP - l.queue); }, 0);
-    sterMove = Math.min(sterMove, room);
-    feed.forEach(function(l){ l.queue += sterMove/feed.length; });
-    ster.queue -= sterMove;
-  } else sterMove = 0;
+  var sterCap = sterDown ? 0 : ster.rateFn() * sterProcOf(product).flowFactor;
+  var sterRoom = Math.max(0, CONFIG.asepticStockCap - ASEPTIC.stock);
+  var sterMove = Math.min(ster.queue, sterCap*dtMin, sterRoom);
+  ster.queue -= sterMove; ASEPTIC.stock += sterMove;
   ster.lastMove = sterMove; ster.lastCap = sterCap; ster.lastDt = dtMin;
+  ASEPTIC.lastSterMove = sterMove;
+  var feedMove = 0;
+  if(feed.length && ASEPTIC.stock > 0){
+    var room = feed.reduce(function(a,l){ return a + Math.max(0, LINE_Q_CAP - l.queue); }, 0);
+    var feedDemand = feed.reduce(function(a,l){ return a + l.fillRate(); }, 0) * dtMin * 1.25; /* 供料泵能力略高于灌装总需求，有库存就能跟上 */
+    feedMove = Math.min(ASEPTIC.stock, room, Math.max(feedDemand, sterMove));
+    if(feedMove > 0){
+      var perLineRoom = feed.map(function(l){ return Math.max(0, LINE_Q_CAP - l.queue); });
+      feed.forEach(function(l, fi){ var share = room > 0 ? feedMove * (perLineRoom[fi]/room) : 0; l.queue += share; });
+      ASEPTIC.stock -= feedMove;
+    }
+  }
+  ASEPTIC.lastFeed = feedMove; ASEPTIC.lastDt = dtMin;
   /* blend -> sterilize queue */
   var blend = stations[1], supply = stations[0];
   var blendDown = blend.faultLeft>0;
@@ -1100,7 +1151,7 @@ function step(dtMin){
 /* ================= [M1] 仿真内核 · 派生指标（只读，供 UI 与渲染） =================
  * 瓶颈评分 = 利用率主导 + 队列积压加权 + 故障一票置顶；改权重只改 bottleneck() 一处。 */
 function stageList(){
-  var arr = stations.map(function(st){ return { name:st.name, rate:st.rateFn(), queue:st.queue, fault:st.faultLeft>0, util: st.lastCap>0 ? (st.lastMove||0)/(st.lastCap*(st.lastDt||1)) : 0 }; });
+  var arr = stations.map(function(st){ return { name:st.name, rate: st.id==="sterilize" ? st.rateFn()*sterProcOf(product).flowFactor : st.rateFn(), queue:st.queue, fault:st.faultLeft>0, util: st.lastCap>0 ? (st.lastMove||0)/(st.lastCap*(st.lastDt||1)) : 0 }; });
   activeLines().forEach(function(l){
     arr.push({ name:l.name+" 灌装", rate:l.fillRate(), queue:l.queue, fault:l.faultLeft>0, util: l.lastCap>0 ? (l.lastMove||0)/(l.lastCap*(l.lastDt||1)) : 0 });
   });
@@ -1131,6 +1182,8 @@ function stationStatus(st){
   if(st.faultLeft>0) return { key:STATUS.FAULT, txt:"故障停机 · 约 "+Math.ceil(st.faultLeft)+" 分" };
   if(st.id==="sterilize" && st.cipLeft>0) return { key:STATUS.FAULT, txt:"CIP 清洗 · 约 "+Math.ceil(st.cipLeft)+" 分" };
   if(!S.running) return { key:STATUS.IDLE, txt:"待机" };
+  if(st.id==="sterilize" && ASEPTIC.stock >= CONFIG.asepticStockCap-1 && st.queue>1) return { key:STATUS.BLOCKED, txt:"无菌罐已满 · 等待灌装消耗" };
+  if(st.id==="sterilize" && st.queue<=1 && ASEPTIC.stock<=1) return { key:STATUS.STARVED, txt:"待料 · 等待调配出料 / 无菌罐空" };
   if(st.queue<=1 && (st.lastMove||0)<(st.lastCap||1)*CONFIG.starvedRatio && st.id!=="supply") return { key:STATUS.STARVED, txt:"饥饿 · 等待上游" };
   return { key:STATUS.RUNNING, txt:"运行中" };
 }
@@ -1139,7 +1192,7 @@ function lineStatus(l){
   if(!l.on) return { key:STATUS.OFF, txt:"已停线" };
   if(l.faultLeft>0) return { key:STATUS.FAULT, txt:"灌装机故障 · 约 "+Math.ceil(l.faultLeft)+" 分" };
   if(!S.running) return { key:STATUS.IDLE, txt:"待机" };
-  if(l.queue<=1 && (l.lastMove||0)<(l.lastCap||1)*CONFIG.starvedRatio) return { key:STATUS.STARVED, txt:"饥饿 · 等待杀菌供料" };
+  if(l.queue<=1 && (l.lastMove||0)<(l.lastCap||1)*CONFIG.starvedRatio) return { key:STATUS.STARVED, txt: ASEPTIC.stock<=1 ? "饥饿 · 无菌罐待料（库存已空）" : "饥饿 · 等待杀菌供料" };
   return { key:STATUS.RUNNING, txt:"运行中" };
 }
 /* 状态 → 灯色/文字色（键 = STATUS 枚举值，全站唯一配色表） */
@@ -1263,7 +1316,11 @@ var D = { blendLiquids:[], blendDiscs:[], agitators:[], sightLiquids:[], lineDyn
   /* V5 新分区动态注册：cip={lampMat,liquids,pumps} 清洗站可视状态 / workers 巡检工人 / agv 送托盘小车 / boilerSmoke 锅炉烟囱烟气 */
   cip:null, workers:[], agv:null, boilerSmoke:null, boilerSmokePos:null,
   /* 调配工艺可视注册：blendFlow[source]={mat（管路流动材质）, lampMat（阀门指示）, wheel（阀门手轮组）, pumpMat（来源泵灯）}，由 updateScene 按 BP 阶段驱动 */
-  blendFlow:{}, blendMainMat:null };
+  blendFlow:{}, blendMainMat:null,
+  /* R1 杀菌链可视注册：sterFlow[seg]={mat,lampMat} 分段管路/段灯（preheat/homog/uht/cooling/aseptic）；
+   * asepticLiquids[] 无菌罐液位柱（按 ASEPTIC.stock 顺序充填驱动，不再随机正弦）；sterPlates 动态参数牌（UHT 温度/保持 + 均质压力，画布纹理低频重绘）；
+   * STER_DYN 显示值在 updateScene 定义（向工艺目标趋近/待机回落） */
+  sterFlow:{}, asepticLiquids:[], sterPlates:{} };
 var clickables = [];
 var scene, camera, renderer, bottleMat, blendLiquidMat, sightLiquidMat;
 
@@ -1842,6 +1899,35 @@ function buildUpstream(){
   LINE_Z.forEach(function(lz){ var dp = CY(g, 0.2, 0.2, 3.4, pipeMat, 4, 3.4, lz); });
 }
 
+/* ---------------- [M2] R1 · 杀菌链分段可视工厂（管路材质 / 段灯 / 动态参数牌） ----------------
+ * sterFlowMat：与调配管路同一颜色语义——流动时显料色+脉冲发光、停/待机暗灰半透，由 updateScene 按段驱动。
+ * makeDynPlate：可重绘的双面参数牌（CanvasTexture 低频更新，只在显示值变化时重绘，避免每帧开销）；
+ * 牌面仍经 doubleSidedSign 构造，背面文字正向不镜像。 */
+function sterFlowMat(){
+  return new THREE.MeshStandardMaterial({ color:0x707880, roughness:0.45, metalness:0.3, transparent:true, opacity:0.55, emissive:0x000000, emissiveIntensity:1 });
+}
+function makeDynPlate(w){
+  var cv = document.createElement("canvas"); cv.width = 512; cv.height = 192;
+  var ctx = cv.getContext("2d");
+  var tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+  var grp = doubleSidedSign(tex, w, w*192/512);
+  var api = { group: grp, last: "", redraw: function(title, line1, line2, accent){
+    var key = title+"|"+line1+"|"+line2;
+    if(key === api.last) return; api.last = key;
+    ctx.fillStyle = "#141a17"; ctx.fillRect(0,0,512,192);
+    ctx.strokeStyle = accent || "#f2b01e"; ctx.lineWidth = 6; ctx.strokeRect(8,8,496,176);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#f5f2e8"; ctx.font = '900 44px "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText(title, 256, 58);
+    ctx.fillStyle = accent || "#f2b01e"; ctx.font = '700 40px "JetBrains Mono",ui-monospace,Menlo,monospace';
+    ctx.fillText(line1, 256, 116);
+    ctx.fillStyle = "#a8b5ad"; ctx.font = '500 30px "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText(line2, 256, 162);
+    tex.needsUpdate = true;
+  }};
+  api.redraw("—", "—", "待机");
+  return api;
+}
 /* ---------------- [M2] 分区 builder · 杀菌无菌大区 buildAsepticZone（V6 扩容） ----------------
  * 为什么独立成区：杀菌是食品安全命门，真实工厂里 UHT + 无菌罐区占地很大——CONFIG.asepticCount 台大型无菌罐
  * （调配→杀菌后的半成品在此无菌暂存）+ 管式杀菌机组放大段，与既有 UHT 柜机/板换同属 sterilize 工位。
@@ -1870,7 +1956,7 @@ function buildAsepticZone(){
     tube2.position.set(tx+2.6, AH*0.42, AZ+AR+0.35); g.add(tube2);                // 液位视镜管（随罐高放大）
     var liqGeo2 = new THREE.BoxGeometry(0.26,1,0.26); liqGeo2.translate(0,0.5,0);
     var liq2 = new THREE.Mesh(liqGeo2, sightLiquidMat); liq2.position.set(tx+2.6, 1.2, AZ+AR+0.35); g.add(liq2);
-    D.sightLiquids.push({ mesh:liq2, phase: ti*1.7 });                               // 复用既有液位动画
+    D.asepticLiquids.push({ mesh:liq2, tankIdx: ti });                               /* R1：液位柱按 ASEPTIC.stock 顺序充填驱动（updateScene），不再用随机正弦 */
     ladder(g, tx-AR-0.2, AZ, 0.3, AH+0.3, Math.PI/2);
     CY(g, 0.15, 0.15, 1.1, DARKSTEEL, tx, 0.25, AZ+AR+0.15, 8).rotation.x = Math.PI/2;    // 出料管
     handwheel(g, tx, 1.1, AZ+AR+0.6, 0.44, 0);
@@ -1925,6 +2011,41 @@ function buildAsepticZone(){
   var pMid = CY(g, 0.26, 0.26, 18, pipeMat2, -14, 6.2, -10, 12); pMid.rotation.x = Math.PI/2; pMid.position.set(-14, 6.45, -1); // 机组 → UHT 柜机（向南长管段） // 机组 → UHT 柜机（向南）
   var pUp = CY(g, 0.26, 0.26, 17, pipeMat2, -29.5, 8.2, -22, 12); pUp.rotation.x = Math.PI/2; pUp.position.set(-29.5, 8.45, -22.5);    // UHT → 无菌罐区（向北上行长管段，落在两罐间隙正下方）    // UHT → 无菌罐区（向北上行）
   var pFeed = CY(g, 0.24, 0.24, 31, pipeMat2, 4.5, 6.45, -15, 12); pFeed.rotation.x = Math.PI/2; pFeed.position.set(4.5, 6.7, -14.5); // 无菌罐 → 灌装总管（x=4 竖管，接既有 hp2） // 无菌罐 → 灌装总管（x=4 竖管，接既有 hp2）
+  /* --- R1 杀菌链分段管路 + 段灯 + 动态参数牌（预热→均质→UHT杀菌→冷却→无菌罐，逐段可读） ---
+   * 每段一条独立材质的管路 + 一盏段灯，updateScene 按段驱动：料流经该段时管显料色脉冲、段灯亮产品色；
+   * 全链无料/待机时各段回暗灰。既有 pMid/pUp/pFeed 三根长管改挂对应段材质，成为间距的视觉证据兼流动证据。 */
+  (function(){
+    function segPipe(mat, x1, z1, x2, z2, y){
+      var len = Math.hypot(x2-x1, z2-z1); if(len < 0.1) return;
+      var p = CY(g, 0.19, 0.19, len, mat, x1, y, z1, 10);
+      if(Math.abs(x2-x1) > Math.abs(z2-z1)){ p.rotation.z = Math.PI/2; p.position.set((x1+x2)/2, y+0.19, z1); }
+      else { p.rotation.x = Math.PI/2; p.position.set(x1, y+0.19, (z1+z2)/2); }
+      return p;
+    }
+    function makeSeg(id, segs, lx, ly, lz, phase){
+      var mat = sterFlowMat();
+      segs.forEach(function(s){ segPipe(mat, s[0], s[1], s[2], s[3], s[4]); });
+      var lampMat = new THREE.MeshStandardMaterial({ color:0x2c3430, emissive:0x8b9a92, emissiveIntensity:0.4, roughness:0.4 });
+      var lb = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 10), lampMat); lb.position.set(lx, ly, lz); g.add(lb);
+      CY(g, 0.06, 0.06, Math.max(0.4, ly-0.3), DARKSTEEL, lx, 0.25, lz, 6).castShadow = false;
+      D.sterFlow[id] = { mat: mat, lampMat: lampMat, phase: phase };
+      return mat;
+    }
+    var mPre = makeSeg("preheat", [[-58,8,-54,8,6.3],[-54,8,-36,8,6.3]], -54, 7.9, 12.6, 0);
+    var mHom = makeSeg("homog", [[-36,8,-32,8,6.3],[-32,8,-32,22,6.3],[-32,22,-15,22,5.2]], -32, 5.1, 25.4, 1);
+    var mUht = makeSeg("uht", [[-15,22,-15,8,5.2]], -6, 11.3, 12.2, 2);
+    var mCool = makeSeg("cooling", [[3,8,20,8,6.3],[20,8,20,-14,6.6]], 20, 7.1, 12.4, 3);
+    var mAsep = makeSeg("aseptic", [[20,-14,20,-22,6.6],[20,-22,-10,-22,6.6]], -20, CONFIG.asepticHeight+3.4, -24.5, 4);
+    /* 既有长管改挂段材质：pMid（机组→UHT）归 UHT 段、pUp（UHT→无菌罐）与 pFeed（无菌罐→灌装总管）归无菌段、pIn 归预热段 */
+    if(pIn) pIn.material = mPre;
+    if(pMid) pMid.material = mUht;
+    if(pUp) pUp.material = mAsep;
+    if(pFeed) pFeed.material = mAsep;
+    /* 动态参数牌：UHT 牌立在管式机组南侧、均质牌立在均质机南侧，数值由 updateScene 低频重绘（运行升温/待机回落） */
+    var uhtPlate = makeDynPlate(5.2); uhtPlate.group.position.set(-6, 8.6, 13.9); g.add(uhtPlate.group); D.sterPlates.uht = uhtPlate;
+    var homPlate = makeDynPlate(4.4); homPlate.group.position.set(-32, 5.6, 25.9); g.add(homPlate.group); D.sterPlates.homog = homPlate;
+    var prePlate = makeDynPlate(4.0); prePlate.group.position.set(-54, 8.3, 13.9); g.add(prePlate.group); D.sterPlates.preheat = prePlate;
+  })();
   /* --- 放大立牌：杀菌无菌区（双立柱大牌，面朝灌装车间；立柱随罐体放高） --- */
   CY(g, 0.11, 0.11, 7.2, DARKSTEEL, -30.5, 0, 26.5, 8); CY(g, 0.11, 0.11, 7.2, DARKSTEEL, -1.5, 0, 26.5, 8);
   var big = signMesh("杀菌 · 无菌罐区", "UHT STERILIZE + ASEPTIC TANKS ×"+CONFIG.asepticCount, 15, "#f87171");
@@ -1975,6 +2096,19 @@ function buildLine(i){
   CY(g, 0.28, 0.28, 2.0, DARKSTEEL, 5.5, 7.35, z, 10);
   CY(g, 0.2, 0.2, 3.4, DARKSTEEL, 3.6, 6.0, z, 8).rotation.z = 0.9;
   var feedMain = CY(g, 0.34, 0.34, 9, DARKSTEEL, 5.5, 8.6, z - 3.2, 12); feedMain.rotation.z = Math.PI/2; feedMain.position.set(5.5, 8.6, z - 3.2);
+  /* R1 无菌供料联动（每线独立）：供料支管（总管 x=4 → 灌装料缸）+ 供料阀（手轮+红绿灯）+ 供料泵（泵体+状态灯）。
+   * 三者的材质登记到 dyn.feed*，由 updateScene 按「该线在灌 + 无菌罐有库存」驱动：开阀绿灯/泵转/管显料色，停线或无菌罐空即关阀停泵回灰。 */
+  dyn.feedPipeMat = sterFlowMat();
+  var fp1 = CY(g, 0.17, 0.17, 3.2, dyn.feedPipeMat, 4, 6.55, z, 10); /* 总管下引段 */
+  var fp2 = CY(g, 0.17, 0.17, 1.8, dyn.feedPipeMat, 4.8, 6.55, z, 10); fp2.rotation.z = Math.PI/2; fp2.position.set(4.85, 6.72, z); /* 横接料缸段 */
+  CY(g, 0.09, 0.09, 1.0, DARKSTEEL, 4, 5.6, z+0.55, 8).castShadow = false;
+  dyn.feedWheel = handwheel(g, 4, 6.55, z+0.55, 0.34, 0);
+  dyn.feedLampMat = new THREE.MeshStandardMaterial({ color:0x3a2323, emissive:0xd92c2c, emissiveIntensity:0.9, roughness:0.4 });
+  var flb = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), dyn.feedLampMat); flb.position.set(4.5, 6.75, z+0.55); g.add(flb);
+  B(g, 0.95, 0.6, 0.75, DARKSTEEL, 1.8, 0, z-4.6).castShadow = false; /* 供料泵基座/泵体（线西端地面） */
+  dyn.feedPumpMat = new THREE.MeshStandardMaterial({ color:0x2c3430, emissive:0x8b9a92, emissiveIntensity:0.4, roughness:0.4 });
+  var fpb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), dyn.feedPumpMat); fpb.position.set(1.8, 1.15, z-4.6); g.add(fpb);
+  CY(g, 0.32, 0.32, 0.9, M(0x2b6cb0,0.5,0.3), 1.8, 0.6, z-4.6, 12).rotation.z = Math.PI/2;
   if(!GLASSMAT) GLASSMAT = new THREE.MeshStandardMaterial({ color:0xbfe6f2, roughness:0.08, metalness:0.1, transparent:true, opacity:0.16 });
   [-3.75, 3.75].forEach(function(gz){ var gp = new THREE.Mesh(new THREE.BoxGeometry(12.9, 2.7, 0.05), GLASSMAT); gp.position.set(5.5, 2.5, z + gz); g.add(gp); });
   [-6.5, 6.5].forEach(function(gx){ var gp2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.7, 7.5), GLASSMAT); gp2.position.set(5.5 + gx, 2.5, z); g.add(gp2); });
@@ -2742,6 +2876,10 @@ window.__setProductColor = function(hex){
    ================================================================ */
 var dummy3 = null;
 var _prodC = null, _turbidC = null; /* 调配主罐液色渐变用（懒初始化，避免每帧分配） */
+/* R1 杀菌链显示值 STER_DYN：UHT 温度/预热/冷却出口/均质一二级压力的「仪表显示值」，
+ * 由 updateScene 每帧向 CONFIG.sterilizeProcess 的工艺目标趋近（温度慢、压力快），待机/停机回落——
+ * 信息卡与动态参数牌都只读它，所以牌面数字会随运行状态真实变化，不是贴死静态字。 */
+var STER_DYN = { tempC: 28, preheatC: 24, coolOutC: 26, homogP1: 0, homogP2: 0 };
 var sceneFrame = 0; /* updateScene 帧计数：LOD 降频与粒子隔帧更新共用 */
 var _lodCenter = null;
 function lineFlow(l){
@@ -2782,6 +2920,9 @@ function updateScene(dt, t){
       var bx = -11 + tt*69;
       dummy3.position.set(bx, 1.1, LINE_Z[i] + bd.jit);
       var sc = hide ? 0.0001 : 1;
+      /* R1 空瓶端断流：bx<0.5 是空瓶暂存/冲瓶段——该线不在灌装（停线/故障/无料）时空瓶不再进入（缩放隐藏），
+       * 已灌段的瓶子停线时留在带上不动（phase 冻结），首尾呼应；产量计数在内核 produced，与此处视觉瓶数无关（既有约定）。 */
+      if(!hide && bx < 0.5 && flow <= 0.05) sc = 0.0001;
       dummy3.scale.set(sc, sc, sc);
       dummy3.rotation.set(0,0,0);
       dummy3.updateMatrix();
@@ -2797,17 +2938,41 @@ function updateScene(dt, t){
       dyn.cases.setMatrixAt(cj, dummy3.matrix);
     }
     dyn.cases.instanceMatrix.needsUpdate = true;
-    dyn.beltTex.offset.x -= ldt*(0.15 + flow*2.4);
-    dyn.carousel.rotation.y -= ldt*flow*3.4;
-    dyn.turret.rotation.y += ldt*flow*2.6;
-    dyn.drum.rotation.y -= ldt*flow*3.0;
-    if(dyn.starWheels) dyn.starWheels.forEach(function(sw2){ sw2.rotation.y -= ldt*flow*2.2; });
-    if(dyn.labelRolls) dyn.labelRolls.forEach(function(lr){ lr.rotation.y += ldt*(0.4 + flow*2.6); });
+    /* R1 转速与灌装速度成比例：rpm = 本线实际灌装速率（lastMove/lastDt，瓶/分）÷ 800 基准——
+     * 拉高灌装速度滑杆且上游供得上时转盘/星轮/封盖塔/贴标辊真转快；饥饿时随实际速率变慢；停线/故障/暂停 rpm=0 全部同步停转。 */
+    var rpm = 0;
+    if(S.running && !S.changeover && l.on && l.faultLeft<=0){
+      var actRate = (l.lastDt||1) > 0 ? (l.lastMove||0)/(l.lastDt||1) : 0;
+      rpm = Math.min(2.2, actRate/800);
+      if(rpm < 0.02 && flow > 0.05) rpm = flow*0.35; /* 爬坡期兜底：有瓶流就有慢转，不出现有瓶不转 */
+    }
+    dyn.beltTex.offset.x -= ldt*rpm*2.4;
+    dyn.carousel.rotation.y -= ldt*rpm*3.4;
+    dyn.turret.rotation.y += ldt*rpm*2.6;
+    dyn.drum.rotation.y -= ldt*rpm*3.0;
+    if(dyn.starWheels) dyn.starWheels.forEach(function(sw2){ sw2.rotation.y -= ldt*rpm*2.2; }); /* 含冲瓶星轮：与灌装同启同停 */
+    if(dyn.labelRolls) dyn.labelRolls.forEach(function(lr){ lr.rotation.y += ldt*rpm*2.6; });
     if(dyn.gripper) dyn.gripper.rotation.y = Math.sin(t*1.6 + i*1.3)*0.5*(0.25+flow);
-    dyn.table.rotation.y += ldt*(0.25 + Math.min(1, l.queue/600)*1.6)*(S.running && !S.changeover ? 1 : 0.15);
+    dyn.table.rotation.y += ldt*rpm*1.6; /* 空瓶暂存转盘随本线启停/转速（R1：停线即停转断流） */
     dyn.armYaw.rotation.y = Math.sin(t*0.85 + i*2.1)*0.65*(0.25+flow);
     dyn.armFore.rotation.z = 0.55 + Math.sin(t*1.6 + i*1.3)*0.28*(0.25+flow);
     setLamp(dyn.lampMat, lineStatus(l).key, t);
+    /* R1 无菌供料联动：开阀条件 = 本线在灌（运行/在线/无故障）且无菌罐有库存；任一不满足即关阀（红灯）停泵、支管回灰。
+     * 无菌罐空时即使产线想跑也开不了阀——与 lineStatus 的「无菌罐待料」互为表里。 */
+    if(dyn.feedPipeMat){
+      var feedOpen = S.running && !S.changeover && l.on && l.faultLeft<=0 && ASEPTIC.stock > 0.5 && flow > 0.03;
+      if(feedOpen){
+        dyn.feedPipeMat.color.set(product.color); dyn.feedPipeMat.emissive.set(product.color);
+        dyn.feedPipeMat.emissiveIntensity = 1.1 + Math.sin(t*9 + i*1.7)*0.45; dyn.feedPipeMat.opacity = 0.95;
+      } else {
+        dyn.feedPipeMat.color.set(0x44484b); dyn.feedPipeMat.emissive.set(0x000000); dyn.feedPipeMat.opacity = 0.5;
+      }
+      dyn.feedLampMat.emissive.set(feedOpen ? 0x2fbf8f : 0xd92c2c);
+      dyn.feedLampMat.color.set(feedOpen ? 0x1d3a2c : 0x3a2323);
+      if(dyn.feedWheel) dyn.feedWheel.rotation.z += ((feedOpen ? 0.9 : 0) - dyn.feedWheel.rotation.z)*Math.min(1, ldt*5);
+      dyn.feedPumpMat.emissive.set(feedOpen ? 0x2fbf8f : 0x8b9a92);
+      dyn.feedPumpMat.emissiveIntensity = feedOpen ? 1.6 : 0.4;
+    }
     var cyc = Math.floor(l.done/36) % 13;
     dyn.stack.forEach(function(cm, si){ cm.visible = si < cyc; });
   });
@@ -2864,6 +3029,56 @@ function updateScene(dt, t){
     F.pumpMat.emissive.set(isActive ? 0x2fbf8f : 0x8b9a92);
     F.pumpMat.emissiveIntensity = isActive ? 1.6 : 0.4;
   });
+  /* --- R1 杀菌链分段驱动（预热→均质→UHT→冷却→无菌罐）+ STER_DYN 仪表值 + 无菌罐液位 ---
+   * 段活条件：杀菌段在处理（sterMove>0 或队列有料且运行）时 preheat/homog/uht/cooling 依次显料色脉冲（相位错开，像料在往前走）；
+   * aseptic 段在杀菌入罐或灌装拉料任一发生时亮。CIP/换型时 UHT/无菌段显清洗蓝，其余回灰；故障/待机全段回灰、段灯随工位状态。 */
+  (function(){
+    var sterSt = stations[2];
+    var proc = sterProcOf(product);
+    var sterMoving = S.running && !S.changeover && sterSt.faultLeft<=0 && sterSt.cipLeft<=0 && ((sterSt.lastMove||0) > 0.05 || sterSt.queue > 1);
+    var feedMoving = S.running && !S.changeover && (ASEPTIC.lastFeed||0) > 0.05 && ASEPTIC.stock >= 0;
+    var cipFlow = sterSt.cipLeft>0 || !!S.changeover;
+    /* STER_DYN 目标值：运行杀菌升到工艺值；运行但无料时 UHT 保温在工艺值（热待机，真实 UHT 即如此）、均质压力归零（无料无压）；
+     * CIP 时温度回落到清洗温、故障继续回落、暂停向常温回落、从未开工为常温。 */
+    var tempT, preT, coolT, p1T = 0, p2T = 0;
+    if(S.changeover){ tempT = 55; preT = 40; coolT = 30; }
+    else if(sterSt.cipLeft>0){ tempT = 82; preT = 55; coolT = 32; }
+    else if(sterSt.faultLeft>0){ tempT = 70; preT = 45; coolT = 28; }
+    else if(S.running){ tempT = proc.uhtTempC; preT = proc.preheatC; coolT = proc.coolOutC; if(sterMoving){ p1T = proc.homogP1; p2T = proc.homogP2; } }
+    else { tempT = S.everRan ? 48 : 28; preT = S.everRan ? 35 : 24; coolT = 26; }
+    var kT = 1 - Math.exp(-dt*0.45), kP = 1 - Math.exp(-dt*2.2);
+    STER_DYN.tempC += (tempT - STER_DYN.tempC)*kT;
+    STER_DYN.preheatC += (preT - STER_DYN.preheatC)*kT;
+    STER_DYN.coolOutC += (coolT - STER_DYN.coolOutC)*kT;
+    STER_DYN.homogP1 += (p1T - STER_DYN.homogP1)*kP;
+    STER_DYN.homogP2 += (p2T - STER_DYN.homogP2)*kP;
+    var segActive = { preheat: sterMoving, homog: sterMoving, uht: sterMoving, cooling: sterMoving, aseptic: sterMoving || feedMoving };
+    Object.keys(D.sterFlow).forEach(function(segId){
+      var F = D.sterFlow[segId]; if(!F) return;
+      if(segActive[segId]){
+        F.mat.color.set(product.color); F.mat.emissive.set(product.color);
+        F.mat.emissiveIntensity = 1.05 + Math.sin(t*8 + F.phase*1.9)*0.5; F.mat.opacity = 0.95;
+        F.lampMat.emissive.set(product.color); F.lampMat.emissiveIntensity = 1.5;
+      } else if(cipFlow && (segId === "uht" || segId === "aseptic")){
+        F.mat.color.set(0x60a5fa); F.mat.emissive.set(0x60a5fa); F.mat.emissiveIntensity = 0.7 + Math.sin(t*6)*0.25; F.mat.opacity = 0.8;
+        F.lampMat.emissive.set(0x60a5fa); F.lampMat.emissiveIntensity = 1.2;
+      } else {
+        F.mat.color.set(0x707880); F.mat.emissive.set(0x000000); F.mat.opacity = 0.55;
+        setLamp(F.lampMat, sterSt.faultLeft>0 ? STATUS.FAULT : STATUS.IDLE, t);
+      }
+    });
+    /* 动态参数牌（低频重绘：redraw 内部按文本去重，值不变不重绘） */
+    var sbi = sterBatchInfo();
+    var stateTxt = S.changeover ? "换型清线中" : sterSt.cipLeft>0 ? "CIP 清洗中" : sterSt.faultLeft>0 ? "故障停机" : sterMoving ? "运行 · 批次 #"+sbi.num+" "+sbi.productName : S.running ? "热待机 · 等待来料" : "待机";
+    if(D.sterPlates.uht) D.sterPlates.uht.redraw("UHT 杀菌", Math.round(STER_DYN.tempC)+"℃ · 保持 "+proc.holdSec+"s", stateTxt, "#f87171");
+    if(D.sterPlates.homog) D.sterPlates.homog.redraw("高压均质", Math.round(STER_DYN.homogP1)+"/"+Math.round(STER_DYN.homogP2)+" bar", sterMoving ? "均质中 · 批次 #"+sbi.num : "无料无压", "#f5a623");
+    if(D.sterPlates.preheat) D.sterPlates.preheat.redraw("预热 → 冷却", Math.round(STER_DYN.preheatC)+"℃ → "+Math.round(STER_DYN.coolOutC)+"℃", stateTxt, "#60a5fa");
+    /* 无菌罐液位：按 ASEPTIC.stock 顺序充填（1 号罐先满先用），液柱高度与库存严格对应 */
+    D.asepticLiquids.forEach(function(al){
+      var f = asepticPerTankFrac(al.tankIdx);
+      al.mesh.scale.y = Math.max(0.02, f * (CONFIG.asepticHeight*0.82 - 1.4));
+    });
+  })();
   D.sightLiquids.forEach(function(sl){
     var lvl = 0.55 + 0.33*Math.sin(t*0.1 + sl.phase);
     sl.mesh.scale.y = Math.max(0.6, lvl*10.2);   /* 液柱高度随扩容后的高罐视管放大 */
@@ -3016,7 +3231,7 @@ function goPreset(name){
 var TOUR_STOPS = [
   { u:0.10, dwell:3.4, title:"原料罐区", text:"6 台大储罐存原浆与糖浆，液位随供应消耗变化。仿真里它是全厂的源头：供应速度被锁死时，再快的产线也只能等料。" },
   { u:0.20, dwell:3.4, title:"调配区", text:"调配罐群各有分工：溶糖罐以约 80℃ 热水化糖，糖浆暂存、浓缩液、水处理缓冲各就其位，按配方顺序汇入主调配罐（点任一调配罐可看批次卡：当前第几步、每料投没投、搅拌还剩几分钟）。罐数在调度台可调——罐太少，这里就是全厂第一个瓶颈。" },
-  { u:0.30, dwell:3.4, title:"杀菌 UHT 区", text:"半成品在这里依次经预热、均质、管式杀菌与冷却，再进成排大型无菌罐无菌暂存后送灌装（「杀菌无菌区」机位可看整排大罐）。开启 CIP 后它会周期性停机清洗，全线一起等料，北侧 CIP 站同步供酸、碱与热水。" },
+  { u:0.30, dwell:3.4, title:"杀菌 UHT 区", text:"半成品在这里依次经预热、均质、管式杀菌与冷却，再进成排大型无菌罐无菌暂存后送灌装（「杀菌无菌区」机位可看整排大罐）。各段管路随料流逐段亮起料色，UHT 牌与均质牌显示随运行/待机变化的温度、保持时间与均质压力（点无菌罐区看信息卡，含当前在制批次与无菌库存）；无菌罐存量被灌装耗空时产线会饥饿待料，不会无料空转。开启 CIP 后它会周期性停机清洗，全线一起等料，北侧 CIP 站同步供酸、碱与热水。" },
   { u:0.40, dwell:3.4, title:"灌装车间", text:"全厂的心脏：多条灌装线并行（线数由 CONFIG.lineCount 决定），旋转灌装、封盖、贴标一气呵成。点任意一条线可以单独停用或抢修，故障只停单线。" },
   { u:0.50, dwell:3.2, title:"包装区", text:"灌装好的瓶子在这里膜包、装箱，机械臂把整箱码上托盘。箱流速度跟不上时，灌装线会被反压堵住（BLOCKED）。" },
   { u:0.60, dwell:3.2, title:"立体仓库", text:"3 排 3 层货架存放成品，箱数随累计产量增长，叉车在货架与月台之间循环搬运。仓满不是仿真终点，订单进度在数据抽屉里看。" },
@@ -3363,6 +3578,8 @@ function renderInfo(){
     });
     rows2 += rowHtml("搅拌剩余", bst.id === "mix" ? Math.ceil(BP.left)+" 分（共 "+rc.mixMinutes+" 分）" : rc.mixMinutes+" 分（搅拌阶段）");
     rows2 += rowHtml("当前开启阀门", bst.source ? BLEND_VALVES[bst.source]+"（"+bst.name+"）" : "无 · 搅拌/取样中");
+    var sbi2 = sterBatchInfo();
+    rows2 += rowHtml("杀菌链在制批次", "#"+sbi2.num+" · "+sbi2.productName+" · 无菌库存 "+fmt(ASEPTIC.stock)+" 瓶");
     rows2 += rowHtml("管路图例", "蓝=水 · 琥珀=糖浆 · 橙=浓缩液 · 紫=小料 · 成品色=出料");
     $("infoRows").innerHTML = rows2;
     $("infoBtns").innerHTML = "";
@@ -3372,15 +3589,21 @@ function renderInfo(){
   if(sel.kind === "aseptic"){
     var ast = stations[2];
     var astt = stationStatus(ast);
+    var aproc = sterProcOf(product);
+    var abatch = sterBatchInfo();
     $("infoTitle").textContent = "无菌罐区 · 杀菌 UHT";
     $("infoStatus").textContent = "● " + astt.txt;
     $("infoStatus").style.color = STATUS_COLORS[astt.key];
     $("infoRows").innerHTML =
-      rowHtml("无菌罐", CONFIG.asepticCount+" 台 × "+CONFIG.asepticCapacityM3+" m³（杀菌后暂存）") +
+      rowHtml("正在处理批次", "#"+abatch.num+" · "+abatch.productName+"（"+abatch.phase+"）") +
       rowHtml("工艺链", "调配→预热→均质→杀菌→冷却→无菌罐→灌装") +
-      rowHtml("杀菌机组", "管式 ×"+CONFIG.sterilizerTubes+" 管束 + UHT 柜机 + 板换") +
+      rowHtml("UHT 杀菌参数", Math.round(STER_DYN.tempC)+"℃ / 保持 "+aproc.holdSec+"s（目标 "+aproc.uhtTempC+"℃ · "+product.name+"）") +
+      rowHtml("预热 / 冷却出口", Math.round(STER_DYN.preheatC)+"℃ → "+Math.round(STER_DYN.coolOutC)+"℃（目标 "+aproc.preheatC+"℃ → "+aproc.coolOutC+"℃）") +
+      rowHtml("均质压力（一/二级）", Math.round(STER_DYN.homogP1)+" / "+Math.round(STER_DYN.homogP2)+" bar（目标 "+aproc.homogP1+" / "+aproc.homogP2+" bar）") +
+      rowHtml("无菌罐库存", fmt(ASEPTIC.stock)+" / "+fmt(CONFIG.asepticStockCap)+" 瓶（"+Math.round(asepticFrac()*100)+"% · "+CONFIG.asepticCount+" 台 × "+CONFIG.asepticCapacityM3+" m³）") +
+      rowHtml("无菌供料", ASEPTIC.stock<=0.5 ? "已空 · 灌装待料中" : (ASEPTIC.lastFeed>0.05 ? "供料中 · "+fmt(ASEPTIC.lastFeed/Math.max(0.01, ASEPTIC.lastDt))+" 瓶/分" : "待命 · 有库存")) +
       rowHtml("杀菌队列", fmt(ast.queue)+" 瓶") +
-      rowHtml("杀菌产能", fmt(ast.rateFn())+" 瓶/分") +
+      rowHtml("杀菌产能", fmt(ast.rateFn() * aproc.flowFactor)+" 瓶/分（额定 × 流量系数 "+aproc.flowFactor+"）") +
       rowHtml("CIP 状态", ast.cipLeft>0 ? "清洗中 · 约 "+Math.ceil(ast.cipLeft)+" 分" : "待命") +
       rowHtml("累计处理", fmt(ast.done)+" 瓶");
     btns = (ast.faultLeft>0 || ast.cipLeft>0) ? '<button class="btn" id="infoRepairSt">⚡ 抢修 / 结束清洗（¥'+CONFIG.repairFee+'）</button>' : "";
@@ -3399,6 +3622,7 @@ function renderInfo(){
     $("infoRows").innerHTML =
       rowHtml("灌装机规格", "旋转一体机 · "+CONFIG.fillerHeads+" 头 · 转盘 Ø"+(CONFIG.fillerRadius*2).toFixed(1)+" m") +
       rowHtml("前/后道", "冲瓶转盘 → 灌装 → 封盖转塔 → 贴标 → 检重剔除") +
+      rowHtml("无菌供料", ASEPTIC.stock<=0.5 ? "无菌罐已空 · 待料" : lineStatus(l).key===STATUS.RUNNING ? "供料阀开 · 泵运行 · 库存 "+fmt(ASEPTIC.stock)+" 瓶" : "供料阀关 · 库存 "+fmt(ASEPTIC.stock)+" 瓶") +
       rowHtml("灌装速度", fmt(l.fillRate())+" 瓶/分") +
       rowHtml("灌装队列", fmt(l.queue)+" 瓶") +
       rowHtml("封盖贴标队列", fmt(l.capQ)+" 瓶") +
@@ -3421,7 +3645,14 @@ function renderInfo(){
       rowHtml("队列等待", s2.id==="supply" ? "原料充足" : fmt(s2.queue)+" 瓶") +
       rowHtml("累计处理", fmt(s2.done)+" 瓶") +
       rowHtml("停机次数", s2.faults+" 次");
-    if(s2.id==="sterilize") rows += rowHtml("CIP 清洗", S.cipOn ? "已开启（每 "+CONFIG.cipIntervalMinutes+" 分钟清洗 "+CONFIG.cipDurationMinutes+" 分钟）" : "未开启");
+    if(s2.id==="sterilize"){
+      var sproc = sterProcOf(product); var sbatch = sterBatchInfo();
+      rows += rowHtml("正在处理批次", "#"+sbatch.num+" · "+sbatch.productName);
+      rows += rowHtml("UHT 参数", Math.round(STER_DYN.tempC)+"℃ / "+sproc.holdSec+"s（目标 "+sproc.uhtTempC+"℃）");
+      rows += rowHtml("均质压力", Math.round(STER_DYN.homogP1)+" / "+Math.round(STER_DYN.homogP2)+" bar");
+      rows += rowHtml("无菌罐库存", fmt(ASEPTIC.stock)+" 瓶（"+Math.round(asepticFrac()*100)+"%）");
+      rows += rowHtml("CIP 清洗", S.cipOn ? "已开启（每 "+CONFIG.cipIntervalMinutes+" 分钟清洗 "+CONFIG.cipDurationMinutes+" 分钟）" : "未开启");
+    }
     if(s2.id==="blend"){ rows += rowHtml("调配罐", S.tanks+" 台启用"); rows += rowHtml("当前批次", "#"+BP.batch+" · "+curBlendStage().name+"（点任一调配罐看批次卡）"); }
     $("infoRows").innerHTML = rows;
     if(s2.faultLeft>0 || (s2.id==="sterilize" && s2.cipLeft>0)){
@@ -3712,6 +3943,7 @@ $("resetBtn").addEventListener("click", function(){
   history=[]; sampleAcc=0; sampleCount=0;
   stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
   lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.lastMove=0; });
+  ASEPTIC.stock = CONFIG.asepticStockInit; ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
   applyProduct(PRODUCTS[0]);
   $("log").innerHTML = "";
   log("工厂已重置，回到第 1 天 08:00 待机状态。");
