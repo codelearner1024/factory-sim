@@ -609,6 +609,13 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <button class="btn" id="pmBtn" style="width:100%;justify-content:center">🛠 保养最低健康度设备（停机 4 分 · ¥450）</button>
       <p class="hint" style="margin:6px 2px 0">健康度随运行负荷衰减：跌破 70 先黄字预警，跌到 28 会劣化成故障（走备件维修链、修后只回 72）；预警期点保养即可停机短修、恢复到 100 免于故障。保养不耗备件，费用计入当前产品成本。在 3D 里点中设备也能看健康度并单独保养。</p>
     </div>
+    <div class="sec-label">仓库扩容投资（R20）</div>
+    <div class="ctl">
+      <div class="lab"><label>货架货位</label><output id="expOut">99 位 · 3 排</output></div>
+      <div class="supply-alert ok" id="expAlert" role="status">仓库容量充足：货架 3 排共 99 个货位。</div>
+      <button class="btn" id="expBtn" style="width:100%;justify-content:center">🏗 扩容一排货架（+33 位 · ¥48,000 · 工期 240 分）</button>
+      <p class="hint" style="margin:6px 2px 0">点按钮先弹确认（费用与工期明示，确认后才扣款）：费用计入当前产品成本台账并进当日日报；施工走仿真时钟，期间新排区域有围挡与施工人员、新货位不可用；完工后新增一整排货架（逐货位账本 / FIFO / 批次谱系自动兼容）。最多扩容 2 次（上限 165 位），参数在 CONFIG.r20。</p>
+    </div>
     <div class="sec-label">一键场景</div>
     <div class="scenarios">
       <button class="scen" data-scen="normal">☀ 平稳日常<span>回到均衡点</span></button>
@@ -676,7 +683,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
     <p class="hint mono" id="perfMerge" style="margin-top:6px">静态合并：—</p>
     <p class="hint mono" id="perfMergeEx" style="margin-top:2px"></p>
     <p class="hint mono" id="perfNav" style="margin-top:2px">车辆最小净距：—</p>
-    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：口径 = 全厂俯瞰机位 · 桌面档 · window.__perfSnapshot() 读 renderer.info.render.calls（含阴影通道）。R15 基线实测：待机 767 · 生产中 804。R16 攻坚（同口径）：灌装头实例化结构性减 231 次绘制（每线 72 个逐头网格 → 2 个 InstancedMesh、封盖塔 8 → 1，三线合计，算术可核）+ 阴影投射体审计（最大边 &lt;5.2 的网格不再进阴影通道）。R17 活页面复测（构建环境同栈 Chromium 自跑，非平台审计服务）：待机 549–592（两轮多读数区间，含 R17 新增第 3 台 AGV 的约 15 个网格）· 生产中 603——待机已达 ≤650 目标且低于 600 冲刺线附近。分区贡献前五（待机，window.__drawProfile()）：灌装大厅 216 · 仓储与月台 140 · 公用工程（西北）84 · 罐区（西）46 · 包装与码垛 36。R18 更正与复测（同口径，2026-10-06）：R17 的 549–592 在真实运行循环中不可复现——同口径基线为 767（R15）→ 775（R17 代码 + 第 3 台 AGV）；R18 加远景剔除 farCull（俯瞰隐藏 231 件最大边 &lt;2.4 的静态小件、近景自动恢复）后，车队扩至 4 台口径下待机实测 <b>614</b> · 生产中 <b>617</b>，≤620 达标（window.__farCull() 可读剔除数与开关状态）。R19 复测（同口径）：交接位扩容 +2 垛约 +8 次绘制，farCull 阈值 2.4→2.7（候选 231→261 件）抵消后待机实测 <b>592</b>，仍 ≤620。</p>
+    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：口径 = 全厂俯瞰机位 · 桌面档 · window.__perfSnapshot() 读 renderer.info.render.calls（含阴影通道）。R15 基线实测：待机 767 · 生产中 804。R16 攻坚（同口径）：灌装头实例化结构性减 231 次绘制（每线 72 个逐头网格 → 2 个 InstancedMesh、封盖塔 8 → 1，三线合计，算术可核）+ 阴影投射体审计（最大边 &lt;5.2 的网格不再进阴影通道）。R17 活页面复测（构建环境同栈 Chromium 自跑，非平台审计服务）：待机 549–592（两轮多读数区间，含 R17 新增第 3 台 AGV 的约 15 个网格）· 生产中 603——待机已达 ≤650 目标且低于 600 冲刺线附近。分区贡献前五（待机，window.__drawProfile()）：灌装大厅 216 · 仓储与月台 140 · 公用工程（西北）84 · 罐区（西）46 · 包装与码垛 36。R18 更正与复测（同口径，2026-10-06）：R17 的 549–592 在真实运行循环中不可复现——同口径基线为 767（R15）→ 775（R17 代码 + 第 3 台 AGV）；R18 加远景剔除 farCull（俯瞰隐藏 231 件最大边 &lt;2.4 的静态小件、近景自动恢复）后，车队扩至 4 台口径下待机实测 <b>614</b> · 生产中 <b>617</b>，≤620 达标（window.__farCull() 可读剔除数与开关状态）。R19 复测（同口径）：交接位扩容 +2 垛约 +8 次绘制，farCull 阈值 2.4→2.7（候选 231→261 件）抵消后待机实测 <b>592</b>，仍 ≤620。R20 复测（同口径）：未扩容待机仍 <b>592</b>；扩容完工后生产中实测 <b>634</b>——扩容排是运行期动态生成、进不了建场静态合并，首版逐件建网格曾达 675，已把立柱（14 根）与车道标线（28 段）改 InstancedMesh，整排新增收敛到约 9 次绘制（立柱 1 + 梁 4 + 层板 3 + 标线 1），余量为生产态动态件波动。</p>
     <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="uiResetBtn">↺ 恢复默认界面</button><span class="hint" style="margin:0">界面偏好（面板隐藏 / 画质档 / 相机条折叠 / 选中机位）仅本次打开期间保留：重置模拟不会清掉它们，刷新页面则恢复默认。</span></div>
 
     <h3>物流任务播报（与车辆动作同源）</h3>
@@ -686,6 +693,14 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">入库台 AGV · 包装下线 → 货架</div><div class="v" id="logiLineIn" style="font-size:13px">空闲</div></div>
       <div class="dcell wide"><div class="l">出库台 AGV · 货架 → 交接位</div><div class="v" id="logiLineOut" style="font-size:13px">空闲</div></div>
       <div class="dcell wide"><div class="l">高倍速物流补偿 · 车辆耗电（R18）</div><div class="v" id="logiLineComp" style="font-size:13px">1× 基准节拍（无补偿）</div></div>
+    </div>
+
+    <h3>库龄与滞销预警（R20）</h3>
+    <p class="hint">逐货位托盘的库龄与批次谱系同源：起算点 = AGV 落位事件（与谱系「入位」同一事件，期初种子托以建账时刻起算），库龄 = 当前仿真时刻 − 入位时刻。各产品保质期在 CONFIG.r20.age：冰红茶 180 天 / 橙汁 90 天 / 可乐 270 天 / 矿泉水 365 天 / 苏打 120 天；库龄占保质期 ≥50% 出「临期」预警、≥75% 出「滞销」重警，货架上该托改醒目色并加红色标记。出库仍严格 FIFO（最老先出，天然先消化临期）。库存周转天数 = 在库托数 ÷ 日均出库托数，持续高于 20 天只给「建议减产 / 促销出货」提示，不自动动产线。</p>
+    <div class="econ" id="ageGrid">
+      <div class="dcell wide"><div class="l">库龄分布</div><div class="v" id="ageDist" style="font-size:13px">—</div></div>
+      <div class="dcell wide"><div class="l">临期 / 滞销预警</div><div class="v" id="ageWarn" style="font-size:13px">暂无</div></div>
+      <div class="dcell wide"><div class="l">库存周转与建议</div><div class="v" id="ageAdvice" style="font-size:13px">—</div></div>
     </div>
 
     <h3>批次追溯（全链谱系 · 点托盘或输批次号）</h3>
@@ -816,6 +831,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li><span class="stchip">已落地</span><b>客户满意度与声誉回路</b> — 按时率/抽检合格率/罚金拖拽滚动成 0–100 分，调度台与大屏可见；满意度调制客户新单到达率与规模（走既有订单队列），日报带当日均值与归因（R18）</li>
       <li><span class="stchip">已落地</span><b>DrawCall 远景剔除</b> — 俯瞰时隐藏 231 件远景小件（近景自动恢复），待机实测 614 ≤ 620（R18）</li>
       <li><span class="stchip">已落地</span><b>出库链提速 + 时间基准总表</b> — 波次内链速 1.97（1×）/2.04（2×）托/分 ≥1.75、交接位扩到 5 垛、库存压力成波解开「满架→堵产→冻进度→无波次」回路；全厂时间基准逐项审计成表，人员移动改乘倍速因子（R19）</li>
+      <li id="expLean"><span class="stchip doing">监控中</span><b>仓库扩容投资</b> — <span id="expLeanTxt">货位 99 位（3 排）· 未扩容</span>（R20）</li>
+      <li id="ageLean"><span class="stchip doing">监控中</span><b>库龄与滞销预警</b> — <span id="ageLeanTxt">最老在库 — · 临期 0 托 · 滞销 0 托</span>（R20）</li>
     </ul>
 
     <h3>生产日志</h3>
@@ -852,7 +869,9 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R17 PDCA 打包轮（DrawCall 活页面实测清零 + 大屏总览模式 + 市场账目核对 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 17 轮打包交付，新参数全在 <b>CONFIG.r17</b>，读数口 <b>window.__r17()</b>，探针口 <b>window.__r17Probe</b>，回归结论包 <b>window.__r17Check()</b>。<b>① DrawCall 实测（A 项，欠账清零）</b>：不再依赖平台审计服务——构建环境内用与 R15 成功过的同栈 Chromium 自跑活页面，口径与 R15/R16 完全一致（全厂俯瞰机位 · 桌面档 · __perfSnapshot 读 renderer.info.render.calls，含阴影通道），待机与生产中两值及 __drawProfile() 分区贡献前五写当轮交付汇报与抽屉「真机性能」区 #perfSource 来源说明（与 R15 基线待机 767 同口径对比），不在本节预填；目标待机 ≤ CONFIG.r16.idleTarget=650，若超线当轮继续压减达标再交付。<b>② 大屏总览模式（B 项）</b>：控制台 #bigBtn 一键开关（状态 BIG / window.__bigScreen() / __setBigScreen）。进入 = stopTour + 清飞行/惯性 + body.big-mode：CSS 把顶栏/KPI 条/调度台/控制台/唤回钮/提示片/信息卡/巡游字幕/换型横幅/画质提示/数据抽屉全部 display:none，只留全屏 3D 与顶部 .big-band 大字 KPI 带——面板自身显隐状态（R6 独立隐藏/UIPREFS/抽屉开关）一律不写，退出去掉类即原样恢复。KPI 带六格（当前产品/累计产量/OEE/预估利润/成品库存/在制订单与交期含队列数）由 renderBigBand 直读 product、S.finished、oee()、totalProfit()、WH.stockCases 与订单字段，与主台账同源同数、随 renderKpis 既有 8 帧节奏刷新。环视 = updateCamera 的 bigOrbitStep 沿巡游曲线（tourCurvePos/Tgt）按 CONFIG.r17.bigScreen.orbitSecondsPerLoop=96 秒匀速推进 desired 机位（无解说停留、无站点吸附，touring 保持 false 互不干扰），之后照常碰撞/阻尼。预警行 bigAlerts() 同源汇总：工位/产线故障、换型、原料三级（rawAlertState）、健康度最低者破 CONFIG.r15 预警线、质检整改期、备件耗尽、当前单逾期/临近（warnDueMinutes）与队列单逾期——有 bad 级染红、仅 warn 染黄。退出 = 点任意处（document 捕获级 click；开启那次点击在捕获阶段 BIG.on 尚为 false 不会自退）或 Esc。进入大屏不暂停生产（loop 的 step 不受影响）；手机上 KPI 带走小字号媒体查询，同样可用。<b>③ 市场账目核对（C 项，新增回归项）</b>：留痕三处——MARKET.buysLog 在卸料完成计价点逐笔记 {qty 精确瓶当量, base 被计价产品原料基准价, idx 完成时指数, spent, productId, mode}（不走 lastBuy 的显示舍入）；AUDIT17 在 step 结算点累计逐产品 produced 瓶次、在 stepQC 隔离报废点与 startChangeover 清线报废点累计两类例外项的瓶数与原料内嵌额（rawCostPerBottle × 瓶数）——这两处按 product.cost 全额入 varCost，是 varCost 与「非原料构成」之间唯一的口径内差值。window.__marketAudit() 给三方结论（容差 CONFIG.r17.marketAudit.tolYuan）：procure 逐笔重算 Σ(qty×base×idx) ≟ Σ ledger.procure ≟ MARKET.buySpent；varCost 构成 Σ produced×(cost−raw) + 原料内嵌 ≟ Σ ledger.varCost（残差 ≈0 即无双计/漏计，差值构成逐项列明）；日报 buySpent 与 MARKET 累计量同源做差。探针 __r17Probe.marketAuditRun(n) 实跑 ≥n 笔交付后校验本段三方（本段交付重算额 = 本段台账 procure 增量 = 本段日报增量）0 差。重置随 MARKET 一并清 buysLog/AUDIT17。<b>④ 例行回归（D 项）</b>：__r17Check() = R16 八项结论包 + 市场核对 + 大屏自检 + DrawCall 分区；动态八项（守恒 20,000 步 / 三段补证 / AGV 会车 / CSS 安全区断言 / 罚金三方对账 / 苏打冒烟 / 谱系抽查 / 健康度时序抽查）由当轮在活页面实跑逐项给结论，数字写交付汇报、不在本节预填。<b>⑤ DrawCall 实测结论（A 项回填）</b>：待机 <b>549–592</b>（两轮多读数，原 592 那轮在车队扩编前）· 生产中 <b>603</b>，同 R15 口径（767/804）——待机 ≤650 达标；前五区：灌装大厅 216 / 仓储与月台 140 / 公用工程 84 / 罐区 46 / 包装与码垛 36（#perfSource 同步回填）。<b>⑥ 码垛旁堆积定位与节拍修复（同轮紧急插入 · 用户真机反馈「码垛机用起来了吗？旁边看到还在堆积货物」）</b>：码垛机本身在用（R14），问题在其旁的下线暂存位长期钉满。<b>分段埋点实测（修复前，标准倍速 1× 活页面 150 秒采样）</b>：① 码垛进料输送带 caseQueue 峰值 <b>0</b>（不涨）；② 成层台峰值 5 箱 = 一层（有界）；③ 出托辊道满托待取占比 ≈0（暂存一有空位即滑出）；④ <b>下线暂存位 0→6 封顶、后半程全程钉在 6/6</b>；⑤ 货架入库口仅 +11 托/150 秒。同期码垛机产出 18 托 = 入库 11 + 暂存钉住 6 + 码垛位等取 1，托数账平。<b>瓶颈判定（数字对比）</b>：码垛出托间隔 <b>8.2 秒/托</b> vs AGV 入库交付间隔 <b>14.0 秒/托</b>——原两台车忙碌率 100%/97% 已饱和、单车往返 ≈28 秒（车速 6.0、转移 2×1.3 秒、路线 70–110 单位），入库运力仅为出托需求的约 59%，<b>源头是入库 AGV 往返节拍，不是码垛机</b>（它上游两段全有界）。<b>修复（按定位选，不全套乱改）</b>：(a) 入库 AGV 增至 2 台——新增入库 2 号（makePalletAgv("inbound")，待命位仓库东北角 (119,-31)，不在任何既有路径上），派单预订制天然分单（各取一托未预订暂存托、各订一货位），出库车与互援口径不变，车队 3 台全进 __navStats/避让状态机（遍历 D.agvs 无需另注册）；会车靠边让行按车队优先级泛化（序小者优先：入库 1 号 &gt; 出库车 &gt; 入库 2 号，原两车行为不变），靠边偏移改按相向轴向选横移方向并钳制在当前车道 ±2.6 内——堵掉原 NW 角写死钳制（71.6..80.6）在 B/C 巷会把车钳成横穿货架的隐患；播报两行改按角色汇总（入库行拼两台入库车）。(b) 单趟耗时压缩：CONFIG.r9 车速 6.0→<b>6.8</b>、转移时长 1.3→<b>0.9</b> 秒，单趟 ≈28→24 秒。(c) 曾试「暂存 ≥5 托时码垛进料 ×0.55 降速」的节拍联动，复跑实测<b>有害已撤销</b>：成托变慢使暂存更久钉满、积压被推回进料侧（caseQueue 钉满 60、瓶账 456→636 持续涨）——码垛降速解决不了 AGV 运力，只转移积压点。<b>复跑验证（同口径 150 秒）</b>：入库交付间隔 <b>6.1 秒/托</b> &lt; 出托 6.6 秒/托（运力比 ≈1.08 有盈余）、货架入库 +24 托；暂存位后半程 <b>5→3 回落</b>（峰值 6 = 容量、不越界）、进料带峰值 19 后归 0、成层台 ≤5、瓶账走平不涨、满托待取占比 3%（短暂等待）、三台车忙碌率 89–95% 无死等、__whCheck 全程 ok、零页面错误。<b>倍速诚实边界</b>：AGV/叉车/人员按真实秒运行（全厂既有口径），产量按仿真分钟 ×倍速放大——倍速 ≥2× 持续运行时入库需求翻倍而车辆运力不变，暂存会再次涨至封顶、码垛机转满托等待（不丢货、不越位，降回 1× 后按上述盈余自动清空）；本轮不动车辆时钟口径（牵涉 R8/R9 全部车辆与净距采样），如需倍速下也均衡，另立一轮把车辆推进改挂仿真时钟。</div></div>
       <div class="dcell wide"><div class="l">R18 PDCA 打包轮（车辆时钟重挂 + 出库链平衡 + 客户满意度回路 + DrawCall 远景剔除 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R17 诚实边界收口 + 用户复报「码垛机旁边还在堆积货物」。新参数全在 <b>CONFIG.r18</b>，读数口 <b>window.__r18()</b>，探针口 <b>window.__r18Probe</b>（compRun / satRun），回归结论包 <b>window.__r18Check()</b>，出库链诊断口 <b>window.__shipChain()</b>。<b>⓪ 诊断先行（推翻 R17 两处结论）</b>：确定性泵送实测（__pumpSim，60 泵送秒 = 33 仿真分钟，1× 默认负荷）——成品 478 瓶/仿真分钟 → 托盘需求 1.59 托/分钟，而入库交付只有 4 托/33 分钟、瓶账涨到 18,363 不落。根源不是任何单机节拍，而是<b>时间基准错位</b>：产量按仿真时钟走（1 真实秒 = 0.55 仿真分钟 = 33 仿真秒），车辆/叉车却按真实秒走（1 秒 = 1 秒）——车辆相对产量慢 33 倍，1× 就已结构性积压、与倍速无关。R17 的「入库 6.1 秒/托、暂存 5→3 回落」在其探针口径下没错，但真实运行循环（用户手机）里复现不了；同口径待机 DrawCall 复测亦为 <b>775</b>（非 R17 所报 549–592，该组数字系探针环境差异，一并在本节更正，见 ⑦）。码垛机本体不是瓶颈：暂存满时它停在「满托等待」是被下游堵住的结果。<b>① 车辆时钟重挂（A 项核心）</b>：vehTimeFactor()——运行中车辆步长 = 真实 dt × 33 × 倍速补偿系数；补偿系数 vehComp = min(倍速, <b>vehCompCap=2.2</b>)，倍速 ≤2.2 时车辆与产量完全同速、4× 时残余失配 4/2.2 ≈ 1.8×（新边界，见 ⑤）。AGV/月台叉车/卡车周转同挂此时钟；装卸转移 xferSeconds 改按仿真秒（0.9 真实秒 → <b>6 仿真秒</b>，转移滑动仍可见）；雷达旋转等纯视觉件仍走真实秒；人员（维修/CIP/质检/工人）是展示层、不搬托盘，保持真实秒。码垛机速率小幅联动：PAL.rateEff = 额定 × min(倍速, <b>palCompCap=1.35</b>)。<b>补偿不免费</b>：车辆耗电按仿真工作量计入公用工程电耗台账（AGV 2.4 kW 按有任务时长、叉车 5.5 kW 按实际位移时长，vehPowerKw），抽屉物流区第四行 #logiLineComp 实时显示补偿系数与车辆累计耗电。<b>② 出库链三修（诊断副产物，同轮收口）</b>：实测出库链只有 0.3–0.5 托/仿真分钟（产量 1.59）——货架迟早被填满、暂存随之钉死，与倍速无关。三处对症：(a) 装车叉车废除 R8 固定巡游环线（每趟约 230 单位逐个探空位），改为待命点按交接位实存动态直达（待命→目标交接位→卡车→待命），车速提至 10（仿真口径，单趟 ≈17.6 仿真秒）；(b) 一车装量 shipTruckCases 16→<b>20 托</b>——波次按 6,000 瓶 = 20 托形成，16 时每波必留 4 托是长期填满的另一半原因，改后一波 = 一车；(c) 出库 AGV 增至 2 台（车队入 2 + 出 2 共 <b>4 台</b>，出库 2 号待命位 (88,-26) A 巷北侧口袋位），出库互援限流一台（防两台出库车同时涌向暂存位）。另修四车集群互让环（北横道/B 巷口四车互让冻结 ≥49 仿真分钟）：靠边腿豁免车辆占用判定（行人仍拦）、yieldT 改衰减不清零、逃逸触发放宽为「对方 yieldT 已积累」，互让最长连续让行实测 ≤11.1 仿真分钟且全程流量不断。<b>③ A 探针（同口径 __pumpSim 细切片 0.025，≈真机帧步）</b>：2× 补偿开跑 120 泵送秒——暂存序列峰值 6（仅开局暂态）→ 后段 0–1、尾均 <b>0.3–0.7</b>、满格率 <b>0.08–0.13</b>，入库 216–222 托 / 出库 170–171 托 / 瓶账末值 ≤11 / 货架 74–76/99 未饱和、守恒 ok；同条件关补偿（= R17 及以前口径）承接跑 60 秒——满格率 <b>1.0</b>、入库仅 2–3 托、瓶账 +17,143～27,191，对照成立。1× 回归：暂存尾均 0.3–1.0、入库 90–92 托，不退化（优于 R17 时代的钉满基线）。<b>④ 客户满意度与声誉回路（B 项）</b>：SAT（CONFIG.r18.sat）——按时率（近 12 单结单滚动窗，逾期记 0）权重 0.62 + 抽检合格率（近 40 次滚动窗，边缘记 0.5）权重 0.38，减延误罚金拖拽（近 24 仿真小时罚金 ×1/150、封顶 12）；初始先验使新厂约 86 分。事件同源：结单走 settleOrderDue 的返回值（satOnOrderSettled）、抽检走 stepQC 三个结果点（satOnQc），无第二套统计。影响只走既有订单入口：satTickArrivals 在 step 末尾按满意度调制间隔（×clamp(1.5−0.0105·分, 0.45, 1.5)）与规模（×clamp(0.62+0.0058·分, 0.6, 1.25)）生成客户单进 ORDERQ（队列上限 4，满则本期不入队），交期仍由 dueOffsetMin 核定；系统永不自动接单/下单之外的决策。显示：调度台「客户满意度」块（分数 + 条 + 两窗费率与罚金拖拽）、大屏 KPI 带第七格 #bbSat（&lt;55 标红）、日报格一行 + 下载文本一行 + 归档摘要段，归因文案 satDayText（如「因 2 单逾期 −3.2」按当日各类事件对分数的边际贡献拆分）。探针 __r18Probe.satRun（每阶段 3,000 泵送秒 ≈ 1,650 仿真分钟）：两单真实逾期结单事件使满意度 70.5 → <b>58.9</b>（−11.6）；高满意阶段（到达时均值 80.2）到达 <b>11 单</b>、均单 <b>32,336 瓶</b>，低满意阶段（均值 27.7）到达 <b>7 单</b>、均单 <b>25,757 瓶</b>——到达率 ×1.57、规模 ×1.26，方向与因子设计一致。满意度是滚动窗：持续按时交付会把口碑挣回来（低谷阶段末自 26 回升至 48.5），这是设计而非缺陷。<b>⑤ 新诚实边界（取代 R17 口径）</b>：倍速 ≤2.2 车辆与产量完全同步，不再有倍速性积压；4× 时残余失配 ≈1.8×，长时间 4× 仍会堆积。另一条与倍速无关的长时边界：出库链实测天花板 ≈1.3–1.5 托/仿真分钟 vs 产量 1.59，净增 ≈0.1–0.3 托/分钟，99 货位货架从冷启动约 <b>5–10 仿真小时</b>连续生产后渐满（任何倍速下仿真时间口径相同）——正常会话与探针窗口内暂存保持 0–2，此后积压会先出现在货架满位、再回到暂存位，如实标注。<b>⑥ DrawCall 远景剔除 + R17 数字更正</b>：farCull——全厂俯瞰（相机距原点 &gt;165）时隐藏世界最大边 &lt;2.4 的静态小件（231 件候选，动态根 [车辆/人员/码垛机动件/货架垛体等] 全部排除、自然可见性快照保存、近景自动恢复且已实测关闭）。实测（同 R15 口径）：待机 <b>614</b> · 生产中 <b>617</b>（车队已扩至 4 台）——≤620 达标。R17 §⑤ 的 549–592 系其探针在未含阴影通道全量/车队扩编前的读数，与本口径不可比；同口径基线序列为 767（R15）→ 775（R17 代码 + 第 3 台 AGV）→ 614（R18，本轮）。<b>⑦ 市场核对模型修正（C 项查出）</b>：__marketAudit 的 varCost 期望式漏计例外项非原料部分——QC 隔离/换型清线按 product.cost 全额入 varCost，R17 模型只记原料部分；窗口内无报废时残差恰为 0 未暴露，R18 自动订单频繁换型后残差达 ¥178,645.68（= 154,756 瓶 × 非原料均价，逐项吻合）。已补全额留痕（qcHeldFullYuan / coScrapFullYuan），台账口径未动；复验：换型报废 4,180 瓶、全额 ¥6,478.69 在册时残差 <b>0</b>，procure 三方差 [0, 0, 0]、ok=true。<b>⑧ 例行回归（C 项，活页面实跑）</b>：守恒长跑 20,000 步（成品 4,668,180、无 NaN/负值、__whCheck ok）；三段补证（入库：暂存先有托而库存不动、AGV toSlot 后库存 26→27；出库 FIFO：取走 seq 3 = 在架最小 seq；排空换型：在制 4,180 → 2,833 → 1,513 → 193 → 自动触发、产品已切换）；AGV 会车（4 台混合车队，最长连续让行 11.1 仿真分钟、流量不断）；CSS 安全区断言 allOk（36/36/110/110/112 ≥ 36px）；罚金三方对账 ¥4 = ¥4 = ¥4（真实逾期结单后非空对齐）；市场三方对账（见 ⑦）；苏打冒烟（soda 台账成品 33,817 瓶）；谱系抽查 3 批 diff 全 0；健康度时序（压到 65 先黄警 warned=true 且不故障、压到 20 后劣化故障 degFaults 0→1）；DrawCall 待机 614 ≤ 620。</div></div>
       <div class="dcell wide"><div class="l">R19 PDCA 打包轮（出库链提速收口 + 时间基准一致性审计 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18 新边界收口（出库天花板 1.3–1.5 &lt; 产量 1.59、连续生产 5–10 仿真小时货架渐满）+ R18 时间基准错位的同类排查。新参数全在 <b>CONFIG.r19</b>（车速/转移在 CONFIG.r9、垛位在 CONFIG.r8），读数口 <b>window.__r19()</b>，探针口 <b>window.__r19Probe.shipRun(simHours, speed)</b>，回归包 <b>window.__r19Check()</b>。<b>① 出库链提速（A 项）</b>：五件套——(a) AGV 车速 6.8→9.2、装卸转移 6→4.0 仿真秒；(b) 交接位 3→5 垛（x 58/64/70/76/82，数组/派单/守恒全按长度派生）；(c) 装车叉车 10→11.5、卡车周转压缩（离场 11→15、场外等待 7→3、进场 8→11，周转约 20→12.5 仿真秒/车）；(d) 同向跟驰蠕行（agvBlockerInfo：领队为同向行驶中的 AGV 且间距 &gt;2.6 时限速跟随保持 ≥2.2，不再全停；行人/相向/停等车仍全停）；(e) 库存压力成波（stockCases ≥ wavePressureStock=30 即凭实存成波，补订单进度成波的占空比——原回路「货架满→生产堵→orderDone 冻→无波次→出库停」就此解开，货仍走同一 FIFO/装车兑现链）。<b>顺修两个长跑死锁</b>：出库 1 号待命位 (79.5,−26) 正压 A 巷取货车道（停着待命能把南下取货车堵死，yieldT 实测 &gt;1000 仿真秒）→ 迁南横道东延尽头口袋位 (124, 31.4)；南横道靠边点被钳制到与车身重合时靠边等于没动 → 改沿车头反向后退让行。<b>探针（同口径 __pumpSim）</b>：波次内链速（受控窗口）1× <b>1.97</b> / 2× <b>2.04</b> 托/分 ≥ 目标 1.75；高压区（货架 ≥85）2× 实测 1.83/分、波次占空比 0.92。12 仿真小时长跑——1×：入库 1,240 / 出库 1,217（差 23 = 在架+缓冲有界量）、货架 8–55 振荡（峰 55 / 尾 44）、暂存尾 0；2×：入库 1,024 / 出库 948（差 76 = 尾段产量爆发期货架存量增长，样本非单调、中段曾回落至 23）、货架峰 99 / 尾 97——尾态专项复测：波次占空比 1.0、出库 2.05/分、货架 97→92 自清，属生产阻塞平衡而非死锁；诚实边界：2× 尾段产量爆发（约 2.0 托/分）超过任何单链运力时货架仍会先涨到高位，爆发过后按 2.05/分自清，不再像 R18 那样单调爬升至钉死。<b>② 时间基准一致性审计（B 项）</b>：全厂逐项排查结论见下方「时间基准总表」——流程计时全部在仿真时钟上，唯一修掉的是人员移动（见总表第 14 行）。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒长跑 20,000 步（成品 5,076,006、无 NaN/负值、__whCheck ok、PM 预警 97 次/劣化故障 12 次自然发生）；中程跑入库 275 / 出库 278（出库含期初种子 FIFO 兑现）、谱系抽查 3 批 diff 全 0、市场三方对账 ok 且 varCost 残差 0、罚金三方 equal、CSS 安全区断言 allOk、健康度模型 6 条目在域、满意度抽测（两单逾期 80.4→63.7；高满意阶段到达 7 单均 33,329 瓶 vs 低满意 4 单均 21,625 瓶，方向双因子一致）、DrawCall 待机实测 <b>592</b> ≤ 620（farCull 阈值 2.4→2.7 多收至 261 件，抵消交接垛 +8）；净距五值与 R18 基线同口径对照：agvMinEquip −0.75 / forkMinEquip 1.05 / minVehicle −1.5 / personMinEquip −0.35 四值与基线逐值相同（均为对接工位确定性接触、非本轮引入），minVehicle↔人随随机工况在 0.98–1.62 间。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 ×min(倍速, 2.2) — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 ×min(倍速, 2.2) — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致</div></div>
+
+      <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R14 码垛机（包装线末端 · 龙门整层码垛 + 速率对齐 + 探针口）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户点名——托盘上的饮料处理速度不够、线末应该有码垛机。此前（R9）成品瓶在 stepR2 里按 floor(产量/300) 直接「折托」出现在下线暂存位：没有成箱、没有码垛，托盘凭空出现，处理速度也无从谈起。本轮补上真实码垛环节，参数全在 <b>CONFIG.r14</b>，内核 <b>PAL</b>（stepPalletizer，在 stepR2 内推进），读数/探针口 <b>window.__palletizer()</b>。<b>① 结构（buildPalletizer）</b>：工位在包装下线簇内（缠膜机东侧、暂存位西侧，单元框 x 63.4–69.8 × z −22.6–−10.0）——进料输送带（辊道 + 导轨 + 头端分流罩，箱从罩口出来）自中线出瓶端北上至成层台（66.6,−11.2）；龙门架 4 立柱 + 双纵梁（沿 z）+ 端梁跨成层台与托盘位（66.6,−16.5），桥架带整层夹持抓手（压板 + 四面指爪 + 吸盘垫）往返两工位；安全围栏三面半围合（进料口/出托口留缺口、各设一对光栅立柱）、状态灯塔（绿=码垛中脉冲 / 琥珀=满托闪烁或滑出 / 灰=待机）、空托盘垛、出托辊道（托盘位 → 暂存位向东）。点选工位出信息卡（kind:"palletizer"）。导航口径同步：NAV_OBSTACLES_AGV / PERSON_OBSTACLES 各加单元矩形（AGV 西道对其东缘净距 ≈2.95）、相机 COLLIDERS 加单元盒。<b>② 动作与同源（updatePalletizerVisual）</b>：箱子是单个 InstancedMesh（40 件 = 托盘 25 + 成层 5 + 输送带 10），每帧按 PAL 状态分槽排布——输送带队列（caseQueue）→ 成层台（forming）→ 抓手夹持整层（cycling 且 cycleT∈[0.3, 放层) 时实例跟随夹持板）→ 托盘逐层（curCases）→ 满托滑出（slideT 驱动托盘组移到目标暂存位、垛体在落位前不显形、AGV 不取滑行中的托盘）。抓手周期姿态是 cycleT 的分段函数（下降→夹持→抬升→桥架移位→下降放层→返回），内核在 cycleReleaseAt=0.8 落托，与画面放层同一刻。<b>③ 速率与规格（守恒不动）</b>：托盘规格 bottlesPerCase=12 瓶/箱 × casesPerLayer=5 箱/层 × layersPerPallet=5 层 = 25 箱/托 = <b>300 瓶/托 = CONFIG.whBottlesPerCase</b>，__palletizer().spec.specMatchesWh 应恒 true；WH.producedCases 语义不变（已到暂存位托数），库存恒等式仍由 AGV 物理事件维护（syncWhStock/__whCheck 不变）。额定速率 rateCasesPerMin=<b>460 箱/分</b> ≥ 三线包装下线峰值 3×1600÷12=400 箱/分（运力比 1.15；默认负荷 1600 瓶/分=133 箱/分时运力比 3.45）——成层与抓手周期并行（夹层后成层台续攒下一层）、机器推进按 0.01 分钟量子子步进（大步长探针不丢速）、满托滑出 0.008 分已计入持续运力（≈400 箱/分封顶不低于下线峰值），故正常负荷下码垛机不是瓶颈：进料缓冲 caseBufferCap=60 箱，满时未成箱的瓶留在 PAL.bottleBank（不丢瓶），腾空后按额定速率追赶清空。暂存全满时满托停在托盘位（state="full"，灯塔琥珀闪 + 一次性日志），AGV 取走一托后自动滑出续码。<b>④ 状态可见</b>：抽屉物流播报新增一行 #logiLinePal（码垛中：第 L 层 · 本托 x/25 箱 · 实际速率（近 2 分钟滑窗）/ 满托待取 / 待机），仓库信息卡加「码垛机」行，巡游包装区/智慧物流两站文案同步。<b>⑤ 探针证据（__palletizer）</b>：标准倍速（1×、平稳日常参数）跑固定时长读 offlineCases（下线总箱数=floor(良品瓶/12)）/ completedPallets（码垛完成托数）/ stagePeak（下线暂存位峰值积压，上限 6）/ queuePeak（进料缓冲峰值）/ capacityRatio（运力比）/ wh.ok（守恒）一组数；结论写当轮交付汇报，不在本节预填。<b>重置</b>：resetPalletizer 与 initRackSlots 同级复位（瓶账/队列/成层/当前托/滑出/峰值全清）。</div></div>
       <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
@@ -922,6 +941,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R17 实测 + 大屏 + 市场核对：同栈 Chromium 自跑活页面读 __perfSnapshot/__drawProfile——待机 calls ≤650（与 R15 的 767 同口径）、生产中同步读数、分区前五与 #perfSource 回填一致；点控制台「🖥 大屏模式」——全部面板消失只剩 3D + 顶部大字 KPI 带，六格数值与抽屉 KPI/台账逐项一致（产量/OEE/利润/库存/订单交期），镜头沿巡游轨迹缓慢环视且生产不暂停，触发故障/压低原料液位时带内出现红/黄提示行，点任意处或 Esc 退出且面板显隐恢复进入前状态（window.__bigScreen().on 切换正确）；window.__r17Probe.marketAuditRun(2) 跑出 ≥2 笔交付后 segment 三方差（重算/台账增量/日报增量）均 ≤¥0.5、window.__marketAudit().ok 为 true 且 varCost 残差 ≈0、差值构成只含质检/换型报废两项；window.__r17Check() 全绿；码垛节拍复跑（标准倍速活页面 150 秒采样）：__palletizer().stageNow 后半程呈回落（不长期钉满 6）、caseQueue 峰值有界且末值回落、bottleBank 不持续增长、入库交付间隔（__whCheck().in 增量）&lt; 码垛完成间隔、三台 AGV 播报行按角色汇总（入库行含 1 号/2 号两车文案）、__r17().palletFix.fleetSize=3</li>
       <li>R18 时钟重挂 + 满意度 + 回归：window.__r18Probe.compRun(120, 2, true)——stageSeries 后段回落到 0–1（尾均 ≤0.7、满格率 ≤0.13）、inDelta ≥200、bottleBank 末值 ≤20、__whCheck().ok；compRun(60, 2, false) 对照满格率 1.0（旧口径）；compRun(90, 1, true) 尾均 ≤1.0 不退化。抽屉物流区第四行显示补偿系数 ×2.00 与车辆耗电累计（>0）；调度台满意度块有分数与条、大屏模式 KPI 带第七格数值与调度台一致；window.__r18Probe.satRun()——eventDrop 为负（两单逾期后下降）、high.arrivals > low.arrivals、high.avgSize > low.avgSize；window.__r18Check() 全绿（wh/fineAudit.equal/traceCheck.allDiffZero/soda/cssSafeArea/healthModel/market/palletizer/marketAudit.ok/sat.value 在 0–100/farCull.count>200）；__perfSnapshot 待机 ≤620、点「物流特写」等镜头落位后 __farCull().on=false；车队 4 台（__r17().palletFix.fleetSize=4）、长跑后 __marketAudit().checks.varCostResidual ≈0（有换型报废在册时仍成立）</li>
       <li>R19 出库链 + 时间基准：window.__r19Probe.shipRun(12, 1)——inTail−outTail ≤30、rackPeak ≤60、rackTail ≤50、stageTail ≤1；shipRun(12, 2)——gap 有界（≤ rack 容量）、samples 非单调、尾态以 __shipChain 复测 activeFrac ≥0.9 且出库 ≥1.8/分自清；波次内链速（受控窗口）1× 与 2× 均 ≥1.75；window.__r19()——handoverSlots=5、agvSpeed=9.2、xferSeconds=4、truckTurnSec≈12.5；window.__r19Check() 全绿、__perfSnapshot 待机 ≤620、__farCull().count ≥250；交接文档「时间基准总表」17 项齐全、第 14 项（人员移动）已改乘 S.speed（2× 下 __crew 移动速度感与世界倍速一致、1× 不变）</li>
+      <li>R20 扩容 + 库龄：window.__r20Probe.expandRun()——before.slots=99=rendered、charge 三方（台账增量=日报增量=EXP.spent=48,000）、during.slotsUnchanged 且 maxRack ≤2 且 freeSlotRack ≤2、after.growth=33 且 slotsEqual、fifo.ok、wh.ok；expandAgvRun(240)——基础排占满后 newRackTaken ≥1、wh 与 whAfterRestore 均 ok；ageRun()——60% 托临期命中、85% 托滞销命中、ageMarksRendered ≥ warn 数；调度台点「扩容」只弹确认不扣款（台账不变）、确认后才扣；抽屉库龄区各产品均/最老库龄与 __r20().age.per 一致、日报格与下载 txt 均有「仓库扩容（当日）」与「最老在库批次库龄」行；重置后 __r20().expand.slots 回 99、done=0、3D 扩容排消失；window.__r20Check() 全绿、时间基准总表已续 18/19 项</li>
     </ul>
   </div>
 </aside>
@@ -935,6 +955,18 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <button class="btn" id="coCancel">再想想</button>
       <button class="btn" id="coDrain" title="不停线：当前产品灌装排空后自动换型，在制报废≈0">排空后换型（预约）</button>
       <button class="btn primary" id="coConfirm">立即换型</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= R20 WAREHOUSE EXPANSION CONFIRM ======= -->
+<div class="modal-overlay" id="expModal" role="dialog" aria-modal="true" aria-labelledby="expTitle">
+  <div class="modal">
+    <h3 id="expTitle">扩容货架 · 确认投资</h3>
+    <p id="expBody"></p>
+    <div class="modal-btns">
+      <button class="btn" id="expCancel">再想想</button>
+      <button class="btn primary" id="expConfirm">确认扩容（扣款开工）</button>
     </div>
   </div>
 </div>
@@ -1270,6 +1302,30 @@ var CONFIG = {
     wavePressureStock: 30,   /* 压力成波阈值（托）：70→45→30 两段下调——中库存区靠订单进度成波时占空比不足、货架会爬进钉满区才被接住；30 托起即凭实存连续成波（高周转工厂的常态发货），订单进度成波仍是主路径，本阀只补占空比（12h 长跑实测见 R19 节） */
     dockForkSpeed: 11.5,
     truckDepartSpeed: 15, truckArriveSpeed: 11, truckAwaySec: 3
+  },
+  /* ---- R20 · 仓库扩容投资 + 库龄/滞销预警 ----
+   * expand：货架从固定 3 排（99 位）变可投资变量。单次扩容 = 新增一整排
+   * （slotsPerRack = 3 层 × 11 位 = 33，与基础排同构），费用 costYuan 进当前产品
+   * 成本台账（fixedCost 口径，与保养/备件同源）+ 日报当日做差；工期 buildMinutes
+   * 走仿真时钟（时间基准总表第 18 项），施工期新货位不存在于 SLOTS/渲染位——
+   * 入库按 freeSlotForPut 只能落既有货位，结构上不可能落进新排；完工事件点才
+   * 追加货位（SLOTS 与 D.whCasePos 同步 +33），逐货位/FIFO/谱系零改动自动兼容。
+   * 排位：rackX0 起向东续排（间距 rackSpacing 与基础列距 16 一致），取货车道 =
+   * 排面西侧 4.5（与基础三排同式 serviceLaneOf 派生）。上限 maxExpansions 次。
+   * age：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin =
+   * S.simMin，谱系 traceOnSlot 同一事件点）；期初种子托以建账时刻起算。
+   * shelfLifeDays 各产品保质期（仿真天）；warnFrac/staleFrac = 库龄占保质期
+   * 比例阈值（临期预警 / 滞销重警），货架上该托改醒目色 + 顶部红标记。
+   * turnover：库存周转天数 = 在库托数 ÷ 日均出库托数（会话累计口径，开局
+   * 0.5 天内不判定）；turnoverWarnDays 以上且持续 turnoverSustainMin 分钟 →
+   * 「建议减产/促销出货」提示（只提示、不自动动作）。 */
+  r20: {
+    slotsPerRack: 33,
+    expand: { costYuan: 48000, buildMinutes: 240, maxExpansions: 2, rackX0: 132, rackSpacing: 16,
+              levels: [0.55, 3.55, 6.55], zStart: -24, zStep: 4.4, zCount: 11 },
+    age: { shelfLifeDays: { lemon: 180, orange: 90, cola: 270, water: 365, soda: 120 },
+           warnFrac: 0.5, staleFrac: 0.75,
+           turnoverWarnDays: 20, turnoverSustainMin: 360 }
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -2423,6 +2479,7 @@ function dayrepSnapshot(){
     coI: CO_STATS.immediate, coD: CO_STATS.drained,
     rawOrders: RAW.orders, rawStockouts: RAW.stockouts, rawStockoutMin: RAW.stockoutMin,   /* R13：原料下单/断料当日做差 */
     buyQty: (typeof MARKET !== "undefined") ? MARKET.buyQty : 0, buySpent: (typeof MARKET !== "undefined") ? MARKET.buySpent : 0,   /* R16：原料采购当日做差 */
+    expandSpent: (typeof EXP !== "undefined" && EXP) ? EXP.spent : 0,   /* R20：扩容支出当日做差 */
     perProd: PRODUCTS.map(function(p){ return ledger[p.id].finished; })
   };
 }
@@ -2436,6 +2493,7 @@ function dayrepDelta(){
     fine: totalFine() - (b.fine || 0),
     rawOrders: RAW.orders - (b.rawOrders || 0), rawStockouts: RAW.stockouts - (b.rawStockouts || 0), rawStockoutMin: RAW.stockoutMin - (b.rawStockoutMin || 0),   /* R13 */
     buyQty: ((typeof MARKET !== "undefined") ? MARKET.buyQty : 0) - (b.buyQty || 0), buySpent: ((typeof MARKET !== "undefined") ? MARKET.buySpent : 0) - (b.buySpent || 0),   /* R16 */
+    expand: ((typeof EXP !== "undefined" && EXP) ? EXP.spent : 0) - (b.expandSpent || 0),   /* R20 */
     coI: CO_STATS.immediate - b.coI, coD: CO_STATS.drained - b.coD,
     perProd: PRODUCTS.map(function(p, i){ return ledger[p.id].finished - b.perProd[i]; })
   };
@@ -2445,7 +2503,9 @@ function dayrepSummaryLine(d){
     + " · 白班 " + fmt(SHIFT.totals.day.finished) + " 瓶 / 夜班 " + fmt(SHIFT.totals.night.finished) + " 瓶"   /* R13：归档行带班次小计（SHIFT.totals 在翻页后才清） */
     + (d.buyQty > 0 ? " · 原料采购 " + fmtMoney(d.buySpent) + "（均价指数 " + marketDayAvgIdx().toFixed(2) + "）" : "")   /* R16 */
     + (d.rawStockouts > 0 ? " · 断料 " + d.rawStockouts + " 次 / " + d.rawStockoutMin.toFixed(1) + " 分" : " · 无断料")   /* R13 */
-    + " · 满意度 " + Math.round(SAT.value) + "（" + satDayText().split(" · ")[0] + "）";   /* R18：归档行带满意度当日均值 */
+    + " · 满意度 " + Math.round(SAT.value) + "（" + satDayText().split(" · ")[0] + "）"   /* R18：归档行带满意度当日均值 */
+    + (d.expand > 0 ? " · 仓库扩容支出 " + fmtMoney(d.expand) + "（货位现 " + SLOTS.length + " 位）" : "")   /* R20 */
+    + " · 最老在库 " + ageOldestText();   /* R20：归档行带最老批次库龄 */
 }
 function renderDayHistory(){
   var el = $("dayHistory");
@@ -2937,6 +2997,8 @@ $("reportDlBtn").addEventListener("click", function(){
     "班次小计 · 夜班：产量 " + fmt(SHIFT.totals.night.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.night.profit) + " · 人工成本 " + fmtMoney(SHIFT.totals.night.laborCost) + "（夜班津贴 ×1.30 · 产能系数 ×" + CONFIG.r13.shifts.nightCapacityFactor + "）",
     "原料供应（当日）：补料下单 " + dd.rawOrders + " 次 · 断料 " + dd.rawStockouts + " 次 / " + dd.rawStockoutMin.toFixed(1) + " 分 · 当前液位 " + Math.round(RAW.level*100) + "% · 预计耗尽 " + rawEtaText(),
     "原料采购（当日 · R16）：采购额 " + fmtMoney(dd.buySpent) + " · 到货 " + fmt(dd.buyQty) + " 瓶当量 · 当日均价指数 " + marketDayAvgIdx().toFixed(2) + " · 现价指数 " + MARKET.idx.toFixed(2) + "（采购额已按到货量 × 到货时指数计入成本台账）",
+    "仓库扩容（当日 · R20）：支出 " + fmtMoney(dd.expand) + "（会话累计 " + fmtMoney(EXP.spent) + " · 已扩 " + EXP.done + " 次 · 当前货位 " + SLOTS.length + " 位）",
+    "最老在库批次库龄（R20）：" + ageOldestText(),
     "当前库存：" + WH.stockCases + " 托",
     "质检抽检（累计）：" + QC.samples + " 次（不合格 " + QC.fails + " · 临界 " + QC.marginals + "）· 当前有效良品率 " + (effQuality()*100).toFixed(1) + "%"
   ];
@@ -3056,6 +3118,11 @@ $("coDrain").addEventListener("click", function(){
 });
 $("resCancelBtn").addEventListener("click", function(){ cancelReservation(); });
 $("coModal").addEventListener("click", function(e){ if(e.target===this){ this.classList.remove("show"); pendingProduct=null; } });
+/* R20：扩容确认流——调度台按钮只弹确认（费用/工期在弹窗内明示），扣款只在确认按钮 */
+$("expBtn").addEventListener("click", function(){ openExpansionConfirm(); });
+$("expCancel").addEventListener("click", function(){ $("expModal").classList.remove("show"); });
+$("expConfirm").addEventListener("click", function(){ startExpansionBuild(); });
+$("expModal").addEventListener("click", function(e){ if(e.target===this) this.classList.remove("show"); });
 
 /* 产能曲线采样：每 CONFIG.sampleSteps 步聚合一次实际出瓶速度（瓶/时），供数据抽屉曲线与当前产能读数。
  * R4：采样只置 chartDirty 标志，曲线 DOM 重绘由主循环按既有 UI 节奏（每 24 帧）执行——禁止在 step 里直接碰 DOM。 */
@@ -3068,6 +3135,124 @@ function pushSample(produced, dtMin){
     sampleAcc=0; sampleCount=0;
     chartDirty = true;
   }
+}
+/* ================= [M1] R20 · 仓库扩容投资（EXP）+ 库龄/滞销预警（AGE） =================
+ * EXP：货架容量从固定 99 位变可投资变量。状态机只有三态：未扩 / 施工中
+ * （EXP.building = { rack, leftMin }，工期在 step 内按仿真分钟倒计时——时间
+ * 基准总表第 18 项）/ 已完工（EXP.done 计数）。扣款只发生在确认弹窗的确认
+ * 按钮里（startExpansionBuild），调度台按钮只负责弹确认，杜绝误触扣款；
+ * 费用进当前产品台账 fixedCost + 会话固定成本（与保养/备件同源），EXP.spent
+ * 累计供日报当日做差。施工期新货位「不存在」：SLOTS 与渲染位表都不追加，
+ * freeSlotForPut 结构上够不到新排（探针断言点）；完工事件 completeExpansion
+ * 一次性做四件事——货架 3D 显形（buildExpansionRack）、围挡施工队撤场、
+ * 渲染位表 +33、SLOTS +33（idx 连续、within 0..32），此后逐货位入/出库、
+ * FIFO（seq 全局序）、谱系（batchKey 承接）零改动自动覆盖新排。
+ * AGE：库龄只读派生，不持第二套状态（唯一例外 AGE.turnHighSince 周转持续
+ * 计时，由 renderKpis 节奏 tick）。库龄 = (S.simMin − slot.inAtMin)/1440 天，
+ * inAtMin 由 AGV 落位事件写入（与谱系入位同一事件），出库叉起即清零。 */
+var EXP = { done: 0, building: null, spent: 0, builds: 0, groups: {} };
+var AGE = { turnHighSince: null };
+function rackXOf(rack){
+  return rack < CONFIG.layout.rackX.length ? CONFIG.layout.rackX[rack]
+    : CONFIG.r20.expand.rackX0 + (rack - 3) * CONFIG.r20.expand.rackSpacing;
+}
+function serviceLaneOf(rack){ return rackXOf(rack) - 4.5; }   /* 与基础三排 CONFIG.r9.serviceLaneX 逐值一致（84−4.5=79.5 …） */
+function slotAgeDays(s){
+  if(!s || !s.taken || s.inAtMin == null) return null;
+  return Math.max(0, (S.simMin - s.inAtMin) / 1440);
+}
+function slotAgeFrac(s){
+  var d = slotAgeDays(s); if(d === null) return 0;
+  return d / (CONFIG.r20.age.shelfLifeDays[s.productId] || 180);
+}
+function ageSummary(){
+  var C = CONFIG.r20.age, per = {}, taken = 0, warn = 0, stale = 0, oldest = null, warnSlots = [];
+  PRODUCTS.forEach(function(p){ per[p.id] = { pid: p.id, name: p.name, pallets: 0, sumDays: 0, avgDays: 0, oldestDays: 0, oldestLabel: null, warn: 0, stale: 0, life: C.shelfLifeDays[p.id] || 180 }; });
+  SLOTS.forEach(function(s){
+    if(!s.taken) return;
+    taken++;
+    var d = slotAgeDays(s); if(d === null) d = 0;
+    var f = d / (C.shelfLifeDays[s.productId] || 180), row = per[s.productId];
+    if(row){ row.pallets++; row.sumDays += d; if(d > row.oldestDays){ row.oldestDays = d; row.oldestLabel = slotLabel(s); } }
+    if(f >= C.warnFrac){ warn++; if(row) row.warn++; warnSlots.push({ slot: s, label: slotLabel(s), pid: s.productId, name: prodNameOf(s.productId), days: d, frac: f, stale: f >= C.staleFrac }); }
+    if(f >= C.staleFrac){ stale++; if(row) row.stale++; }
+    if(!oldest || d > oldest.days) oldest = { slot: s, label: slotLabel(s), pid: s.productId, name: prodNameOf(s.productId), days: d, frac: f, batchKey: s.batchKey, seq: s.seq };
+  });
+  var rows = PRODUCTS.map(function(p){ return per[p.id]; }).filter(function(r){ return r.pallets > 0; });
+  rows.forEach(function(r){ r.avgDays = r.sumDays / r.pallets; });
+  rows.sort(function(a, b){ return b.oldestDays - a.oldestDays; });
+  warnSlots.sort(function(a, b){ return b.frac - a.frac; });
+  /* 周转天数：会话累计口径——在库托 ÷ 日均出库托；开局 0.5 仿真天内样本不足不判定（turnoverDays = null） */
+  var elapsedDays = (S.simMin - 480) / 1440, turnoverDays = null, outPerDay = 0;
+  if(elapsedDays >= 0.5 && WH.outCases > 0){ outPerDay = WH.outCases / elapsedDays; turnoverDays = taken / outPerDay; }
+  return { per: rows, oldest: oldest, taken: taken, warn: warn, stale: stale, warnSlots: warnSlots,
+           turnoverDays: turnoverDays, outPerDay: outPerDay, elapsedDays: Math.round(elapsedDays * 10) / 10 };
+}
+function ageAdviceTick(sum){
+  var C = CONFIG.r20.age;
+  var high = sum.turnoverDays !== null && sum.turnoverDays > C.turnoverWarnDays && sum.taken >= 10;
+  if(high){ if(AGE.turnHighSince === null) AGE.turnHighSince = S.simMin; }
+  else AGE.turnHighSince = null;
+  var sustained = AGE.turnHighSince === null ? 0 : (S.simMin - AGE.turnHighSince);
+  return { high: high, sustainedMin: Math.round(sustained), advice: high && sustained >= C.turnoverSustainMin };
+}
+function ageOldestText(){
+  var o = ageSummary().oldest;
+  if(!o) return "暂无在库托盘";
+  return o.name + " · " + o.label + " · 库龄 " + o.days.toFixed(1) + " 天（保质期 " + (CONFIG.r20.age.shelfLifeDays[o.pid] || 180) + " 天 · 已耗 " + Math.round(o.frac * 100) + "%）" + (o.batchKey ? " · 谱系键 " + o.batchKey : " · 期初库存");
+}
+function openExpansionConfirm(){
+  var C = CONFIG.r20.expand;
+  if(EXP.building){ log("🏗 扩容施工进行中（" + rackNameOf(EXP.building.rack) + " 排 · 剩 " + Math.ceil(EXP.building.leftMin) + " 仿真分钟），完工后才能发起下一次扩容。", "warn"); return false; }
+  if(EXP.done >= C.maxExpansions){ log("仓库已扩至上限：" + (3 + EXP.done) + " 排共 " + SLOTS.length + " 个货位（CONFIG.r20 上限 " + C.maxExpansions + " 次）。", "warn"); return false; }
+  var body = $("expBody");
+  if(body) body.innerHTML = "新增一整排货架（" + rackNameOf(3 + EXP.done) + " 排 · +" + CONFIG.r20.slotsPerRack + " 个货位，货位总数 " + SLOTS.length + " → " + (SLOTS.length + CONFIG.r20.slotsPerRack) + " 位）。<br>费用 <b>¥" + fmt(C.costYuan) + "</b>：确认后立即计入当前产品（" + product.name + "）成本台账，并进当日生产日报。<br>工期 <b>" + C.buildMinutes + " 仿真分钟</b>（走仿真时钟）：施工期间新排区域有围挡与施工人员、新货位不可用，入库只落既有货位；完工后新货位自动参与逐货位入库与 FIFO 出库。";
+  var m = $("expModal"); if(m) m.classList.add("show");
+  return true;
+}
+function startExpansionBuild(){
+  var C = CONFIG.r20.expand;
+  var m = $("expModal"); if(m) m.classList.remove("show");
+  if(EXP.building || EXP.done >= C.maxExpansions) return false;
+  var rack = 3 + EXP.done;
+  curL().fixedCost += C.costYuan; S.fixedCost += C.costYuan; EXP.spent += C.costYuan; EXP.builds++;
+  EXP.building = { rack: rack, leftMin: C.buildMinutes };
+  buildExpansionSite(rack);
+  log("🏗 仓库扩容开工：新增 " + rackNameOf(rack) + " 排货架（+" + CONFIG.r20.slotsPerRack + " 位），费用 ¥" + fmt(C.costYuan) + " 已计入「" + product.name + "」成本台账；工期 " + C.buildMinutes + " 仿真分钟，施工区已围挡、新货位尚不可用。", "warn");
+  renderKpis();
+  return true;
+}
+function stepExpansion(dtMin){
+  if(!EXP.building) return;
+  EXP.building.leftMin -= dtMin;
+  if(EXP.building.leftMin <= 0) completeExpansion();
+}
+function completeExpansion(){
+  var C = CONFIG.r20.expand, rack = EXP.building.rack, rx = rackXOf(rack);
+  buildExpansionRack(rack);        /* 货架 3D 显形（梁柱/层板/车道标线，与基础排同材质同构） */
+  removeExpansionSite();           /* 围挡与施工人员撤场 */
+  var base = SLOTS.length;
+  for(var li = 0; li < C.levels.length; li++) for(var zi = 0; zi < C.zCount; zi++){
+    D.whCasePos.push([rx, C.levels[li] + 0.48, C.zStart + zi * C.zStep]);
+    D.whTapePos.push([rx, C.levels[li] + 0.98, C.zStart + zi * C.zStep]);
+  }
+  for(var j = 0; j < CONFIG.r20.slotsPerRack; j++){
+    SLOTS.push({ idx: base + j, pos: D.whCasePos[base + j], rack: rack, within: j, taken: false, reserved: false, seq: 0, productId: null, batchKey: null, inAtMin: null });
+  }
+  NAV_OBSTACLES_AGV.push([rx - 1.3, -28, rx + 1.3, 28]);   /* 新排进 AGV 净距核算（排面矩形，与基础三排同式） */
+  EXP.done++; EXP.building = null; LOGI.rackDirty = true;
+  log("🏗 仓库扩容完工：" + rackNameOf(rack) + " 排货架上线，货位总数 " + SLOTS.length + " 位（渲染位 = 账本货位）。新货位即刻参与逐货位入库与全局 FIFO 出库。", "good");
+}
+function resetWarehouseExpansion(){
+  Object.keys(EXP.groups).forEach(function(k){
+    var grp = EXP.groups[k];
+    if(grp){ grp.traverse(function(o){ var ix = D.rackMeshes.indexOf(o); if(ix >= 0) D.rackMeshes.splice(ix, 1); }); scene.remove(grp); }
+  });
+  EXP.groups = {};
+  removeExpansionSite();
+  if(D.baseSlotCount){ D.whCasePos.length = D.baseSlotCount; D.whTapePos.length = D.baseSlotCount; }
+  for(var i = NAV_OBSTACLES_AGV.length - 1; i >= 0; i--){ if(NAV_OBSTACLES_AGV[i][0] > 120) NAV_OBSTACLES_AGV.splice(i, 1); }   /* 撤下扩容排的净距矩形（基础排最东 117.3） */
+  EXP.done = 0; EXP.building = null; EXP.spent = 0; EXP.builds = 0; AGE.turnHighSince = null;
 }
 /* ================= [M1] 仿真内核 · 主推进 step(dtMin) =================
  * 数据流（拉式生产，下游拉动上游）：装箱出瓶 → 封盖队列 capQ → 灌装队列 queue
@@ -3082,6 +3267,7 @@ function step(dtMin){
   var shFin0 = S.finished, shRej0 = S.rejected, shProf0 = totalProfit();
   var shPrevKey = shiftInfoAt(S.simMin).key;
   S.simMin += dtMin;
+  stepExpansion(dtMin);   /* R20：扩容工期走仿真时钟（换型步同样推进，施工不停工） */
   accrueShiftLabor(shSegs);
   var shNowInfo = shiftInfoAt(S.simMin);
   if(shNowInfo.key !== shPrevKey){
@@ -3458,6 +3644,43 @@ function renderKpis(){
       if(satNote18) satNote18.textContent = "客户新单：到达间隔 ×" + satIntervalFactor().toFixed(2) + " · 规模 ×" + satSizeFactor().toFixed(2) + " · 已自动到达 " + SAT.arrivals.length + " 单（队列 " + ORDERQ.length + " 单）。满意度由近 12 单按时率、近 40 次抽检合格率与延误罚金滚动计算——逾期与抽检不合格会实打实拉低它。";
     }
   }
+  /* R20：扩容状态（调度台）+ 库龄分布/预警/周转建议（抽屉 + 精益看板）——全部直读 EXP/逐货位账本，不另立第二套数；
+   * 预警集合签名变化时置 rackDirty，让货架醒目色/红标记随库龄增长刷新（不依赖出入库事件）。 */
+  (function(){
+    var C20 = CONFIG.r20, sum20 = ageSummary(), adv20 = ageAdviceTick(sum20);
+    var sig20 = sum20.warnSlots.map(function(w){ return w.slot.idx + ":" + (w.stale ? 2 : 1); }).join(",");
+    if(sig20 !== AGE.lastMarkSig){ AGE.lastMarkSig = sig20; LOGI.rackDirty = true; }
+    var eo = $("expOut"), ea = $("expAlert"), eb = $("expBtn");
+    if(eo) eo.textContent = SLOTS.length + " 位 · " + (3 + EXP.done) + " 排" + (EXP.building ? "（+" + C20.slotsPerRack + " 位施工中）" : "") + " · 累计支出 " + fmtMoney(EXP.spent);
+    if(ea){
+      if(EXP.building){ ea.className = "supply-alert warn"; ea.textContent = "🏗 扩容施工中：" + rackNameOf(EXP.building.rack) + " 排区域已围挡 · 剩 " + Math.ceil(EXP.building.leftMin) + " 仿真分钟完工；施工期新货位不可用，入库只落既有 " + SLOTS.length + " 位。"; }
+      else if(EXP.done >= C20.expand.maxExpansions){ ea.className = "supply-alert ok"; ea.textContent = "仓库已扩至上限：" + (3 + EXP.done) + " 排共 " + SLOTS.length + " 个货位（扩容 " + EXP.done + " / " + C20.expand.maxExpansions + " 次已用满）。"; }
+      else { ea.className = "supply-alert ok"; ea.textContent = "仓库容量：" + (3 + EXP.done) + " 排共 " + SLOTS.length + " 个货位 · 在库 " + sum20.taken + " 托 · 空位 " + (SLOTS.length - sum20.taken) + " 个。可再扩 " + (C20.expand.maxExpansions - EXP.done) + " 次。"; }
+    }
+    if(eb){
+      if(EXP.building){ eb.disabled = true; eb.textContent = "🏗 扩容施工中（剩 " + Math.ceil(EXP.building.leftMin) + " 仿真分钟）"; }
+      else if(EXP.done >= C20.expand.maxExpansions){ eb.disabled = true; eb.textContent = "🏗 已达扩容上限（" + SLOTS.length + " 位）"; }
+      else { eb.disabled = false; eb.textContent = "🏗 扩容一排货架（+" + C20.slotsPerRack + " 位 · ¥" + fmt(C20.expand.costYuan) + " · 工期 " + C20.expand.buildMinutes + " 分）"; }
+    }
+    var el20 = $("expLeanTxt");
+    if(el20) el20.textContent = "货位 " + SLOTS.length + " 位（" + (3 + EXP.done) + " 排）· 已扩 " + EXP.done + " 次 · 支出 " + fmtMoney(EXP.spent) + (EXP.building ? " · " + rackNameOf(EXP.building.rack) + " 排施工中剩 " + Math.ceil(EXP.building.leftMin) + " 分" : "");
+    var ad20 = $("ageDist");
+    if(ad20) ad20.textContent = sum20.per.length ? sum20.per.map(function(r){ return r.name + " " + r.pallets + " 托 · 均 " + r.avgDays.toFixed(1) + " 天 / 最老 " + r.oldestDays.toFixed(1) + " 天（" + r.oldestLabel + "）"; }).join("；") : "暂无在库托盘";
+    var aw20 = $("ageWarn");
+    if(aw20){
+      if(!sum20.warnSlots.length) aw20.textContent = "暂无临期/滞销托盘（阈值：库龄 ≥ 保质期 " + Math.round(C20.age.warnFrac * 100) + "% 预警 · ≥ " + Math.round(C20.age.staleFrac * 100) + "% 重警）";
+      else aw20.textContent = sum20.warnSlots.slice(0, 6).map(function(w){ return (w.stale ? "🔴 滞销 " : "🟠 临期 ") + w.name + " · " + w.label + " · 库龄 " + w.days.toFixed(1) + " 天（占保质期 " + Math.round(w.frac * 100) + "%）"; }).join("；") + (sum20.warnSlots.length > 6 ? "；…共 " + sum20.warnSlots.length + " 托" : "") + "。出库 FIFO 最老先出，优先消化临期。";
+    }
+    var aa20 = $("ageAdvice");
+    if(aa20){
+      if(sum20.turnoverDays === null) aa20.textContent = "库存周转天数：样本积累中（开局 0.5 仿真天后按在库托 ÷ 日均出库托计算）· 在库 " + sum20.taken + " 托";
+      else if(adv20.advice) aa20.textContent = "🔴 库存周转 " + sum20.turnoverDays.toFixed(1) + " 天（在库 " + sum20.taken + " 托 ÷ 日均出库 " + sum20.outPerDay.toFixed(1) + " 托/天）已持续高于阈值 " + C20.age.turnoverWarnDays + " 天满 " + C20.age.turnoverSustainMin + " 分钟：建议减产 / 促销出货消化库存（仅提示，不自动调整产线）。";
+      else if(adv20.high) aa20.textContent = "🟠 库存周转 " + sum20.turnoverDays.toFixed(1) + " 天已高于阈值 " + C20.age.turnoverWarnDays + " 天，持续观察中（已持续 " + adv20.sustainedMin + " / " + C20.age.turnoverSustainMin + " 分钟，满额后出减产/促销建议）。";
+      else aa20.textContent = "库存周转 " + sum20.turnoverDays.toFixed(1) + " 天（在库 " + sum20.taken + " 托 ÷ 日均出库 " + sum20.outPerDay.toFixed(1) + " 托/天）· 低于阈值 " + C20.age.turnoverWarnDays + " 天，周转健康。";
+    }
+    var al20 = $("ageLeanTxt");
+    if(al20) al20.textContent = sum20.oldest ? "最老在库 " + sum20.oldest.name + " " + sum20.oldest.days.toFixed(1) + " 天（" + sum20.oldest.label + "）· 临期 " + sum20.warn + " 托 · 滞销 " + sum20.stale + " 托" + (sum20.turnoverDays !== null ? " · 周转 " + sum20.turnoverDays.toFixed(1) + " 天" : "") + (adv20.advice ? " · 🔴 建议减产/促销" : "") : "暂无在库托盘";
+  })();
   /* R10 读数：单瓶能耗（每千瓶）+ 质检抽检 + 班次日报 + 订单队列交期刷新（与上方同节奏，不新增循环） */
   var epW = $("ePerWater");
   if(epW){
@@ -3569,7 +3792,9 @@ function renderKpis(){
         ["班次小计 · 白班（当前生产日）", "产量 " + fmt(SHIFT.totals.day.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.day.profit) + " · 人工 " + fmtMoney(SHIFT.totals.day.laborCost) + "（¥" + fmt(CONFIG.r13.shifts.dayLaborCostPerShift) + "/班）"],   /* R13 */
         ["班次小计 · 夜班（当前生产日）", "产量 " + fmt(SHIFT.totals.night.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.night.profit) + " · 人工 " + fmtMoney(SHIFT.totals.night.laborCost) + "（¥" + fmt(CONFIG.r13.shifts.nightLaborCostPerShift) + "/班 · 津贴 ×1.30 · 产能 ×" + CONFIG.r13.shifts.nightCapacityFactor + "）"],   /* R13 */
         ["原料供应（当日）", "补料下单 " + dd.rawOrders + " 次 · 断料 " + dd.rawStockouts + " 次 / " + dd.rawStockoutMin.toFixed(1) + " 分 · 当前液位 " + Math.round(RAW.level*100) + "% · ETA " + rawEtaText()],   /* R13 */
-        ["原料采购（当日 · R16）", "采购额 " + fmtMoney(dd.buySpent) + " · 到货 " + fmt(dd.buyQty) + " 瓶当量 · 当日均价指数 " + marketDayAvgIdx().toFixed(2) + "（现价 " + MARKET.idx.toFixed(2) + "）· 采购额已按到货计入成本台账"]   /* R16 */
+        ["原料采购（当日 · R16）", "采购额 " + fmtMoney(dd.buySpent) + " · 到货 " + fmt(dd.buyQty) + " 瓶当量 · 当日均价指数 " + marketDayAvgIdx().toFixed(2) + "（现价 " + MARKET.idx.toFixed(2) + "）· 采购额已按到货计入成本台账"],   /* R16 */
+        ["仓库扩容（当日 · R20）", "支出 " + fmtMoney(dd.expand) + "（会话累计 " + fmtMoney(EXP.spent) + "）· 已扩 " + EXP.done + " / " + CONFIG.r20.expand.maxExpansions + " 次 · 当前货位 " + SLOTS.length + " 位" + (EXP.building ? " · " + rackNameOf(EXP.building.rack) + " 排施工中（剩 " + Math.ceil(EXP.building.leftMin) + " 分）" : "")],
+        ["最老在库批次库龄（R20）", ageOldestText()]
       ];
       rep.innerHTML = cells.map(function(c){ return '<div class="dcell"><div class="l">' + c[0] + '</div><div class="v" style="font-size:13px">' + c[1] + '</div></div>'; }).join("");
       renderDayHistory();
@@ -4672,13 +4897,77 @@ function makeForklift(){
   scene.add(g);
   return { g:g, fork:fork, carried:carried, seg:1, wait:0, forkY:0.1, forkTarget:0.1, speed:7.5, wps:[], pauseAt:{} };
 }
+/* ================= R20 · 扩容排 3D（货架显形 / 施工围挡 / 撤场） =================
+ * buildExpansionRack 在完工事件点调用：梁柱与基础排同材质同构（upMat/beamMat
+ * 经 D.rackUpMat/BeamMat 复用，遮挡淡化 D.rackMeshes 一并登记），另加层板与
+ * 新排取货车道标线 + 横道东延虚线。组挂 EXP.groups[rack]，重置时整组移除。
+ * buildExpansionSite 在开工事件点调用：新排区域橙白围挡 + 2 名施工人员
+ * （makeWorker 同机制，站位在围挡内、面朝新排）+ 警示牌；人员不进 D.workers
+ * 巡逻系统（施工站位固定，updateScene 只给轻微作业摆动）。 */
+function buildExpansionRack(rack){
+  var C = CONFIG.r20.expand, rx = rackXOf(rack);
+  var g = new THREE.Group(); scene.add(g);
+  /* 立柱 14 根走 InstancedMesh（1 次绘制）：扩容排是运行期动态生成、进不了建场
+   * 静态合并，逐件建网格会把 DrawCall 顶高（首版实测完工后生产中 675）——
+   * 实例化后整排新增 ≈ 9 次绘制（立柱 1 + 梁 4 + 层板 3 + 标线 1）。 */
+  var upInst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, 9, 0.35), D.rackUpMat, 14);
+  var ud = new THREE.Object3D(), ui = 0;
+  for(var uz = -27; uz <= 27; uz += 9){ [-1.15, 1.15].forEach(function(ox){ ud.position.set(rx + ox, 4.5, uz); ud.rotation.set(0, 0, 0); ud.updateMatrix(); upInst.setMatrixAt(ui++, ud.matrix); }); }
+  upInst.count = ui; upInst.castShadow = false; g.add(upInst); D.rackMeshes.push(upInst);
+  [0.35, 3.35, 6.35, 9].forEach(function(by){ var bm = B(g, 2.6, 0.32, 56, D.rackBeamMat, rx, by, 0); bm.castShadow = false; D.rackMeshes.push(bm); });
+  C.levels.forEach(function(lv){ var bd = B(g, 2.5, 0.06, 52, M(0x2c3844, 0.8, 0.2), rx, lv - 0.08, 0); bd.castShadow = false; });
+  /* 车道虚线（新排取货道 + 北/南横道东延）合并为一个 InstancedMesh（1 次绘制） */
+  var dashPos = [];
+  for(var az = -24; az <= 24; az += 3.2) dashPos.push({ x: rx - 4.5, z: az, rot: 0 });
+  for(var ax = rx - 20; ax <= rx - 4; ax += 3.2){ dashPos.push({ x: ax, z: CONFIG.r9.northZ, rot: Math.PI / 2 }); dashPos.push({ x: ax, z: CONFIG.r8.handoverZ, rot: Math.PI / 2 }); }
+  var dashInst = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.22, 1.7), new THREE.MeshBasicMaterial({ color: 0xf2b01e, transparent: true, opacity: 0.65 }), dashPos.length);
+  dashPos.forEach(function(dp, di){ ud.position.set(dp.x, 0.03, dp.z); ud.rotation.set(-Math.PI / 2, 0, dp.rot); ud.updateMatrix(); dashInst.setMatrixAt(di, ud.matrix); });
+  dashInst.count = dashPos.length; g.add(dashInst);
+  EXP.groups[rack] = g;
+  return g;
+}
+function buildExpansionSite(rack){
+  removeExpansionSite();
+  var rx = rackXOf(rack);
+  var g = new THREE.Group(); scene.add(g);
+  var oMat = M(0xe8641e, 0.7, 0), wMat = M(0xf5f2e8, 0.6, 0);
+  function run(x0, z0, x1, z1, n){
+    for(var i = 0; i < n; i++){
+      var cx = x0 + (x1 - x0) * (i + 0.5) / n, cz = z0 + (z1 - z0) * (i + 0.5) / n;
+      var alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0);
+      var seg = B(g, alongX ? Math.abs(x1 - x0) / n - 0.08 : 0.1, 1.05, alongX ? 0.1 : Math.abs(z1 - z0) / n - 0.08, i % 2 ? wMat : oMat, cx, 0, cz);
+      seg.castShadow = false;
+    }
+  }
+  run(rx - 3.6, -29.5, rx - 3.6, 29.5, 16);   /* 西围挡（临取货车道一侧） */
+  run(rx + 3.6, -29.5, rx + 3.6, 29.5, 16);   /* 东围挡 */
+  run(rx - 3.6, -29.5, rx + 3.6, -29.5, 3);    /* 北端 */
+  run(rx - 3.6, 29.5, rx + 3.6, 29.5, 3);     /* 南端 */
+  var sign = B(g, 1.7, 1.0, 0.08, M(0xf2b01e, 0.5, 0), rx - 3.6, 1.25, -8); sign.castShadow = false;   /* 施工警示牌 */
+  B(g, 0.09, 1.3, 0.09, DARKSTEEL, rx - 3.6, 0, -8.7).castShadow = false; B(g, 0.09, 1.3, 0.09, DARKSTEEL, rx - 3.6, 0, -7.3).castShadow = false;
+  var crew = [];
+  [[rx - 1.2, -5, 0.4], [rx + 1.1, 7, -0.5]].forEach(function(wp){
+    var w = makeWorker(0xe8641e, 0xf5f2e8);   /* 橙背心白盔：施工人员 */
+    w.g.position.set(wp[0], 0, wp[1]); w.g.rotation.y = wp[2];
+    crew.push(w);
+  });
+  D.expSite = { g: g, crew: crew, rack: rack };
+  return D.expSite;
+}
+function removeExpansionSite(){
+  if(!D.expSite) return;
+  scene.remove(D.expSite.g);
+  D.expSite.crew.forEach(function(w){ scene.remove(w.g); });
+  D.expSite = null;
+}
 /* ================= R9 · 逐货位模型（SLOTS） =================
  * 货位 = D.whCasePos 的每个箱位（生成序：A/B/C 三排 × 3 层 × 巷内 z 序）。占用唯一真相 = taken，
  * 只由 AGV 的放入（putXfer 完成）/取出（pickXfer 开始）事件改写；渲染按 taken 集逐位排实例。
  * syncWhStock 在每个物理事件点后重算 WH.stockCases = 货位实存 + 交接位实存 + 出库在途（出库车载），
  * 与 inCases（放入事件计数）/ outCases（叉车装车事件计数）保持 stock = 初始 + 入 − 出 恒等，
  * 自检读 window.__whCheck()。 */
-function slotLabel(s){ return "货架 " + "ABC"[s.rack] + " 巷 " + (s.within + 1) + " 号位"; }
+function slotLabel(s){ return "货架 " + "ABCDE"[s.rack] + " 巷 " + (s.within + 1) + " 号位"; }   /* R20：排名扩到 E（基础 A/B/C + 扩容 D/E） */
+function rackNameOf(rack){ return "ABCDE"[rack] || String(rack + 1); }   /* R20 */
 function syncWhStock(){
   var n = 0;
   SLOTS.forEach(function(s){ if(s.taken) n++; });
@@ -4688,11 +4977,11 @@ function syncWhStock(){
   WH.stockCases = n;
 }
 function initRackSlots(){
-  var per = Math.max(1, Math.floor(D.whCasePos.length / 3));
+  var per = CONFIG.r20.slotsPerRack;   /* R20：每排恒 33 位（3 层 × 11），扩容排同构——不再按总数 /3 推排号 */
   SLOTS = D.whCasePos.map(function(p, i){
-    return { idx: i, pos: p, rack: Math.min(2, Math.floor(i / per)), within: i % per, taken: false, reserved: false, seq: 0, productId: null, batchKey: null };   /* R15：batchKey 谱系键（种子库存为 null = 期初库存） */
+    return { idx: i, pos: p, rack: Math.min(4, Math.floor(i / per)), within: i % per, taken: false, reserved: false, seq: 0, productId: null, batchKey: null, inAtMin: null };   /* R15：batchKey 谱系键（种子库存为 null = 期初库存）；R20：inAtMin 库龄起算（落位事件时刻，种子托为建账时刻） */
   });
-  for(var i = 0; i < CONFIG.whBaseCases && i < SLOTS.length; i++){ SLOTS[i].taken = true; SLOTS[i].seq = i + 1; SLOTS[i].productId = PRODUCTS[0].id; }
+  for(var i = 0; i < CONFIG.whBaseCases && i < SLOTS.length; i++){ SLOTS[i].taken = true; SLOTS[i].seq = i + 1; SLOTS[i].productId = PRODUCTS[0].id; SLOTS[i].inAtMin = (typeof S !== "undefined" ? S.simMin : 480); }
   LOGI.nextSeq = CONFIG.whBaseCases + 1;
   LOGI.stage = []; LOGI.handover = CONFIG.r8.handoverSlots.map(function(){ return null; }); LOGI.handoverRsv = CONFIG.r8.handoverSlots.map(function(){ return false; }); LOGI.rackDirty = true;   /* R19：同 LOGI 初始化口径，按垛位数派生 */
   syncWhStock();
@@ -4724,6 +5013,7 @@ function buildWarehouseDock(){
   var upMat = new THREE.MeshStandardMaterial({ color:0x3f6fb5, roughness:0.55, metalness:0.35, transparent:true });
   var beamMat = new THREE.MeshStandardMaterial({ color:0xe07b26, roughness:0.6, metalness:0.1, transparent:true });
   D.rackMats.push(upMat, beamMat);
+  D.rackUpMat = upMat; D.rackBeamMat = beamMat;   /* R20：扩容排货架复用同材质（遮挡淡化/外观与基础排一致） */
   CONFIG.layout.rackX.forEach(function(rx){
     for(var uz=-27; uz<=27; uz+=9){ var u1 = B(g, 0.35, 9, 0.35, upMat, rx-1.15, 0, uz); u1.castShadow=false; D.rackMeshes.push(u1); var u2 = B(g, 0.35, 9, 0.35, upMat, rx+1.15, 0, uz); u2.castShadow=false; D.rackMeshes.push(u2); }
     [0.35, 3.35, 6.35, 9].forEach(function(by){ var bm = B(g, 2.6, 0.32, 56, beamMat, rx, by, 0); bm.castShadow = false; D.rackMeshes.push(bm); });
@@ -4739,7 +5029,7 @@ function buildWarehouseDock(){
   holes.count = hi; g.add(holes);
   /* stored cases (instanced, count grows with output) */
   var caseGeo = new THREE.BoxGeometry(2.1, 0.95, 3.6);
-  D.whCases = new THREE.InstancedMesh(caseGeo, new THREE.MeshStandardMaterial({ roughness:0.9 }), 108);
+  D.whCases = new THREE.InstancedMesh(caseGeo, new THREE.MeshStandardMaterial({ roughness:0.9 }), 220);   /* R20：容量按扩容上限 165 位 + 余量预建，扩容不重建实例网格 */
   var dummy = new THREE.Object3D(); var ci = 0;
   var palette = [new THREE.Color(0xb08954), new THREE.Color(0xc7a06a), new THREE.Color(0x9c7c4c), new THREE.Color(0xa8b8a0)];
   CONFIG.layout.rackX.forEach(function(rx){ [0.55, 3.55, 6.55].forEach(function(by){ for(var cz=-24; cz<=24; cz+=4.4){
@@ -4752,7 +5042,7 @@ function buildWarehouseDock(){
   D.whCases.count = D.whTarget;
   g.add(D.whCases);
   var tapeGeo = new THREE.BoxGeometry(2.14, 0.05, 0.55);
-  D.whTape = new THREE.InstancedMesh(tapeGeo, new THREE.MeshStandardMaterial({ color:0x8a6f4d, roughness:0.85 }), 108);
+  D.whTape = new THREE.InstancedMesh(tapeGeo, new THREE.MeshStandardMaterial({ color:0x8a6f4d, roughness:0.85 }), 220);   /* R20：同 whCases 容量口径 */
   var td2 = new THREE.Object3D(); var ti = 0;
   CONFIG.layout.rackX.forEach(function(rx){ [0.55, 3.55, 6.55].forEach(function(by){ for(var cz2=-24; cz2<=24; cz2+=4.4){
     td2.position.set(rx, by + 0.98, cz2); td2.rotation.set(0,0,0); td2.updateMatrix(); D.whTape.setMatrixAt(ti++, td2.matrix);
@@ -4760,6 +5050,10 @@ function buildWarehouseDock(){
   } }); });
   D.whTape.count = D.whTarget; g.add(D.whTape);
   initRackSlots();   /* R9：箱位表已生成，逐货位模型在此定版（种子库存 26 托，渲染首帧按 taken 集重排） */
+  D.baseSlotCount = D.whCasePos.length;   /* R20：基础货位数（99）——重置时扩容排按此回滚、EXP 清零 */
+  /* R20：临期/滞销标记（红色倒锥，悬在被标记托盘上方）——实例数随 rackDirty 重排，容量 = 扩容上限 */
+  D.ageMarks = new THREE.InstancedMesh(new THREE.ConeGeometry(0.34, 0.85, 4), new THREE.MeshBasicMaterial({ color:0xe5322d }), 165);
+  D.ageMarks.count = 0; D.ageMarks.frustumCulled = false; g.add(D.ageMarks);
   hitbox(g, 48, 11, 62, 100, 0, 0, { kind:"zone", id:"warehouse" });
   /* --- 扩容细化 · 分拣复核工位（R8 西移至 x=66：原 x=74 正压在 AGV 西车道上，现让道给托盘车）：复核台 + 扫码拱门 + 待分拣托盘 --- */
   B(g, 4.6, 0.95, 1.6, DARKSTEEL, 66, 0, 18);
@@ -5974,7 +6268,7 @@ function assignAgv(a){
     s.reserved = true; LOGI.handoverRsv[hi] = true;
     a.task = { type:"out", slot:s, handIdx:hi, pallet:{ seq:s.seq, productId:s.productId } };
     a.phase = "toPick";
-    a.route = agvRoute(a.g.position.x, a.g.position.z, CONFIG.r9.serviceLaneX[s.rack], s.pos[2]);
+    a.route = agvRoute(a.g.position.x, a.g.position.z, serviceLaneOf(s.rack), s.pos[2]);   /* R20：车道按排名派生（基础三排与 CONFIG.r9.serviceLaneX 同值，扩容排续推） */
     if(D.slotHi){ D.slotHi.position.set(s.pos[0], s.pos[1], s.pos[2]); D.slotHi.visible = true; }
     agvText(a); return true;
   }
@@ -6053,9 +6347,10 @@ function updatePalletAgvs(dt, t, rdt){
       if(a.phase === "loadXfer"){
         a.carry = tk2.pallet; a.load.visible = true;
         a.phase = "toSlot";
-        a.route = agvRoute(a.g.position.x, a.g.position.z, CONFIG.r9.serviceLaneX[tk2.slot.rack], tk2.slot.pos[2]);
+        a.route = agvRoute(a.g.position.x, a.g.position.z, serviceLaneOf(tk2.slot.rack), tk2.slot.pos[2]);   /* R20：同 assignAgv 车道派生 */
       } else if(a.phase === "putXfer"){
         tk2.slot.taken = true; tk2.slot.seq = tk2.pallet.seq; tk2.slot.productId = tk2.pallet.productId; tk2.slot.reserved = false; tk2.slot.batchKey = tk2.pallet.batchKey || null;   /* R15：货位承接托盘谱系键 */
+        tk2.slot.inAtMin = S.simMin;   /* R20：库龄起算 = 本次落位事件（与谱系 traceOnSlot 同一事件点同源） */
         WH.inCases++; LOGI.rackDirty = true; syncWhStock();          /* 库存只在托盘真实落位这一刻 +1 */
         traceOnSlot(tk2.pallet, slotLabel(tk2.slot));   /* R15：入位事件点记谱系货位 */
         agvFinishTask(a);
@@ -6127,7 +6422,7 @@ function updatePalletAgvs(dt, t, rdt){
       if(!agvStartXfer(a, a.load.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(tk.slot.pos[0], tk.slot.pos[1] - 0.55, tk.slot.pos[2]), "putXfer")) return;
     } else if(a.phase === "toPick"){
       if(!agvStartXfer(a, new THREE.Vector3(tk.slot.pos[0], tk.slot.pos[1] - 0.55, tk.slot.pos[2]), a.load.getWorldPosition(new THREE.Vector3()), "pickXfer")) return;
-      tk.slot.taken = false; tk.slot.reserved = false; LOGI.rackDirty = true;   /* 货位在叉起开始即变空 */
+      tk.slot.taken = false; tk.slot.reserved = false; tk.slot.inAtMin = null; LOGI.rackDirty = true;   /* 货位在叉起开始即变空；R20：库龄随之清零 */
       a.carry = tk.pallet; syncWhStock();
     } else if(a.phase === "toHand"){
       if(!agvStartXfer(a, a.load.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(CONFIG.r8.handoverSlots[tk.handIdx], 0, CONFIG.r9.southZ), "dropXfer")) return;
@@ -6859,13 +7154,24 @@ function updateScene(dt, t){
     var rank9 = {};
     taken9.slice().sort(function(a, b){ return a.seq - b.seq; }).forEach(function(s, i){ rank9[s.idx] = taken9.length > 1 ? i/(taken9.length - 1) : 0; });
     var cOld9 = new THREE.Color(0x7d4f22), cNew9 = new THREE.Color(0xdec493), cTmp9 = new THREE.Color();
+    var cWarn20 = new THREE.Color(0xe08a1e), cStale20 = new THREE.Color(0xd43a2a), markN20 = 0;   /* R20：临期琥珀 / 滞销红，覆盖批次龄渐变 */
     taken9.forEach(function(s, wi){
       dummy3.position.set(s.pos[0], s.pos[1], s.pos[2]); dummy3.rotation.set(0,0,0); dummy3.scale.set(1,1,1); dummy3.updateMatrix();
       D.whCases.setMatrixAt(wi, dummy3.matrix);
-      cTmp9.copy(cOld9).lerp(cNew9, rank9[s.idx]); D.whCases.setColorAt(wi, cTmp9);
+      var f20 = slotAgeFrac(s);
+      if(f20 >= CONFIG.r20.age.staleFrac) cTmp9.copy(cStale20);
+      else if(f20 >= CONFIG.r20.age.warnFrac) cTmp9.copy(cWarn20);
+      else cTmp9.copy(cOld9).lerp(cNew9, rank9[s.idx]);
+      D.whCases.setColorAt(wi, cTmp9);
+      if(f20 >= CONFIG.r20.age.warnFrac && D.ageMarks){   /* R20：预警托上方加红色倒锥标记 */
+        dummy3.position.set(s.pos[0], s.pos[1] + 1.05, s.pos[2]); dummy3.rotation.set(0, 0, Math.PI); dummy3.updateMatrix();
+        D.ageMarks.setMatrixAt(markN20++, dummy3.matrix);
+        dummy3.rotation.set(0, 0, 0); dummy3.position.set(s.pos[0], s.pos[1], s.pos[2]); dummy3.updateMatrix();
+      }
       var wt2 = D.whTapePos[s.idx];
       if(wt2){ dummy3.position.set(wt2[0], wt2[1], wt2[2]); dummy3.updateMatrix(); D.whTape.setMatrixAt(wi, dummy3.matrix); }
     });
+    if(D.ageMarks){ D.ageMarks.count = markN20; D.ageMarks.instanceMatrix.needsUpdate = true; }
     D.whRenderSlots = taken9;   /* R15：实例序 → 货位映射（与 taken9 排布同序），点选托盘据此反查谱系 */
     D.whCases.count = taken9.length; D.whCases.instanceMatrix.needsUpdate = true;
     if(D.whCases.instanceColor) D.whCases.instanceColor.needsUpdate = true;
@@ -6908,6 +7214,13 @@ function updateScene(dt, t){
   }
   /* --- V5 巡检工人（R8：托盘车队已在上方车辆段更新，此处只推进工人） --- */
   D.workers.forEach(function(w){ updateWorker(w, dt * (S.running ? S.speed : 1)); });   /* R19：巡检工人同任务人员口径，移动乘倍速因子 */
+  /* R20：扩容施工人员作业摆动（站位固定，只摆臂/轻晃，幅度小、无新状态） */
+  if(D.expSite && D.expSite.crew) D.expSite.crew.forEach(function(w, wi){
+    var sw = Math.sin(t * 2.2 + wi * 1.7);
+    if(w.armR) w.armR.rotation.x = -0.9 + sw * 0.35;
+    if(w.armL) w.armL.rotation.x = -0.4 - sw * 0.2;
+    if(w.body) w.body.rotation.y = sw * 0.06;
+  });
   updateCrew(dt * (S.running ? S.speed : 1), t);   /* R11 任务人员：故障/CIP/抽检事件监视派单 + 行走/作业推进。R19 时间基准审计：人员的事件门控与作业存续本就与仿真状态同源（故障 faultLeft/CIP cipLeft/抽检 samples），唯移动速度原为真实秒——倍速越高人相对世界越慢；现移动/取样停留乘 S.speed 倍速因子（延时摄影口径：1× 不变、2×/4× 人随世界一起快），姿态平滑仍用真实秒 t。巡检工人同理见 updateWorker 调用处 */
   /* --- R2 锅炉烟气：量与升速随 UTIL.steamLoad（满负荷浓烟快升、待机保温淡烟、停机近无烟） --- */
   if(D.boilerSmoke){
@@ -7612,6 +7925,11 @@ function renderInfo(){
     $("infoStatus").textContent = "● " + prodNameOf(sl15.productId) + " · 已上架在库";
     $("infoStatus").style.color = STATUS_COLORS.run;
     var srows = rowHtml("产品", prodNameOf(sl15.productId)) + rowHtml("入库序号（FIFO）", "第 " + sl15.seq + " 托（越小越早，出库先取）");
+    var ageD20 = slotAgeDays(sl15);   /* R20：本托库龄（与抽屉库龄区同源） */
+    if(ageD20 !== null){
+      var life20 = CONFIG.r20.age.shelfLifeDays[sl15.productId] || 180, f20b = ageD20 / life20;
+      srows += rowHtml("库龄（R20）", ageD20.toFixed(1) + " 天 / 保质期 " + life20 + " 天（已耗 " + Math.round(f20b * 100) + "%）" + (f20b >= CONFIG.r20.age.staleFrac ? " · 🔴 滞销预警" : f20b >= CONFIG.r20.age.warnFrac ? " · 🟠 临期预警" : ""));
+    }
     if(rec15){
       srows += rowHtml("所属批次", rec15.productName + " · 调配批次 #" + rec15.num)
         + rowHtml("本批良品产量", fmt(rec15.bottles) + " 瓶")
@@ -7629,7 +7947,8 @@ function renderInfo(){
     $("infoStatus").textContent = "● 高位货架存储区";
     $("infoStatus").style.color = STATUS_COLORS.run;
     $("infoRows").innerHTML =
-      rowHtml("货架", "3 排 × 3 层") +
+      rowHtml("货架", (3 + EXP.done) + " 排 × 3 层 · 共 " + SLOTS.length + " 个货位" + (EXP.building ? "（+" + CONFIG.r20.slotsPerRack + " 位施工中）" : "") + " · 扩容 " + EXP.done + " / " + CONFIG.r20.expand.maxExpansions + " 次（调度台「仓库扩容投资」）") +
+      rowHtml("最老在库库龄（R20）", ageOldestText()) +
       rowHtml("分拣复核", "复核工位 + 扫码拱门（货架西侧）") +
       rowHtml("缠绕", "托盘缠绕膜机（出库前缠膜）") +
       rowHtml("已存托盘", fmt(WH.stockCases)+" 托（逐货位实存 · 色深 = 批次老）") +
@@ -8069,6 +8388,8 @@ $("resetBtn").addEventListener("click", function(){
   if(D.xferPallet) D.xferPallet.visible = false;
   if(D.xferOwner) D.xferOwner = null;
   if(D.slotHi) D.slotHi.visible = false;
+  resetWarehouseExpansion();   /* R20：扩容回滚到新工厂——扩容排网格移除、渲染位表截回基础 99 位、EXP/AGE 清零（须在 initRackSlots 之前） */
+  var expM = $("expModal"); if(expM) expM.classList.remove("show");
   initRackSlots();   /* R9：逐货位模型复位——种子库存 26 托（seq 1..26）、暂存/交接清空、LOGI.nextSeq 回 27、库存守恒回初值 */
   resetPalletizer();   /* R14：码垛机复位——瓶账/进料队列/成层/当前托/滑出/峰值证据全清（托盘组与箱实例下一帧按 PAL 回位） */
   if(D.forklifts) D.forklifts.forEach(function(fl){
@@ -8698,6 +9019,114 @@ window.__r19Check = function(){
            cssSafeArea: c18.cssSafeArea, healthModel: c18.healthModel, market: c18.market,
            palletizer: c18.palletizer, marketAudit: c18.marketAudit, bigScreen: c18.bigScreen,
            sat: c18.sat, farCull: c18.farCull, r19: window.__r19() };
+};
+/* ================= R20 · 读数口与探针包 =================
+ * __r20()：本轮单一读数口（扩容状态/货位对账 + 库龄分布/预警/周转）。
+ * __r20Probe.expandRun：完整扩容实跑——确认扣款三方（台账 fixedCost 增量 =
+ * 日报当日扩容增量 = EXP.spent）、施工中程断言（货位总数不变、无新排货位、
+ * freeSlotForPut 只够既有排）、泵到完工后对账（+33 且渲染位 = 账本货位）、
+ * FIFO 全局序复核（oldestTakenSlot = 全局 seq 最小）。
+ * __r20Probe.expandAgvRun：把基础排临时占满（占位托走真实账本 inCases，
+ * 测完撤账），泵送生产，验入库 AGV 真把托送进新排且守恒不破。
+ * __r20Probe.ageRun：定点回拨两托 inAtMin 到保质期 60%/85%，验临期/滞销
+ * 预警与货架红标记（ageMarks）随之出现（与 FIFO 最老先出同托）。 */
+window.__r20 = function(){
+  var sum = ageSummary(), adv = ageAdviceTick(sum);
+  return { expand: { done: EXP.done, builds: EXP.builds, spent: EXP.spent,
+                     building: EXP.building ? { rack: EXP.building.rack, name: rackNameOf(EXP.building.rack), leftMin: Math.round(EXP.building.leftMin * 10) / 10 } : null,
+                     slots: SLOTS.length, renderedSlots: (typeof D !== "undefined" && D.whCasePos) ? D.whCasePos.length : null,
+                     slotsEqual: (typeof D !== "undefined" && D.whCasePos) ? SLOTS.length === D.whCasePos.length : null,
+                     baseSlots: (typeof D !== "undefined" && D.baseSlotCount) ? D.baseSlotCount : null,
+                     maxSlots: 99 + CONFIG.r20.expand.maxExpansions * CONFIG.r20.slotsPerRack },
+           age: { per: sum.per.map(function(r){ return { name: r.name, pallets: r.pallets, avgDays: Math.round(r.avgDays * 10) / 10, oldestDays: Math.round(r.oldestDays * 10) / 10, oldestLabel: r.oldestLabel, warn: r.warn, stale: r.stale }; }),
+                  oldest: sum.oldest ? { label: sum.oldest.label, name: sum.oldest.name, days: Math.round(sum.oldest.days * 10) / 10, frac: Math.round(sum.oldest.frac * 100) / 100, seq: sum.oldest.seq } : null,
+                  warn: sum.warn, stale: sum.stale, taken: sum.taken,
+                  turnoverDays: sum.turnoverDays === null ? null : Math.round(sum.turnoverDays * 10) / 10,
+                  advice: adv.advice, ageMarks: (typeof D !== "undefined" && D.ageMarks) ? D.ageMarks.count : null },
+           dayrepExpand: dayrepDelta().expand };
+};
+window.__r20Probe = {
+  expandRun: function(){
+    var C = CONFIG.r20.expand;
+    var out = { before: { slots: SLOTS.length, rendered: D.whCasePos.length } };
+    out.before.equal = out.before.slots === out.before.rendered;
+    if(EXP.building || EXP.done >= C.maxExpansions){ out.skipped = "施工中或已达上限（done=" + EXP.done + "），请重置后重跑"; return out; }
+    var ledger0 = curL().fixedCost, dayBase = dayrepDelta().expand, spent0 = EXP.spent;
+    out.started = startExpansionBuild();
+    out.charge = { cost: C.costYuan, ledgerDelta: Math.round((curL().fixedCost - ledger0) * 100) / 100,
+                   dayrepDelta: Math.round((dayrepDelta().expand - dayBase) * 100) / 100, spentDelta: EXP.spent - spent0 };
+    out.charge.ok = out.charge.ledgerDelta === C.costYuan && out.charge.dayrepDelta === C.costYuan && out.charge.spentDelta === C.costYuan;
+    if(!S.running){ S.running = true; var pb = $("playBtn"); if(pb) pb.textContent = "⏸ 暂停"; }
+    var half = Math.ceil(C.buildMinutes * 0.5 / 0.55);
+    for(var i = 0; i < half; i++) step(0.55);
+    var freeMid = freeSlotForPut();
+    out.during = { slots: SLOTS.length, rendered: D.whCasePos.length, building: !!EXP.building,
+                   leftMin: EXP.building ? Math.round(EXP.building.leftMin) : 0,
+                   maxRack: Math.max.apply(null, SLOTS.map(function(s){ return s.rack; })),
+                   freeSlotRack: freeMid ? freeMid.rack : null, slotsUnchanged: SLOTS.length === out.before.slots };
+    var guard = 0;
+    while(EXP.building && guard < 4000){ step(0.55); guard++; }
+    out.after = { slots: SLOTS.length, rendered: D.whCasePos.length, done: EXP.done, stepsToFinish: guard };
+    out.after.equal = out.after.slots === out.after.rendered;
+    out.growth = out.after.slots - out.before.slots;
+    var minSeq = Infinity; SLOTS.forEach(function(s){ if(s.taken && s.seq < minSeq) minSeq = s.seq; });
+    var oldest = oldestTakenSlot();
+    out.fifo = { minSeq: minSeq, oldestSeq: oldest ? oldest.seq : null, ok: !!oldest && oldest.seq === minSeq };
+    out.wh = window.__whCheck();
+    out.ok = out.before.equal && out.charge.ok && out.during.slotsUnchanged && out.during.maxRack <= 2 && out.after.equal && out.growth === CONFIG.r20.slotsPerRack && out.fifo.ok && out.wh.ok;
+    return out;
+  },
+  expandAgvRun: function(pumpSec){
+    pumpSec = pumpSec || 240;
+    if(EXP.done < 1) return { ok: false, note: "尚未扩容，先跑 expandRun" };
+    if(!S.running){ S.running = true; var pb2 = $("playBtn"); if(pb2) pb2.textContent = "⏸ 暂停"; }
+    var filled = [];
+    SLOTS.forEach(function(s){
+      if(s.rack < 3 && !s.taken && !s.reserved){ s.taken = true; s.seq = LOGI.nextSeq++; s.productId = product.id; s.batchKey = null; s.inAtMin = S.simMin; filled.push(s); WH.inCases++; }   /* reserved = 在途入库任务的目标位，跳过防撞车 */
+    });
+    syncWhStock(); LOGI.rackDirty = true;
+    var whFull = window.__whCheck();
+    window.__pumpSim(pumpSec);
+    var newTaken = SLOTS.filter(function(s){ return s.rack >= 3 && s.taken; });
+    var res = { filledBase: filled.length, whAtFullOk: whFull.ok, pumpSec: pumpSec,
+                newRackTaken: newTaken.length, newRackLabels: newTaken.slice(0, 4).map(function(s){ return slotLabel(s); }),
+                wh: window.__whCheck() };
+    var back = 0;
+    filled.forEach(function(s){ if(s.taken){ s.taken = false; s.seq = 0; s.productId = null; s.inAtMin = null; back++; } });
+    WH.inCases -= back; syncWhStock(); LOGI.rackDirty = true;
+    res.restored = back; res.whAfterRestore = window.__whCheck();
+    res.ok = res.newRackTaken >= 1 && res.wh.ok && res.whAfterRestore.ok;
+    return res;
+  },
+  ageRun: function(){
+    var taken = SLOTS.filter(function(s){ return s.taken; });
+    if(!taken.length) return { ok: false, note: "无在库托盘" };
+    var C = CONFIG.r20.age;
+    var s1 = taken[0], life1 = C.shelfLifeDays[s1.productId] || 180;
+    s1.inAtMin = S.simMin - life1 * 1440 * 0.6;         /* 60% 保质期 → 临期档 */
+    var sumA = ageSummary();
+    var hitA = sumA.warnSlots.filter(function(w){ return w.slot === s1; })[0] || null;
+    var s2 = taken.length > 1 ? taken[1] : s1, life2 = C.shelfLifeDays[s2.productId] || 180;
+    s2.inAtMin = S.simMin - life2 * 1440 * 0.85;        /* 85% 保质期 → 滞销档 */
+    LOGI.rackDirty = true;
+    window.__pumpSim(0.1);                              /* 强制一帧渲染，让 ageMarks 落数 */
+    var sumB = ageSummary();
+    var oldestNow = oldestTakenSlot();
+    var out = { warnCase: { label: slotLabel(s1), name: prodNameOf(s1.productId), fracSet: 0.6, hit: !!hitA, frac: hitA ? Math.round(hitA.frac * 100) / 100 : null },
+                staleCase: { label: slotLabel(s2), name: prodNameOf(s2.productId), fracSet: 0.85, frac: Math.round(slotAgeFrac(s2) * 100) / 100, stale: slotAgeFrac(s2) >= C.staleFrac },
+                totals: { warn: sumB.warn, stale: sumB.stale, oldestDays: sumB.oldest ? Math.round(sumB.oldest.days * 10) / 10 : null },
+                ageMarksRendered: (typeof D !== "undefined" && D.ageMarks) ? D.ageMarks.count : null,
+                fifoOldestSeq: oldestNow ? oldestNow.seq : null };
+    out.ok = out.warnCase.hit && out.staleCase.stale && out.ageMarksRendered >= sumB.warn;
+    return out;
+  }
+};
+window.__r20Check = function(){
+  var c19 = window.__r19Check();
+  return { wh: c19.wh, fineAudit: c19.fineAudit, traceCheck: c19.traceCheck, soda: c19.soda,
+           cssSafeArea: c19.cssSafeArea, healthModel: c19.healthModel, market: c19.market,
+           palletizer: c19.palletizer, marketAudit: c19.marketAudit, bigScreen: c19.bigScreen,
+           sat: c19.sat, farCull: c19.farCull, r19: c19.r19, r20: window.__r20(), draw: drawProfile16() };
 };
 function loop(ts){
   requestAnimationFrame(loop);
