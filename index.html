@@ -498,6 +498,15 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="kpi"><div class="label">预估利润</div><div class="value mono" id="kpiProfit">¥0</div><div class="sub" id="kpiProfitSub">各产品利润之和</div></div>
     </div>
 
+    <h3>真机性能（本机实测 · 反馈时照此读数）</h3>
+    <p class="hint">近 60 帧平均帧率、当前画质档、像素比与上一帧 draw call 数，全部读自本机渲染器（renderer.info），随数据抽屉既有节奏刷新。在手机上卡不卡、降到哪一档，看这四格即可，不用猜。</p>
+    <div class="econ">
+      <div class="dcell"><div class="l">帧率 · 近 60 帧均值</div><div class="v mono" id="perfFps">— FPS</div></div>
+      <div class="dcell"><div class="l">画质档 · 设备档 / 阴影档</div><div class="v mono" id="perfTier" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">像素比 · 当前 / 设备</div><div class="v mono" id="perfPr">—</div></div>
+      <div class="dcell"><div class="l">Draw Call · 上一帧</div><div class="v mono" id="perfCalls">—</div></div>
+    </div>
+
     <h3>当前订单</h3>
     <div class="orderbar">
       <div class="row"><div>📦 <span id="orderName">冰红茶 · 便利店渠道</span></div><div><span>目标</span> <b class="mono" id="orderTargetTxt">30,000 瓶</b></div></div>
@@ -563,12 +572,13 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">调配工艺模型（配方 + 批次状态机）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>数据</b>：CONFIG.recipes[产品id] = { name, batchL, mixMinutes, note, ingredients[{name, amount, unit, source, from}] }；CONFIG.blendProcess = { sugarTempC（溶糖热水约 80℃）, stages[八阶段：water→syrup→conc→minor→topup→mix→sample→discharge，各带 dur/source/color] }。改配方/时长只改这两处。<b>阶段序列</b>由 activeStages() 按配方实际用料过滤（矿泉水无糖浆/浓缩液阶段自动跳过）；mix 阶段时长取配方 mixMinutes。<b>状态机</b> BP{idx,left,batch} 在 step() 中随生产推进（暂停/换型冻结），渲染与批次卡只读 BP/curBlendStage()/ingredientStatus()。<b>罐位分工</b>（buildUpstream）：(-58,-18) 水处理缓冲 / (-58,18) 浓缩液 / (-34,-18) 糖浆暂存 / (-34,18) 主调配 / (-46,30) 溶糖 / (-14,-18) 待杀菌缓冲；每来源一条独立管进主罐，D.blendFlow[source] 注册管路材质/阀门（编号 BLEND_VALVES：V1 水/V2 糖浆/V3 浓缩/V4 小料/V5 出料）/泵灯，updateScene 按阶段驱动：当前管按物料色脉冲流动、阀门进度 8% 后开（先关后开）、来源泵灯亮、来源罐液位回落、主罐液位涨落、搅拌阶段液色由浑浊渐变成品色。点任一调配罐（kind:"blendTank"，pickAt 优先命中）出批次卡，含配方、用料状态、搅拌剩余与管路颜色图例。</div></div>
       <div class="dcell wide"><div class="l">布局放大轮（间距再放一档 + 前进/后退可最小化）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>布局参数入口 = CONFIG.layout</b>（hallW/hallD 厅内墙跨 300×116、chainZ/preheatX/homogenizerX/homogenizerZ/sterilizerSkidX/coolingX 杀菌链坐标、asepticTankX0/asepticTankSpacing/asepticTankZ 无菌罐排、rackX 货架列、dockBays 月台车位）+ CONFIG.factory（360×230、层高 15/屋顶 24）+ CONFIG.lineSpacing=40。杀菌链现为：预热 (-54,8) → 均质 (-32,22，偏南错开) → 管式杀菌机组 (-6,8) → UHT 柜机 (-25,-14，buildUpstream 内 uht 组整体偏移 -10,-14) → 冷却 (20,8) → 无菌罐排 (x -58..18 / z -30，罐距 19) → 灌装总管 (x=4)；机组间以长管段相连（pIn/pMid/pUp/pFeed 在 buildAsepticZone，长度即间距的视觉证据），锅炉蒸汽总管改接 x=-25。调配罐距 24×36、货架列距 16（巷道 ≈13）、月台车距 30、复核/缠膜工位西移到 x=74/73。联动项（改布局后必须同步核对）：PRESETS 全部机位、buildTour 路点/目标、COLLIDERS 碰撞盒、遮挡顶板 slab 与 inside 判定、工人 w1/w3 路线与人行通道 (z=-42)、叉车 1 矩形路线 (x 76/124)、buildSignage 铭牌/立牌坐标、UHT 蒸汽粒子原点 (-25,12,-14)。灌装线内部工位（冲瓶→灌装→封盖→贴标→检重→膜包→装箱）是连续输送带工艺、本就不留间隙，间距体现在线间 (40) 与线前后缓冲段。<b>前进/后退最小化</b>：控制条内 #moveCluster（#moveToggle 切换钮 + #moveBtns），收起态给 #controlBar 加 .move-collapsed 类隐藏按钮组与 .ops-hint，只剩一颗「🧭 移动」钮；默认小屏 (&lt;900px) 收起、大屏展开，会话内选择不持久化；逻辑在 bindMoveControls 的 setMoveCollapsed（window.__setMoveCollapsed 可调试切换），收起时自动清 moveDir。</div></div>
       <div class="dcell"><div class="l">巡游解说改法</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">文案集中在 M4 的 TOUR_STOPS（u=曲线位置 0~1、dwell=停留秒数、title/text）。改文案只改该数组；改路线改 buildTour 的 pts/tgts 并同步核对 u 顺序。停留/触发逻辑在 updateCamera，字幕 DOM 是 #tourCap，跳过/退出按钮在 M5 绑定。</div></div>
-      <div class="dcell"><div class="l">性能开关位置</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">预算全在 CONFIG.perf：像素比上限（桌面/移动）、LOD 距离与降频、降级阈值（阴影分级 R3 起在 CONFIG.light.shadowTiers，初始档桌面 high / 移动 mid）。移动端默认低一档（buildScene 内 isMobileGL）。帧率显示：顶栏「帧率」按钮，默认关，开启后读数写在按钮上；帧率持续低于阈值会自动逐级降质（像素比→关阴影，只降不升，逻辑在 loop 的 sampleFps）。瓶/箱/货架孔位/试剂瓶均为 InstancedMesh，勿改回逐个 Mesh。</div></div>
+      <div class="dcell"><div class="l">性能开关位置</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">预算全在 CONFIG.perf：像素比上限（桌面/移动）、LOD 距离与降频、降级阈值（阴影分级 R3 起在 CONFIG.light.shadowTiers，初始档桌面 high / 移动 R5 起为低端档 eco 512，参数组 CONFIG.perf.mobileLow）。移动端判定在 buildScene 内（isMobileGL / __perfTier）。真机读数在数据抽屉「真机性能」四格（R5）。帧率显示：顶栏「帧率」按钮，默认关，开启后读数写在按钮上；帧率持续低于阈值会自动逐级降质（像素比→关阴影，只降不升，逻辑在 loop 的 sampleFps）。瓶/箱/货架孔位/试剂瓶均为 InstancedMesh，勿改回逐个 Mesh。</div></div>
       <div class="dcell wide"><div class="l">字体 / 顶栏 / 建场时机（可验证性修复轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>字体加载方案 = 异步加载 + 系统回退（非自托管）</b>：Google Fonts 样式表改用 preload + onload 切 rel 异步引入（URL 带 display=swap），已移出加载关键路径；font-family 回退栈写清为 Noto Sans SC → PingFang SC / Hiragino Sans GB / Microsoft YaHei → system-ui，等宽为 JetBrains Mono → ui-monospace / SFMono / Menlo / Consolas。字体域名完全不可达时页面按系统字体直接渲染、数秒内可达 DOMContentLoaded，字体晚到只平滑替换字形；牌面 canvas 文字同样按该回退栈绘制。<b>顶栏小屏布局</b>：标题区 flex 可收缩、标题/副标题单行省略号截断，按钮组不收缩；≤900px 全面收紧内边距，≤560px 再收一档，≤420px 隐藏诊断用的「帧率」按钮（非关键按钮，≥421px 恢复）以保「数据」按钮与标题完整在视口内；底部控制条的分段控件（机位含「杀菌无菌区」、前进/后退、ops-hint）小屏允许换行、控制条仅纵向可滚且滚得到底，横向不溢出。<b>建场时机</b>：buildScene() 已移至 DOMContentLoaded 后经 rAF + setTimeout 异步执行（bootFactory，耗时打 console.info），建场期间显示「工厂搭建中…」加载态、建好自动移除，勿改回脚本尾部同步执行。</div></div>
       <div class="dcell wide"><div class="l">控制台整体隐藏（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>实现位置</b>：隐藏入口 = 调度台标题栏的 #dispatchHideBtn（✕ 隐藏）与底部控制条末尾的 #controlHideBtn（✕ 隐藏控制台）；逻辑 = [M5] 调度台绑定旁的 setConsoleHidden（window.__setConsoleHidden 可调试切换），只切 body.console-hidden 一个类，CSS 据此把 #dispatch 与 #controlBar 一起淡出/滑出 + visibility:hidden + pointer-events:none（完全消失、不占位、不拦画布手势），样式段在 CSS 的「console overall hide」注释块。唤回 = 右下角浮钮 #consoleShowBtn（🎛 控制台，仅隐藏时可见可点），其状态点/文案 #consoleDot/#consoleStatus 由 renderKpis 按 S.running/changeover 同步（运行中绿点/换型中蓝点/已暂停黄点/待机灰点）。与既有两套折叠划清：调度台 .closed（只折 body）与移动组 .move-collapsed（只折前进/后退）都不被本功能触碰，所以恢复时各自回到隐藏前状态。默认显示面板；隐藏只在会话内有效（不持久化），除唤回钮外任何操作（切机位/巡游/开数据抽屉/场景按钮程序化点 playBtn）都不会清掉该类把面板弹回；隐藏不影响仿真 step 与已设参数。</div></div>
       <div class="dcell wide"><div class="l">R1 工艺真实感（杀菌链动态 + 无菌守恒 + 灌装联动 + 批次衔接）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.sterilizeProcess[产品id] = { uhtTempC / holdSec / preheatC / coolOutC / homogP1 / homogP2 / flowFactor }（茶 137℃/4s·150/30bar、橙汁 136℃/6s·200/50bar、可乐 133℃/4s·120/25bar、矿泉水 85℃/2s·80/15bar 量级），CONFIG.asepticStockCap=30000 / asepticStockInit=4500（瓶当量）。<b>守恒链（step）</b>：杀菌处理 sterMove = min(队列, 额定×flowFactor×dt, 罐容剩余) → ASEPTIC.stock 上升；灌装拉料 feedMove = min(stock, 产线队列空间, 灌装总需求×1.25) 按各线空间占比分配 → stock 下降；stock=0 时产线队列见底触发 lineStatus 饥饿「无菌罐待料」，罐满时杀菌 stationStatus 为 BLOCKED。totalWip() 已含 stock，换产 startChangeover 清 stock 并按在制品口径报废计入旧产品成本（与调配清线一致），applyProduct 时 STER_FEED 重置，杜绝旧产品换产后继续灌出。<b>批次衔接</b>：STER_FEED 在 advanceBlendBatch 出料完成时更新为该批 {num, productId}，sterBatchInfo() 在出料阶段显示当前出料批、其余显示 STER_FEED；杀菌区信息卡（kind:aseptic）、杀菌工位卡、调配批次卡三处同源显示。<b>渲染</b>：D.sterFlow 五段（preheat/homog/uht/cooling/aseptic，各自管路材质+段灯，料色语义与调配管路一致：流动=料色脉冲、停=暗灰、CIP/换型时 UHT/无菌段显清洗蓝）；STER_DYN 显示值（tempC/preheatC/coolOutC/homogP1/homogP2）由 updateScene 向工艺目标趋近（温度慢 k≈0.45/s、压力快），待机回落（运行热待机保工艺温、无料均质无压、CIP 82℃、故障 70℃、暂停向 48℃、未开工 28℃），动态参数牌 D.sterPlates（UHT/均质/预热-冷却，makeDynPlate 画布纹理、文本不变不重绘）与信息卡同读 STER_DYN；无菌罐液位柱 D.asepticLiquids 按 asepticPerTankFrac 顺序充填（不再随机正弦，原料罐视管仍正弦）。<b>灌装联动</b>：每线 dyn.feedPipeMat/feedLampMat/feedPumpMat/feedWheel（供料支管/阀灯/泵灯/阀手轮，buildLine 内建），开阀条件 = 运行+在线+无故障+stock&gt;0.5+有瓶流；转速 rpm = 实际灌装速率（lastMove/lastDt）/800 驱动转盘/封盖塔/贴标辊/星轮（含冲瓶）/暂存转盘/输送带，停线故障即 0 同步停转；空瓶段（bx&lt;0.5）瓶子仅在 flow&gt;0.05 时显示，停线即断流，已灌段瓶子留带上（phase 冻结），产量计数仍走内核 produced 不受视觉瓶数影响。</div></div>
       <div class="dcell wide"><div class="l">R3 视觉真实感（光影体系 + 材质分级 + 天空远景）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.light = { exposure 曝光 / sunColor·sunIntensity 主光（工业冷白）/ hemiSky·hemiGround·hemiIntensity 半球光 / ambientIntensity / skyTop·skyHorizon·skyGround 天空渐变三段 / fogColor·fogNear·fogFar 远景雾 / silhouette 远景剪影色 / shadowTiers 阴影分级 { high 2048 / mid 1024 / low 0=关 } / envIntensity 环境反射强度 }；CONFIG.mats = 八档材质分级 { stainless 不锈钢罐体（粗糙 .22 / 金属 .85）/ steel 管道阀门 / machine 涂装机架 / frame 结构钢件 / plastic 塑料件 / glass 玻璃 / epoxy 环氧地坪 / concrete 水泥 }，M() 预设（STEEL/DARKSTEEL/MACH）与管路流动材质、GLASSMAT、办公室玻璃、地面都只从这两处取值，禁止在 builder 里再散写粗糙度/金属度魔法值。<b>光源结构</b>（buildScene）：半球光 + 方向光主光（PCFSoft 阴影，阴影相机范围按 CONFIG.factory 派生覆盖全厂 360×230，normalBias 0.02）+ 弱环境光；渲染器 sRGB 输出 + ACESFilmic，曝光读 CONFIG.light.exposure。阴影只由主要设备/建筑投射（建场末尾 traverse 把最大边 &lt;3.2 的小件 castShadow 关掉，地面/大平面只接收）。<b>环境反射</b>：buildScene 用程序渐变全景画布经 PMREM 生成 scene.environment，全场 Standard 材质共用、强度统一写 envMapIntensity = CONFIG.light.envIntensity——不锈钢的镜面感全靠它，若关掉环境反射必须同步调低 mats 的 metal 值，否则罐体会发黑。<b>阴影分级与降级</b>：初始档桌面 high / 移动 mid（window.__setShadowTier 可调试切换，切档自动释放旧 shadow.map 重建）；自适应降级链（loop 的 sampleFps）1 级 = 像素比 1.25 + 阴影降 mid，2 级 = 关阴影（low），只降不升。<b>天空与远景</b>：scene.background = 程序渐变画布纹理（顶空→地平线→地面雾色），fogColor 必须与 skyHorizon 同源否则厂界出色带；buildBackdrop 一圈低多边形剪影（北侧缓丘 / 南侧邻厂厂房+双烟囱 / 东侧水塔，MeshBasicMaterial 受雾衰减、无阴影），固定白天、无夜间模式。<b>地面</b>（buildShell）：一张分区颜色贴图（生产区深灰绿环氧 + 边界色带 / 仓储·月台水泥 / 黄色安全线与伸缩缝沿用）+ 一张同构粗糙度贴图（roughnessMap，环氧区半光、水泥区近全粗糙），均为程序画布、无外部图片；改分区范围改 buildShell 里的 epoxyRect 与 fz(34) 月台界线两处、颜色与粗糙度两张图同改。<b>玻璃与液体</b>：GLASSMAT（灌装护罩）/ 办公室玻璃 / 视镜玻璃管走 CONFIG.mats.glass；瓶液 bottleMat 降粗糙（0.16）+ 透明度 0.9 呈透光感，颜色仍由 __setProductColor 驱动；蒸汽/烟气粒子加了冷灰蓝染色（PointsMaterial color）并下调烟气不透明度，新光照下不发白刺眼；警示灯/信标保持发光材质（emissive）方案、不加真实点光源以保性能。</div></div>
       <div class="dcell wide"><div class="l">R4 性能收官 + 全量回归（马拉松收官轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>四轮总览</b>：基线稳定版（控制台可隐藏）→ R1 工艺真实感（杀菌链分产品参数 / 无菌库存守恒 / 灌装转速联动 / 批次衔接）→ R2 仓储物流 + 公用工程联动（锅炉/空压/RO/冷库随负荷、仓库 FIFO 守恒、发货波次装车、原料罐车补给）→ R3 视觉真实感（CONFIG.light/mats 光影材质体系、阴影三档、天空雾与远景、PMREM 环境反射）→ R4 性能收官 + 全量回归（本节）。<b>版本与校验值</b>：各轮快照与 index.html 的 sha256 校验值登记在本地 <b>~/workspace/factory-sim-versions/VERSION_LOG.md</b>（v01 基线 / v02 R1 / v03 R2 / v04 R3），镜像 git 仓库 ~/workspace/factory-sim-repo 有对应标签 <b>v0.1.0–v0.4.0</b>；本轮 R4 代码即马拉松最终版，其快照与标签在收官交付时按同一规矩登记（v05 / v0.5.0）。<b>R4 性能修复</b>：① 粒子减量随画质档真实生效——CONFIG.perf.particleFactor { high 1 / mid 0.6 / low 0.3 }，__setShadowTier 同步 setDrawRange 并缩短 updateScene 的蒸汽/烟气粒子循环；② 自动降级不再静默——sampleFps 触发降级时无论帧率显示开关都写日志并弹出 #qualityNotice 提示条，「恢复高画质」钮（restoreQuality / window.__restoreQuality）一键回初始像素比+阴影+粒子档，恢复后仍可再次自动降级；③ 每帧零分配巡检——遮挡扇形射线（updateOcclusion）的临时向量/盒/命中点全部预分配复用、材质反查改 Map O(1)，resolveCollision 五向推离改标量比较（去数组+sort）；④ 渲染循环零 DOM——pushSample 只置 chartDirty 标志，产能曲线重绘节流到主循环既有 24 帧节奏，KPI/信息卡维持 8/24 帧分频；⑤ resize 改 rAF 合并节流；⑥ 材质去重——视管玻璃管全厂 5 处共用 SIGHTTUBE 一个实例（M() 缓存工厂与 GLASSMAT/SCREENMAT 共享模式此前已在用），瓶/箱/立柱/货架孔位/试剂瓶等高频对象继续 InstancedMesh、表针/液位/火焰只改引用属性不重建几何；⑦ step() 加异常 dt 守卫（NaN/≤0 直接跳步）。<b>R4 回归修复</b>：停机时切产品即时生效——此前暂停状态点确认换产，倒计时只在 step 推进、暂停永不走完会假死；现停机切产品走 startChangeover 结算清线 + completeChangeover 立即完成（结单/报废/换型费/清洗消耗与运行中换产同口径），运行中换产仍走确认→15 分钟倒计时全流程。<b>最终回归结论</b>：A 生产主链 / B 切产品（含停机即时生效）/ C 故障与 CIP / D 公用工程联动 / E 镜头与 UI / F 性能三档 / G 持久与边界——逐项结论见收官交付汇报（构建 + 审计探针实测）。<b>遗留项清单</b>：① 静态几何未做 BufferGeometry 合并——three r128 核心不含 BufferGeometryUtils，高频重复件已全部实例化，剩余一次性网格合并收益低、回归风险高，保留现状；② 巡游解说点 u 为弧长估算，个别点触发可漂移约 1 秒（既有可接受项）；③ 审计/无头环境的软件渲染帧率不代表真机，性能三档的真机帧率区间以实机为准，页面内有帧率显示与自动降级兜底；④ 移动端未设独立低端机档位，靠初始 mid 档 + 自动降级覆盖。除以上四项外无未修复功能缺陷。</div></div>
+      <div class="dcell wide"><div class="l">R5 遗留清理 + 真机仪表（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>总览</b>：不动 R1–R4 功能与联动逻辑，专清 R4 遗留清单四项 + 给数据抽屉加真机仪表；全部新参数进 CONFIG（perf.mobileLow / light.shadowTiers.eco / perf.particleFactor.eco）。<b>① 静态几何合并（遗留 ① 已清）</b>：three r128 核心确无 BufferGeometryUtils，故自研 mergeStaticGroup（buildScene 前 R5 一节）：范围只限 D.staticGroups 登记的纯静态根组——远景剪影 / 标识牌面 / 安全标识 / 质检实验室 / 地面导向（组内无任何每帧位姿/可见性更新、组根恒等变换）；按材质签名分桶（贴图按 uuid、其余按类型+颜色+自发光+粗糙/金属+不透明），每桶几何转非索引、烘焙 matrixWorld 后拼接 position/normal/uv，一桶一 Mesh，cast/receive 取来源并集。hitbox（clickables/colorWrite=false）、InstancedMesh 自动跳过；属性集不一致整桶放弃。混合动态组（产线/公用工程/仓库等含转盘/液位/灯/车辆）不合并——高频重复件此前已全部实例化，强行合并会冻死动态件位姿，收益不抵风险（此判断即 R4 保留现状的理由，本轮以「纯静态组全合」方式落地）。合并前后网格数由 mergeAllStaticGroups 在建场时实测、写入 D.mergeStats / window.__mergeStats，控制台有同口径日志（[factory] R5 静态合并：登记组网格 X → Y）；draw call 总数以数据抽屉「真机性能」格的 renderer.info 读数为准，合并组每桶省下的网格即等量 draw call。<b>② 巡游漂移（遗留 ② 已清）</b>：旧 u 按路点序号手估、而 getPointAt 是弧长参数，各段路长悬殊导致约 1 秒早/晚触发。修法：TOUR_STOPS 每站加 wp（路点序号），buildTour 后 alignTourStops() 查曲线弧长表 getLengths(2000)，以 t=wp/N 处的累计弧长占比回填精确 u（误差 &lt;0.0005 → &lt;0.04 秒）；updateCamera 触发时再把 tourT 吸附到 u 并重算机位，消除帧步进过冲。实测 u 值在 window.__tourStopUs。改路线只改 pts 与 wp 对应，勿再手写 u。<b>③ 移动端独立低端档（遗留 ④ 已清）</b>：CONFIG.perf.mobileLow = { pixelRatioCap:1.0, shadowTier:"eco"(512，light.shadowTiers 新增), lodDistance:110 } + particleFactor.eco=0.3；buildScene 一次判定（pointer:coarse 或视口 &lt;820）定版 window.__perfTier/__basePixelCap/__baseShadowTier/__baseLodDistance，桌面三档（high/mid/low）行为不变。自动降级以本档为锚：移动链 eco→关阴影→像素比 0.85，桌面链不变；restoreQuality 回设备档基准（不再另写设备判断）。<b>④ 真机仪表（遗留 ③ 的页面侧落地）</b>：数据抽屉顶部「真机性能」四格——近 60 帧均值帧率（loop 内 perfPushFrame 帧时环，只做数组操作）、设备档/阴影档/降级级数、当前像素比、上一帧 draw call（renderer.info.render.calls），由 renderKpis 按既有 8 帧节奏填写，渲染循环内零 DOM。调试入口 window.__perfSnapshot()（含 merge 与 tourStopUs）。无头/软件渲染帧率仍不代表真机（遗留 ③ 的环境部分无法由页面消除），但真机读数从此可在页面内直接读取反馈。<b>遗留清单更新</b>：<s>① 静态几何未合并</s>（本轮纯静态组已合并，混合组按上述理由保留）；<s>② 巡游 u 漂移约 1 秒</s>（已按弧长精确对齐）；<s>④ 移动端无独立低端档</s>（mobileLow 已落地）；③ 无头帧率不代表真机——保留为环境说明，页面侧已补真机仪表。本轮新发现：建场走查与合并实测见交付汇报。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
     <h3 style="margin-top:14px">常见改动怎么做</h3>
@@ -591,10 +601,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     <h3 style="margin-top:14px">已知限制</h3>
     <ul class="doclist">
       <li>单文件约 3100 行，ES5 风格（var / 函数）为兼容现有代码，接手重构时再统一到模块化构建，不要混写。</li>
-      <li>巡游解说点的 u 是按路点序号估算的弧长参数，改路线后个别点可能早/晚约 1 秒触发，属可接受漂移；自适应降级只降不升，但 R4 起已可手动恢复：降级时画面上方弹出提示条，点「恢复高画质」即回初始档（或控制台 window.__restoreQuality()），不必刷新页面。</li>
+      <li>巡游解说点 u：<s>R5 前按路点序号手估、个别点可早/晚约 1 秒</s>——R5 起由 alignTourStops() 按弧长表精确回填（误差 &lt;0.2 秒），改路线后自动重算；自适应降级只降不升，但 R4 起已可手动恢复：降级时画面上方弹出提示条，点「恢复高画质」即回设备档基准（或控制台 window.__restoreQuality()），不必刷新页面。</li>
       <li>相机遮挡淡出基于材质级透明度，同一材质多处共用时会一起淡（罐体 / 货架 / 顶棚已按此设计）；北侧公用工程区建筑未纳入淡出清单，从北侧高位看厂内时需手动切顶棚。</li>
       <li>瓶子为实例化视觉流量，不与 queue 数值逐瓶对应；仓库箱数由 WH 入/出库守恒驱动（FIFO 窗口渲染）；工人为固定路线巡演，叉车/AGV/吊车由仓储活动门控待机，均不参与产能计算。</li>
-      <li>移动端为可用级适配（面板折叠 / 点按拾取），未做专门的手势教程与低端机降级档。</li>
+      <li>移动端为可用级适配（面板折叠 / 点按拾取），未做专门的手势教程；<s>低端机降级档</s>已由 R5 补齐（CONFIG.perf.mobileLow：像素比 1.0 / 阴影 eco 512 / 粒子 0.3 / LOD 110，判定与恢复逻辑见交接文档 R5 节）。</li>
     </ul>
     <h3 style="margin-top:14px">后续可扩展方向（V6 之后）</h3>
     <ul class="doclist">
@@ -620,6 +630,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R2 联动：停产时锅炉火焰缩到小火/熄火、烟气变淡、空压全停、叉车/AGV 回停靠点待机、月台卡车静止待命；开 1 线空压 1 台运行、开 3 线 2 台并联且运行台灯绿+微振；调配进水阶段 RO 灯亮产水管变蓝、软水位降原水位缓降；杀菌满负荷时锅炉负荷趋近 100%、分汽缸表针与抽屉总览压力一致；原料液位压到 30% 以下（拉高供应耗用）后罐车到场卸料、液位回升且泵台灯亮；订单推进过 6,000 瓶节点后月台形成波次装车（车厢箱数渐增、货架从队头侧先清空）、装满离场新车进场；抽屉「公用工程状态」6 行与各区信息卡口径一致；重置后 UTIL/RAW/WH/SHIP 全回初值、货架回 26 箱</li>
       <li>R3 视觉真实感：全厂俯瞰下不锈钢罐体有环境反射高光（非死灰/死黑）、环氧生产区地面带轻微反光且与水泥仓储/月台区一眼可分、黄色安全线对比足够；地平线有极淡远景剪影（缓丘/邻厂烟囱/水塔）且雾色与天空无断层色带；控制台切 window.__setShadowTier("high"/"mid"/"low") 三档阴影贴图/开关即时生效不报错，低帧率自动降级时阴影同步降 mid → 关；玻璃护罩/办公室窗半透明、瓶液透光、蒸汽烟气不发白；双面标识、遮挡淡出、镜头行为与 R1/R2 全部联动不变</li>
       <li>R4 收官：三档画质下粒子数随档增减（high 全量 / mid 0.6 / low 0.3，控制台看 D.steam.geometry.drawRange）；帧率持续低于 45 时自动降级必弹提示条 + 写日志（与帧率显示开关无关），点「恢复高画质」像素比/阴影/粒子全回初始档；暂停状态切产品即时生效（结单/报废/换型费照计），运行中切产品仍走确认 + 15 分钟倒计时；长时间加速运行无 NaN、无负库存、无菌库存不越界；重置后含画质外全部状态回初值</li>
+      <li>R5 遗留清理：控制台读 window.__mergeStats——登记的 5 个纯静态组合并后网格数明显下降且各区外观/位置与 R4 一致（牌面文字双面正向、实验室玻璃/货架不动）；window.__tourStopUs 为弧长精算值（不再是 0.10/0.20 手估），巡游全程 9 站均在对应区域停留上字幕、停留时长与 dwell 一致；移动视口（或触屏）打开时 window.__perfTier="mobileLow"、像素比 ≤1.0、阴影档 eco，桌面为 desktop/high；数据抽屉「真机性能」四格有数（帧率 60 帧均值 / 档位 / 像素比 / draw call），开始生产后帧率格随之更新；自动降级与「恢复高画质」在移动档下回到 eco 基准而非 mid</li>
     </ul>
   </div>
 </aside>
@@ -762,7 +773,12 @@ var CONFIG = {
     pixelRatioCap: 1.75, mobilePixelRatioCap: 1.25, // 桌面/移动像素比上限（帧率友好优先于极致锐利）
     shadowMapSize: 2048, mobileShadowMapSize: 1024, // 旧版双档阴影贴图边长（R3 起仅作对照：阴影分级统一由 CONFIG.light.shadowTiers 管理，改档改那一处）
     lodDistance: 150, lodSkip: 3,                   // 相机距产线 > lodDistance 时，该线动画每 lodSkip 帧才更新一次（步长等比放大，速度不变）
-    particleFactor: { high: 1, mid: 0.6, low: 0.3 }, // R4：粒子保留比例随画质档（__setShadowTier 同步 setDrawRange + 缩短每帧粒子更新循环）
+    particleFactor: { high: 1, mid: 0.6, eco: 0.3, low: 0.3 }, // R4：粒子保留比例随画质档（__setShadowTier 同步 setDrawRange + 缩短每帧粒子更新循环）；R5 加 eco（移动低端档，与 low 同量级）
+    /* R5 移动端独立低端档 mobileLow：触屏（pointer:coarse）或视口 <820 时整档生效——像素比上限 1.0、
+     * 初始阴影 eco 档（512，见 CONFIG.light.shadowTiers.eco）、粒子 eco 0.3、LOD 距离收紧到 110；
+     * 桌面判定与三档（high/mid/low）行为不变。判定在 buildScene 一次完成（window.__perfTier），
+     * 自动降级从本档起步（mobileLow → 关阴影 → 像素比 0.85），手动恢复回本档（见 sampleFps / restoreQuality）。 */
+    mobileLow: { pixelRatioCap: 1.0, shadowTier: "eco", lodDistance: 110 },
     lowFpsThreshold: 45, fpsSampleSeconds: 2        // 每 fpsSampleSeconds 采样一次帧率，低于阈值逐级降质（像素比→关阴影），只降不升
   },
   /* ---- R3 视觉真实感：光影体系 light + 材质分级 mats（改光影/材质只改这里，builder 禁止再散写魔法值） ----
@@ -779,7 +795,7 @@ var CONFIG = {
     skyTop: "#5d87a0", skyHorizon: "#a9c2cf", skyGround: "#c7d5d3",
     fogColor: 0xa9c2cf, fogNear: 470, fogFar: 1000,
     silhouette: 0x8ba3b1,
-    shadowTiers: { high: 2048, mid: 1024, low: 0 },
+    shadowTiers: { high: 2048, mid: 1024, eco: 512, low: 0 },   /* R5：eco=512 为移动低端档初始阴影（R5 前移动端只有 mid 1024 一档） */
     envIntensity: 0.55
   },
   /* 材质分级（粗糙度 rough / 金属度 metal）：M() 预设与各 builder 的独立材质一律从这里取——
@@ -1484,6 +1500,19 @@ function renderKpis(){
     else if(S.everRan || S.finished>0){ cDot.className = "console-dot pause"; cSt.textContent = "已暂停"; }
     else { cDot.className = "console-dot"; cSt.textContent = "待机"; }
   }
+  /* R5 真机性能四格（数据抽屉）：帧率近 60 帧均值 / 设备档+阴影档+降级级数 / 像素比 / 上一帧 draw call。
+   * 数据源 perfAvgFps() 与 renderer.info（render 后读，info 为最近一帧口径）；本函数本就按 8 帧分频，
+   * 不新增任何渲染循环内的 DOM 操作。renderer 未就绪（建场前）时显示占位，不报错。 */
+  var pfFps = $("perfFps");
+  if(pfFps){
+    pfFps.textContent = (typeof perfAvgFps === "function" && perfAvgFps() > 0) ? Math.round(perfAvgFps()) + " FPS" : "— FPS";
+    var pfTier = $("perfTier");
+    if(pfTier) pfTier.textContent = (window.__perfTier === "mobileLow" ? "移动低端档" : "桌面档") + " · " + (window.__shadowTier || "—") + (typeof qualityLevel !== "undefined" && qualityLevel > 0 ? " · 已降 " + qualityLevel + " 级" : " · 未降级");
+    var pfPr = $("perfPr");
+    if(pfPr) pfPr.textContent = renderer ? renderer.getPixelRatio().toFixed(2) + " / " + (window.devicePixelRatio || 1) : "—";
+    var pfCalls = $("perfCalls");
+    if(pfCalls) pfCalls.textContent = (renderer && renderer.info && renderer.info.render) ? fmt(renderer.info.render.calls) : "—";
+  }
 }
 function drawChart(){
   var W=640,H=190,pad=10;
@@ -1531,7 +1560,10 @@ var D = { blendLiquids:[], blendDiscs:[], agitators:[], sightLiquids:[], lineDyn
   sterFlow:{}, asepticLiquids:[], sterPlates:{},
   /* R2 联动可视注册：utilDyn = 公用工程动态件（锅炉火焰/表针、空压灯与机组、水处理液位/RO 灯、冷库门/机组灯，由 updateScene 按 UTIL 驱动）；
    * whCasePos/whTapePos = 货架箱位坐标（FIFO 窗口渲染用）；rawTanker = 原料罐车组（按 RAW.tanker 在卸料位/场外间滑动） */
-  utilDyn:{}, whCasePos:[], whTapePos:[], rawTanker:null };
+  utilDyn:{}, whCasePos:[], whTapePos:[], rawTanker:null,
+  /* R5 静态合并注册：staticGroups = 纯静态 builder 根组（backdrop/signage/safety/qcLab/peopleGround），
+   * 建场末尾由 mergeAllStaticGroups() 按材质签名合并（见 buildScene 前 R5 一节）；mergeStats = 合并前后网格数实测 */
+  staticGroups:[], mergeStats:null };
 var clickables = [];
 var scene, camera, renderer, bottleMat, blendLiquidMat, sightLiquidMat;
 
@@ -1621,7 +1653,7 @@ function zoneStand(parent, title, sub, color, x, z, ry){
  * 接手人对图索骥/改名/挪位只改本函数；坐标系与厂房一致（x 西→东，z 北→南）。
  * 已有标识（buildShell 内）：原料罐区/调配·杀菌/成品仓库/月台 挂牌 + 每线挂牌，本函数补齐其余分区与单机铭牌。 */
 function buildSignage(){
-  var g = new THREE.Group(); scene.add(g);
+  var g = new THREE.Group(); scene.add(g); D.staticGroups.push({ root:g, label:"标识牌面" });   /* R5：纯静态组，登记待合并（立柱/牌板按材质合并，牌面按各自贴图保留） */
   /* --- 区域立牌（分区入口） --- */
   zoneStand(g, "灌装车间", "FILLING HALL · "+CONFIG.lineCount+" 线并行", "#2fbf8f", -14, 54, Math.PI);       // 灌装区南入口
   zoneStand(g, "包装区", "膜包 · 装箱 · 机械臂", "#e07b26", 62, 54, Math.PI);            // 包装区南入口
@@ -2863,7 +2895,7 @@ function buildCipStation(){
    显微镜 ×2、检测仪（带屏幕）、样品架（彩色样品瓶）、留样柜、圆凳。
    ================================================================ */
 function buildQcLab(){
-  var g = new THREE.Group(); scene.add(g);
+  var g = new THREE.Group(); scene.add(g); D.staticGroups.push({ root:g, label:"质检实验室" });   /* R5：纯静态组，登记待合并（hitbox 与试剂瓶实例化网格在合并时自动跳过） */
   var wallM = M(0xd8dee2,0.7,0.05);
   B(g, 25, 0.22, 13.5, M(0xcfd8d2,0.9,0), 36, 0, -52.5).castShadow = false;       // 室内地坪
   B(g, 24, 4.4, 0.35, wallM, 36, 0, -58.9);                                       // 北墙
@@ -2968,7 +3000,7 @@ function makeWorker(vestColor, hatColor){
   return { g:g, body:body, legL:legL, legR:legR, armL:armL, armR:armR, seg:1, wait:0, phase:Math.random()*6, speed:2.3, wps:[], pauseAt:{}, lookYaw:{} };
 }
 function buildPeopleLogistics(){
-  var g = new THREE.Group(); scene.add(g);
+  var g = new THREE.Group(); scene.add(g); D.staticGroups.push({ root:g, label:"地面导向" });   /* R5：本组只有地面导向标记（工人/AGV 另挂 scene，不在此组），登记待合并 */
   /* --- 地面导向：人行通道绿带（北墙内侧）+ 斑马线 ×2 + AGV 通道虚线 --- */
   var walkMat = new THREE.MeshBasicMaterial({ color:0x2fbf8f, transparent:true, opacity:0.28 });
   var walk = new THREE.Mesh(new THREE.PlaneGeometry(190, 2.2), walkMat);
@@ -3087,7 +3119,7 @@ function updateAgv(dt, t, active){
    人行通道引导灯：沿北侧人行通道每 16 单位一盏绿色地灯。
    ================================================================ */
 function buildSafety(){
-  var g = new THREE.Group(); scene.add(g);
+  var g = new THREE.Group(); scene.add(g); D.staticGroups.push({ root:g, label:"安全标识" });   /* R5：纯静态组，登记待合并 */
   hazardBarrier(g, -9, -45.2, 15, -45.2);        // 锅炉房前（高温区）
   hazardBarrier(g, -40, -45.6, -18, -45.6);      // CIP 罐区前（化学品区）
   hazardBarrier(g, 66, -66.8, 98, -66.8);        // 冷库制冷机组后（设备区）
@@ -3114,7 +3146,7 @@ function buildSafety(){
  * 只提供空间感、不抢主体。全部 MeshBasicMaterial（不受光照、随雾衰减），十余个网格、不投阴影，成本可忽略；
  * 位置在厂外空地（半径约 300~470，仍在 1000×1000 地面大平面内）。 */
 function buildBackdrop(){
-  var g = new THREE.Group(); scene.add(g);
+  var g = new THREE.Group(); scene.add(g); D.staticGroups.push({ root:g, label:"远景剪影" });   /* R5：纯静态组，登记待合并 */
   var mat = new THREE.MeshBasicMaterial({ color: CONFIG.light.silhouette });
   function hill(x, z, r, h){ var m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mat); m.position.set(x, -1 + h/2, z); g.add(m); }
   function block(x, z, w, h, d){ var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); b.position.set(x, -1 + h/2, z); g.add(b); }
@@ -3128,6 +3160,89 @@ function buildBackdrop(){
   chimney(252, 262, 54); chimney(294, 270, 41);                                                            /* 南侧邻厂烟囱 ×2 */
   var tleg = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 13, 8), mat); tleg.position.set(392, 5.5, -140); g.add(tleg);
   var ttank = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 10, 12), mat); ttank.position.set(392, 17, -140); g.add(ttank); /* 东侧水塔 */
+}
+
+/* ================= [M2] R5 · 静态几何合并（清 R4 遗留 ①） =================
+ * 为什么只合这几组：R4 登记时 three r128 核心不含 BufferGeometryUtils，且全厂多数设备组是
+ * 「静态机架 + 动态件」混合（转盘/液位/灯/车辆/人员每帧被 updateScene 驱动），整场无差别合并会把
+ * 动态件的世界位姿在建场瞬间冻死。故合并范围 = D.staticGroups 登记的纯静态根组（远景剪影 /
+ * 标识牌面 / 安全标识 / 质检实验室 / 地面导向）——这些组内没有任何每帧位姿/可见性更新，组根恒为
+ * 恒等变换，外观与位置可证不变；混合组与已实例化的高频件（瓶/箱/货架孔位/试剂瓶）保持原状。
+ * 策略 = 按材质签名分桶（贴图按 uuid、其余按 类型+颜色+自发光+粗糙/金属+不透明 分组，同签名
+ * 材质视觉等价、用首个实例渲染）→ 每桶几何转非索引、烘焙 matrixWorld 后拼接 position/normal/uv
+ * → 一桶一 Mesh 回挂组根。跳过：hitbox（clickables / colorWrite=false）、InstancedMesh、带骨骼/
+ * 程序动画的网格——本批组内本就没有，后两类为防未来误登记的守卫。组内若某桶几何属性集不一致
+ * （缺 uv 等）整桶放弃合并、保留原网格，宁可少合不可合错。
+ * 实测（网格数/draw call 前后）写入 D.mergeStats 并 console.info，交接文档 R5 节引用此口径。 */
+function mergeMaterialKey(mat){
+  if(!mat) return "none";
+  var k = mat.type + "|" + (mat.map ? "map:" + mat.map.uuid : "c:" + (mat.color ? mat.color.getHexString() : "-"));
+  k += "|" + (mat.emissive ? mat.emissive.getHexString() : "-") + "|" + (mat.emissiveIntensity || 0);
+  k += "|" + (mat.roughness !== undefined ? mat.roughness : "-") + "|" + (mat.metalness !== undefined ? mat.metalness : "-");
+  k += "|" + (mat.opacity !== undefined ? mat.opacity : 1) + "|" + (mat.transparent ? 1 : 0) + "|" + (mat.side || 0);
+  return k;
+}
+function mergeStaticGroup(root){
+  root.updateMatrixWorld(true);
+  var meshes = [];
+  root.traverse(function(o){ if(o.isMesh && !o.isInstancedMesh) meshes.push(o); });
+  var buckets = {}, order = [], skipped = 0;
+  meshes.forEach(function(m){
+    if(clickables.indexOf(m) >= 0){ skipped++; return; }                       /* 点选 hitbox 不合 */
+    if(!m.material || m.material.colorWrite === false){ skipped++; return; }    /* 隐形盒兜底 */
+    if(!m.geometry || !m.geometry.attributes || !m.geometry.attributes.position || !m.geometry.attributes.normal){ skipped++; return; }
+    var key = mergeMaterialKey(m.material);
+    if(!buckets[key]){ buckets[key] = { mat: m.material, list: [] }; order.push(key); }
+    buckets[key].list.push(m);
+  });
+  var before = meshes.length, mergedMeshes = 0, removed = 0;
+  order.forEach(function(key){
+    var b = buckets[key];
+    if(b.list.length < 2) return;                                               /* 单件不合，保留原样 */
+    var parts = [], hasUv = true, ok = true, total = 0;
+    for(var i=0; i<b.list.length; i++){
+      var src = b.list[i].geometry, g2 = null;
+      try { g2 = src.index ? src.toNonIndexed() : src.clone(); } catch(e){ ok = false; break; }
+      g2.applyMatrix4(b.list[i].matrixWorld);                                   /* 组根恒等变换：烘焙世界矩阵 = 原位姿 */
+      if(!g2.attributes.uv) hasUv = false;
+      parts.push(g2); total += g2.attributes.position.count;
+    }
+    if(!ok || total === 0) return;
+    var pos = new Float32Array(total*3), nor = new Float32Array(total*3), uv = hasUv ? new Float32Array(total*2) : null;
+    var off = 0;
+    parts.forEach(function(g2){
+      pos.set(g2.attributes.position.array, off*3);
+      nor.set(g2.attributes.normal.array, off*3);
+      if(uv) uv.set(g2.attributes.uv.array, off*2);
+      off += g2.attributes.position.count;
+      g2.dispose();
+    });
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    if(uv) geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    var merged = new THREE.Mesh(geo, b.mat);
+    merged.castShadow = b.list.some(function(m){ return m.castShadow; });
+    merged.receiveShadow = b.list.some(function(m){ return m.receiveShadow; });
+    merged.userData.r5Merged = key;
+    b.list.forEach(function(m){ if(m.parent) m.parent.remove(m); removed++; });
+    root.add(merged); mergedMeshes++;
+  });
+  return { before: before, after: before - removed + mergedMeshes, removed: removed, mergedMeshes: mergedMeshes, skipped: skipped };
+}
+function mergeAllStaticGroups(){
+  var tot = { before:0, after:0, groups:[] };
+  D.staticGroups.forEach(function(sg){
+    try {
+      var r = mergeStaticGroup(sg.root);
+      tot.before += r.before; tot.after += r.after;
+      tot.groups.push({ label: sg.label, before: r.before, after: r.after });
+    } catch(err){ if(window.console) console.warn("[factory] R5 静态合并跳过「" + sg.label + "」：", err); }
+  });
+  D.mergeStats = tot;
+  window.__mergeStats = tot;
+  if(window.console && console.info) console.info("[factory] R5 静态合并：登记组网格 " + tot.before + " → " + tot.after + "（减少 " + (tot.before - tot.after) + " 个网格/draw call）", tot.groups);
+  return tot;
 }
 
 function buildScene(){
@@ -3144,9 +3259,16 @@ function buildScene(){
   renderer = new THREE.WebGLRenderer({ antialias:true });
   /* 画质档（CONFIG.perf）：移动端默认低一档（像素比上限更低、阴影贴图更小），桌面用标准档；
    * 运行时若帧率持续低于阈值，loop 里的自适应降级还会再逐级下调（见 qualityLevel）。 */
+  /* R5 设备档判定（一次定版）：触屏或视口 <820 → 移动低端档 mobileLow（像素比 1.0 / 阴影 eco 512 /
+   * 粒子 eco / LOD 110），桌面维持原三档行为。__isMobileGL 保留旧语义（是否移动）供降级/恢复链引用，
+   * __perfTier/__basePixelCap/__baseShadowTier/__baseLodDistance 为本档基准，自动降级与手动恢复都以此为锚。 */
   var isMobileGL = (window.matchMedia && matchMedia("(pointer: coarse)").matches) || innerWidth < 820;
   window.__isMobileGL = isMobileGL;
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1, isMobileGL ? CONFIG.perf.mobilePixelRatioCap : CONFIG.perf.pixelRatioCap));
+  window.__perfTier = isMobileGL ? "mobileLow" : "desktop";
+  window.__basePixelCap = isMobileGL ? CONFIG.perf.mobileLow.pixelRatioCap : CONFIG.perf.pixelRatioCap;
+  window.__baseShadowTier = isMobileGL ? CONFIG.perf.mobileLow.shadowTier : "high";
+  window.__baseLodDistance = isMobileGL ? CONFIG.perf.mobileLow.lodDistance : CONFIG.perf.lodDistance;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1, window.__basePixelCap));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -3204,7 +3326,7 @@ function buildScene(){
       window.__sunLight.castShadow = false;
     }
   };
-  window.__setShadowTier(isMobileGL ? "mid" : "high");   /* 初始档：桌面 high(2048) / 移动 mid(1024)，与旧版双档行为一致 */
+  window.__setShadowTier(window.__baseShadowTier);   /* 初始档：桌面 high(2048) / 移动 R5 低端档 eco(512)（R5 前移动为 mid 1024） */
   bottleMat = new THREE.MeshStandardMaterial({ color:product.color, roughness:0.16, metalness:0, transparent:true, opacity:0.9 });   /* R3：瓶液降粗糙 + 微透，透光感来自环境反射与透明度 */
   buildShell(); buildUpstream();
   for(var i=0;i<CONFIG.lineCount;i++) buildLine(i);
@@ -3228,6 +3350,7 @@ function buildScene(){
       if(Math.max(sz.x, sz.y, sz.z) < 3.2) o.castShadow = false;
     }
   });
+  mergeAllStaticGroups();   /* R5：纯静态组按材质合并（在小件阴影规则之后执行，合并网格继承来源 cast/receive 标记；策略与范围见 buildScene 前 R5 一节） */
   window.__setShadowTier(window.__shadowTier);   /* R4：粒子系统此时已建好，重调一次让当前档的粒子保留比例（drawRange）真正落到几何上 */
 }
 window.__setProductColor = function(hex){
@@ -3271,7 +3394,7 @@ function updateScene(dt, t){
     var ldt = dt;
     if(camera){
       _lodCenter.set(29, 2, LINE_Z[i]);
-      if(camera.position.distanceTo(_lodCenter) > CONFIG.perf.lodDistance){
+      if(camera.position.distanceTo(_lodCenter) > (window.__baseLodDistance || CONFIG.perf.lodDistance)){   /* R5：LOD 距离按设备档（桌面 150 / 移动低端档 110） */
         if(sceneFrame % CONFIG.perf.lodSkip !== (i % CONFIG.perf.lodSkip)){ setLamp(dyn.lampMat, lineStatus(l).key, t); return; }
         ldt = dt * CONFIG.perf.lodSkip;
       }
@@ -3666,19 +3789,21 @@ function goPreset(name){
   document.querySelectorAll("#viewSeg button").forEach(function(b){ b.classList.toggle("on", b.dataset.view===name); });
 }
 /* ================= [M4] 巡游解说点 TOUR_STOPS（文案集中区，接手改文案只改这里） =================
- * u = 在巡游曲线上的大致位置（0~1，= 路点序号 / 路点数，弧长参数下略有漂移，够用了）；
- * dwell = 到达后停留秒数（真实秒），停留时镜头保持当前机位、字幕显示，可「跳过」或「退出巡游」。
+ * u = 在巡游曲线上的弧长位置（0~1）。R5 起不再手估：每站带 wp（= buildTour 路点序号），
+ * buildTour 建曲线后由 alignTourStops() 按曲线弧长表把该路点的精确弧长占比回填到 u，
+ * 触发时再把 tourT 吸附到 u（见 updateCamera），停留点位与解说触发误差 <0.2 秒；
+ * 手写的 u 只作对齐前的兜底值。dwell = 到达后停留秒数（真实秒），停留时镜头保持当前机位、字幕显示，可「跳过」或「退出巡游」。
  * 改路线（buildTour 的 pts/tgts）时同步核对 u 的顺序与区域对应关系。 */
 var TOUR_STOPS = [
-  { u:0.10, dwell:3.4, title:"原料罐区", text:"6 台大储罐存原浆与糖浆，液位随供应消耗变化。仿真里它是全厂的源头：供应速度被锁死时，再快的产线也只能等料。" },
-  { u:0.20, dwell:3.4, title:"调配区", text:"调配罐群各有分工：溶糖罐以约 80℃ 热水化糖，糖浆暂存、浓缩液、水处理缓冲各就其位，按配方顺序汇入主调配罐（点任一调配罐可看批次卡：当前第几步、每料投没投、搅拌还剩几分钟）。罐数在调度台可调——罐太少，这里就是全厂第一个瓶颈。" },
-  { u:0.30, dwell:3.4, title:"杀菌 UHT 区", text:"半成品在这里依次经预热、均质、管式杀菌与冷却，再进成排大型无菌罐无菌暂存后送灌装（「杀菌无菌区」机位可看整排大罐）。各段管路随料流逐段亮起料色，UHT 牌与均质牌显示随运行/待机变化的温度、保持时间与均质压力（点无菌罐区看信息卡，含当前在制批次与无菌库存）；无菌罐存量被灌装耗空时产线会饥饿待料，不会无料空转。开启 CIP 后它会周期性停机清洗，全线一起等料，北侧 CIP 站同步供酸、碱与热水。" },
-  { u:0.40, dwell:3.4, title:"灌装车间", text:"全厂的心脏：多条灌装线并行（线数由 CONFIG.lineCount 决定），旋转灌装、封盖、贴标一气呵成。点任意一条线可以单独停用或抢修，故障只停单线。" },
-  { u:0.50, dwell:3.2, title:"包装区", text:"灌装好的瓶子在这里膜包、装箱，机械臂把整箱码上托盘。箱流速度跟不上时，灌装线会被反压堵住（BLOCKED）。" },
-  { u:0.60, dwell:3.2, title:"立体仓库", text:"3 排 3 层货架存放成品，箱数随累计产量增长，叉车在货架与月台之间循环搬运。仓满不是仿真终点，订单进度在数据抽屉里看。" },
-  { u:0.70, dwell:3.2, title:"装卸月台", text:"成品从这里装车出厂，卡车倒车进位、停留装货、再驶离循环。顶部一条状态只保留产量、产能、瓶颈和利润，其余数字都在数据抽屉。" },
-  { u:0.82, dwell:3.4, title:"公用工程区", text:"厂房北带：水处理、空压站、锅炉蒸汽站与冷库。水、电、蒸汽在账本里分开计量计价（数据抽屉有三行明细），锅炉蒸汽主要供 UHT 杀菌。" },
-  { u:0.92, dwell:3.4, title:"质检实验室", text:"理化与微生物检测在这里完成，取样台、培养箱、试剂柜一应俱全。良品率按产品计入账本——实验室不直接产瓶，但决定多少瓶算合格品。" }
+  { wp:1, u:0.10, dwell:3.4, title:"原料罐区", text:"6 台大储罐存原浆与糖浆，液位随供应消耗变化。仿真里它是全厂的源头：供应速度被锁死时，再快的产线也只能等料。" },
+  { wp:2, u:0.20, dwell:3.4, title:"调配区", text:"调配罐群各有分工：溶糖罐以约 80℃ 热水化糖，糖浆暂存、浓缩液、水处理缓冲各就其位，按配方顺序汇入主调配罐（点任一调配罐可看批次卡：当前第几步、每料投没投、搅拌还剩几分钟）。罐数在调度台可调——罐太少，这里就是全厂第一个瓶颈。" },
+  { wp:3, u:0.30, dwell:3.4, title:"杀菌 UHT 区", text:"半成品在这里依次经预热、均质、管式杀菌与冷却，再进成排大型无菌罐无菌暂存后送灌装（「杀菌无菌区」机位可看整排大罐）。各段管路随料流逐段亮起料色，UHT 牌与均质牌显示随运行/待机变化的温度、保持时间与均质压力（点无菌罐区看信息卡，含当前在制批次与无菌库存）；无菌罐存量被灌装耗空时产线会饥饿待料，不会无料空转。开启 CIP 后它会周期性停机清洗，全线一起等料，北侧 CIP 站同步供酸、碱与热水。" },
+  { wp:4, u:0.40, dwell:3.4, title:"灌装车间", text:"全厂的心脏：多条灌装线并行（线数由 CONFIG.lineCount 决定），旋转灌装、封盖、贴标一气呵成。点任意一条线可以单独停用或抢修，故障只停单线。" },
+  { wp:5, u:0.50, dwell:3.2, title:"包装区", text:"灌装好的瓶子在这里膜包、装箱，机械臂把整箱码上托盘。箱流速度跟不上时，灌装线会被反压堵住（BLOCKED）。" },
+  { wp:6, u:0.60, dwell:3.2, title:"立体仓库", text:"3 排 3 层货架存放成品，箱数随累计产量增长，叉车在货架与月台之间循环搬运。仓满不是仿真终点，订单进度在数据抽屉里看。" },
+  { wp:7, u:0.70, dwell:3.2, title:"装卸月台", text:"成品从这里装车出厂，卡车倒车进位、停留装货、再驶离循环。顶部一条状态只保留产量、产能、瓶颈和利润，其余数字都在数据抽屉。" },
+  { wp:8, u:0.82, dwell:3.4, title:"公用工程区", text:"厂房北带：水处理、空压站、锅炉蒸汽站与冷库。水、电、蒸汽在账本里分开计量计价（数据抽屉有三行明细），锅炉蒸汽主要供 UHT 杀菌。" },
+  { wp:9, u:0.92, dwell:3.4, title:"质检实验室", text:"理化与微生物检测在这里完成，取样台、培养箱、试剂柜一应俱全。良品率按产品计入账本——实验室不直接产瓶，但决定多少瓶算合格品。" }
 ];
 var tourDwell = 0, tourPrevT = 0, tourStopIdx = -1;
 function showTourCaption(stop){
@@ -3698,6 +3823,28 @@ function buildTour(){
   ].map(function(a){ return new THREE.Vector3(a[0],a[1],a[2]); });
   tourCurvePos = new THREE.CatmullRomCurve3(pts, true, "catmullrom", 0.3);
   tourCurveTgt = new THREE.CatmullRomCurve3(tgts, true, "catmullrom", 0.3);
+  tourPointCount = pts.length;
+  alignTourStops();   /* R5：建曲线后立即按弧长表回填每站精确 u（清 R4 遗留 ②） */
+}
+var tourPointCount = 0;
+/* R5 漂移修法（清 R4 遗留 ②）：旧版 u 按「路点序号/路点数」手估，但 getPointAt 走的是弧长参数——
+ * 各段路长悬殊（俯瞰→罐区一段就占全程近三成），手估 u 与路点真实弧长占比差出约 0.01~0.03，
+ * 按全程约 72 秒折算就是约 1 秒的早/晚触发。现按定义反算：闭合 Catmull-Rom 的第 i 个路点精确
+ * 位于参数 t=i/N，查曲线弧长表（getLengths(2000)，t 等分累计弧长）得该点弧长占比即为精确 u。
+ * 采样步长 1/2000 → u 误差 <0.0005 → 时间误差 <0.04 秒，远低于 0.2 秒目标；触发侧再吸附 tourT
+ * 消除帧步进过冲（见 updateCamera）。改路线只改 pts/wp 对应关系，本函数自动重算，勿再手写 u。 */
+function alignTourStops(){
+  if(!tourCurvePos || !tourPointCount) return;
+  var divisions = 2000;
+  var lengths = tourCurvePos.getLengths(divisions);
+  var total = lengths[divisions];
+  if(!total) return;
+  TOUR_STOPS.forEach(function(st){
+    if(st.wp === undefined) return;
+    var idx = Math.min(divisions, Math.round(st.wp / tourPointCount * divisions));
+    st.u = lengths[idx] / total;
+  });
+  window.__tourStopUs = TOUR_STOPS.map(function(s){ return Math.round(s.u*10000)/10000; });   /* 验收/调试读数 */
 }
 /* ---------------- collision: keep the camera out of big equipment ---------------- */
 var COLLIDERS = [];
@@ -3846,6 +3993,11 @@ function updateCamera(dt){
         var crossed = tourT >= tourPrevT ? (su > tourPrevT && su <= tourT) : (su > tourPrevT || su <= tourT);
         if(crossed && tsi !== tourStopIdx){
           tourStopIdx = tsi; tourDwell = TOUR_STOPS[tsi].dwell || 3.2;
+          /* R5：触发即吸附——tourT 精确落到该站 u 并重算机位，消除帧步进过冲（低帧率下单帧步进
+           * 可达 0.001+，吸附后停留点位与路点严格重合，停留/解说时长不再被过冲吃掉） */
+          tourT = su;
+          tourCurvePos.getPointAt(tourT, desiredPos);
+          tourCurveTgt.getPointAt(tourT, desiredTgt);
           showTourCaption(TOUR_STOPS[tsi]);
           break;
         }
@@ -4480,30 +4632,56 @@ function sampleFps(dt){
   if(fpsOn) $("fpsBtn").textContent = Math.round(fps) + " FPS";
   if(fps < CONFIG.perf.lowFpsThreshold && qualityLevel < 2){
     qualityLevel++;
-    if(qualityLevel === 1){ renderer.setPixelRatio(Math.min(devicePixelRatio||1, 1.25)); if(window.__setShadowTier) window.__setShadowTier("mid"); }   /* R3：1 级同时把阴影降到 mid 档（1024）+ 粒子减到 0.6（R4） */
-    if(qualityLevel === 2){ if(window.__setShadowTier) window.__setShadowTier("low"); else if(window.__sunLight) window.__sunLight.castShadow = false; }   /* R3：2 级关阴影（low 档）+ 粒子减到 0.3（R4） */
+    if(window.__perfTier === "mobileLow"){
+      /* R5 移动低端档降级链：起步已是 eco(512)+像素比 1.0，1 级关阴影（粒子随 low 档 0.3），2 级像素比再降到 0.85 */
+      if(qualityLevel === 1){ if(window.__setShadowTier) window.__setShadowTier("low"); else if(window.__sunLight) window.__sunLight.castShadow = false; }
+      if(qualityLevel === 2){ renderer.setPixelRatio(Math.min(devicePixelRatio||1, 0.85)); if(window.__setShadowTier) window.__setShadowTier("low"); }
+    } else {
+      if(qualityLevel === 1){ renderer.setPixelRatio(Math.min(devicePixelRatio||1, 1.25)); if(window.__setShadowTier) window.__setShadowTier("mid"); }   /* R3：1 级同时把阴影降到 mid 档（1024）+ 粒子减到 0.6（R4） */
+      if(qualityLevel === 2){ if(window.__setShadowTier) window.__setShadowTier("low"); else if(window.__sunLight) window.__sunLight.castShadow = false; }   /* R3：2 级关阴影（low 档）+ 粒子减到 0.3（R4） */
+    }
     /* R4：降级提示与帧率显示开关解耦——无论 fpsOn 与否都写日志并弹出 #qualityNotice（含手动恢复钮），不再静默降级 */
     log("帧率偏低（约 "+Math.round(fps)+" FPS），已自动降一档画质保流畅（第 "+qualityLevel+" 级：像素比/阴影/粒子已下调）。可在画面上方提示条点「恢复高画质」手动恢复。");
     var qn = $("qualityNotice");
     if(qn){ $("qualityMsg").textContent = "帧率偏低，已自动降画质至第 "+qualityLevel+" 级保流畅"; qn.classList.add("show"); }
   }
 }
-/* R4 手动恢复画质：qualityLevel 归零 + 像素比回 CONFIG.perf 上限 + 阴影/粒子回初始档（桌面 high / 移动 mid）。
- * 恢复后若帧率再次持续低于阈值仍会重新逐级降级（sampleFps 逻辑不变）。调试入口 window.__restoreQuality / __qualityLevel。 */
+/* R4 手动恢复画质：qualityLevel 归零 + 像素比/阴影/粒子回设备档基准。
+ * R5：基准改读建场时定版的 __basePixelCap/__baseShadowTier（桌面 1.75+high / 移动低端档 1.0+eco），
+ * 不再在恢复函数里另写一套设备判断；恢复后若帧率再次持续低于阈值仍会重新逐级降级（sampleFps 逻辑不变）。
+ * 调试入口 window.__restoreQuality / __qualityLevel。 */
 function restoreQuality(){
   qualityLevel = 0;
-  if(renderer) renderer.setPixelRatio(Math.min(devicePixelRatio||1, window.__isMobileGL ? CONFIG.perf.mobilePixelRatioCap : CONFIG.perf.pixelRatioCap));
-  if(window.__setShadowTier) window.__setShadowTier(window.__isMobileGL ? "mid" : "high");
+  if(renderer) renderer.setPixelRatio(Math.min(devicePixelRatio||1, window.__basePixelCap || CONFIG.perf.pixelRatioCap));
+  if(window.__setShadowTier) window.__setShadowTier(window.__baseShadowTier || "high");
   var qn = $("qualityNotice"); if(qn) qn.classList.remove("show");
   log("画质已手动恢复到初始档（像素比 / 阴影 / 粒子回升）。","good");
 }
 window.__restoreQuality = restoreQuality;
 window.__qualityLevel = function(){ return qualityLevel; };
 $("qualityRestoreBtn").addEventListener("click", restoreQuality);
+/* R5 真机仪表数据源：近 60 帧帧时环（loop 每帧 perfPushFrame，只做数组操作不在渲染循环碰 DOM）；
+ * 数据抽屉「真机性能」四格由 renderKpis 按既有 8 帧节奏读 perfAvgFps()/renderer.info 填写。
+ * 验收/调试入口 window.__perfAvgFps / __perfSnapshot（档位/像素比/draw call 一次读全）。 */
+var perfFrameTimes = [];
+function perfPushFrame(dt){ if(dt > 0 && dt < 0.5){ perfFrameTimes.push(dt); if(perfFrameTimes.length > 60) perfFrameTimes.shift(); } }
+function perfAvgFps(){
+  if(!perfFrameTimes.length) return 0;
+  var s = 0; for(var pi=0; pi<perfFrameTimes.length; pi++) s += perfFrameTimes[pi];
+  return perfFrameTimes.length / s;
+}
+window.__perfAvgFps = perfAvgFps;
+window.__perfSnapshot = function(){
+  return { fpsAvg60: Math.round(perfAvgFps()*10)/10, perfTier: window.__perfTier || "?", shadowTier: window.__shadowTier || "?",
+           qualityLevel: qualityLevel, pixelRatio: renderer ? renderer.getPixelRatio() : null,
+           drawCalls: (renderer && renderer.info && renderer.info.render) ? renderer.info.render.calls : null,
+           merge: window.__mergeStats || null, tourStopUs: window.__tourStopUs || null };
+};
 function loop(ts){
   requestAnimationFrame(loop);
   if(lastTs===null) lastTs = ts;
   var dt = Math.min(0.1, (ts-lastTs)/1000); lastTs = ts;
+  perfPushFrame(dt);   /* R5：真机仪表帧时环（近 60 帧），仅数组操作 */
   sampleFps(dt);
   if(S.running){
     var dtMin = dt * CONFIG.simMinutesPerRealSecond * S.speed; /* 真实秒 → 仿真分钟（倍速在此放大） */
