@@ -227,6 +227,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 .due-warn{color:var(--amber)} .due-over{color:var(--red)}
 /* R12：ECO 开关开启态（与 .tgl.on 同口径） */
 .btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+/* R13：调度台原料供应预警行（状态色由 renderKpis 按 rawAlertState 切换 ok/warn/critical/stockout） */
+.supply-alert{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:10px;padding:8px 10px;font-size:12px;font-weight:700;line-height:1.5;margin:-4px 0 12px}
+.supply-alert.ok{color:var(--muted)}
+.supply-alert.warn{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+.supply-alert.critical,.supply-alert.stockout{border-color:var(--red);color:var(--red);background:var(--red-soft)}
 .qrow .qx{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;width:26px;height:26px;flex:0 0 auto;font-size:12px;line-height:1}
 .qempty{color:var(--muted);font-size:12.5px;font-weight:600;padding:8px 2px 2px}
 .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -505,6 +510,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="lab"><label for="supplyRange">原料供应速度</label><output id="supplyOut">1,600 瓶/分</output></div>
       <input type="range" id="supplyRange">
     </div>
+    <div class="supply-alert ok" id="rawAlert" role="status">原料库存：液位 — · 预计耗尽 —</div>
     <div class="ctl">
       <div class="lab"><label for="orderRange">订单目标</label><output id="orderOut">30,000 瓶</output></div>
       <input type="range" id="orderRange">
@@ -590,6 +596,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     <p class="hint mono" id="perfMerge" style="margin-top:6px">静态合并：—</p>
     <p class="hint mono" id="perfMergeEx" style="margin-top:2px"></p>
     <p class="hint mono" id="perfNav" style="margin-top:2px">车辆最小净距：—</p>
+    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：R13 实测待填（口径：全厂俯瞰机位 · 待机 · window.__perfSnapshot() 读 renderer.info.render.calls，含阴影通道）。</p>
     <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="uiResetBtn">↺ 恢复默认界面</button><span class="hint" style="margin:0">界面偏好（面板隐藏 / 画质档 / 相机条折叠 / 选中机位）仅本次打开期间保留：重置模拟不会清掉它们，刷新页面则恢复默认。</span></div>
 
     <h3>物流任务播报（与车辆动作同源）</h3>
@@ -699,6 +706,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li><span class="stchip">已落地</span><b>订单交期与延误罚金</b> — 交期按量与产能自动核定、黄/红预警、逾期 ¥12/分钟从利润扣（R12）</li>
       <li><span class="stchip">已落地</span><b>ECO 节能模式</b> — 电 −18% / 汽 −12%，灌装上限 −6%，单瓶能耗开/关分开可比（R12）</li>
       <li><span class="stchip">已落地</span><b>备件与可靠性体系</b> — 备件库存领用/补货、缺货加时 + 紧急采购、MTBF/MTTR 累计（R12）</li>
+      <li><span class="stchip">已落地</span><b>第五个产品 · 苏打气泡水</b> — 独立配方 / 灭菌参数 / 瓶盖标签配色 / 台账，全链接入（R13）</li>
+      <li><span class="stchip">已落地</span><b>班次与夜班</b> — 白/夜两班自动轮换、夜班津贴入账 + 产能系数、夜间照明、日报分班小计（R13）</li>
+      <li id="rawLean"><span class="stchip doing">监控中</span><b>原料供应链预警</b> — <span id="rawLeanTxt">液位 — · ETA —</span>（R13）</li>
       <li><span class="stchip todo">待排期</span><b>灌装转盘 36 头实例化</b> — Draw Call 再下探的剩余空间在动态件</li>
     </ul>
 
@@ -730,6 +740,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">R10 细化（生产日报分段口径 + 运行时补证口 + 界面持久化结论）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>日报分段</b>：DAYREP.base = 当前生产日起点对全厂累计量（产量/报废/三表/利润/发车/波次/换型/各产品产量）的快照，当日量 = 累计 − base 做差，与 KPI 同源交叉一致（自检：日报当日总产量 + base.finished = KPI 累计产量）。换型计数 CO_STATS 在 startChangeover 按 drained 分立即/排空两路；波次计数 WAVES 在 stepR2 激活点 +1（形成口径，与 SHIP.trips 发车口径分开）。「新的一天」按钮把当日摘要 unshift 进 DAYREP.history（封顶 7 行）并重取 base；重置清 history/计数、base 置空懒初始化。读数口 window.__dayrep()。<b>运行时补证</b>：入库/出库/排空三段证据由审计探针在真实页面内实跑记录（__whCheck / __logiState / __getReservation / SLOTS.seq / S.lastSettle），结论写当轮交付汇报，不在本节预填。<b>界面持久化结论</b>：本页为纯静态构建且运行在沙盒 iframe 中，localStorage 在应用内 webview / 隐私会话会被清且跨设备不通——跨刷新恢复界面状态需要服务端存储支撑，本轮不以 localStorage 冒充达标；面板隐藏/折叠/机位均为会话内状态（既有口径不变）。<b>补证发现并已修复的真 bug（AGV 会车死锁）</b>：内核 harness 实跑发现两台 AGV 在 NW 角/暂存位一带相向时，跟驰判定让双方互相判「前方有车」双双停车、可冻结 400 秒以上。修法两处：① agvBlockedAhead 的投影方向改用「指向当前路点的方向」（agvDrive 传入），不再用原地冻结的车头朝向（否则靠边路点永远转不了头）；② 让行超时（CONFIG.r9.yieldEscapeSec=4s）且对方也在让行时，出库车横移靠边让行（sideStep=2.4、x 钳制 71.6..80.6、靠边点不叠加、冷却 12s），入库车先行，触发时写日志。修复后 harness 三段全过：入库 putXfer 时刻 inCases 0→1 且此前 stock 恒 26；出库取 seq 1（库存 seq 1..27 中最老）→交接位→叉车装车 outCases+1、stock=26+入−出 恒等；排空在制 4880→4160→2960→0 自动触发、结算报废 0 瓶。</div></div>
       <div class="dcell wide"><div class="l">R11 PDCA 打包轮（界面偏好会话内保持 + SMED 换型计时 + 人员任务化 + 性能二探/回归探针）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 11 轮打包交付，参数全在 <b>CONFIG.r11</b>。<b>① 界面偏好（A 项，R10 的 C 项降级落地）</b>：R10 已确认沙盒 localStorage 不可靠、不冒充跨刷新持久化；本轮落地<b>会话内保持</b>——偏好登记处 <b>UIPREFS</b>（window.__uiPrefs() 可读）：控制台/调度台隐藏、调度台折叠、相机条折叠（setMoveCollapsed 同步登记）、选中机位（goPreset 登记，巡游/拖动接管不清）、画质档（renderKpis 按既有节奏回读 __shadowTier/qualityLevel）。<b>重置模拟只重置生产状态，绝不碰 UIPREFS</b>（resetBtn 处理器内明示）；刷新页面回默认——抽屉真机性能区小字如实标注「仅本次打开期间保留」。<b>「恢复默认界面」</b>钮（#uiResetBtn → resetUIPrefs）一次清全部：两面板显示、折叠按屏宽默认、restoreQuality 回设备档、goPreset("overview")。<b>② SMED 换型计时（B 项）</b>：三段全部由既有状态机实测、无新编时长——排空期 = 预约 t0（reserveChangeover 记 S.simMin）→ 排空触发（经 opts.drainMinutes 传入，立即换型恒 0）；清洗期 = S.changeover 存续仿真分钟（即 CO_MINUTES 倒计时实测，停机即时换型为 0）；调机首件期 = completeChangeover → step 里新产品良品首次下线（ledger 超过完成时刻基线）时 smedFinalize 定版。定版动作：控制台 #smedNote 留一行小结（总 = 排空 + 清洗 + 首件，较同模式上次 ±差值，首次注明无对比）+ 写日志 + SMED.stats 按 immediate/drained 分开累计；精益看板 #smedAvgTxt 行与日报卡「平均换型时长（会话累计 · SMED）」格、日报下载文本同读 stats。读数口 window.__smed()。换型中途再换型覆盖 cur/awaiting 不计；重置清 SMED 与小结行。<b>③ 人员任务化（C 项）</b>：D.crew 三岗位（makeWorker 同机制，建场在 merge 前且经 D 注册保动态不合并）+ 状态机 idle→go→work→back→idle（updateCrew 在 updateScene 工人段后推进）。<b>维修工</b>（红背心白盔 + 工具箱，岗位北通道 (52,-42)）：crewFindFault 工位优先/先故障先修，派单路线全走既有通道——供应经罐间隙 x=-30 + 罐南通道到 (-79,-13)、调配 (-40,-24.5)、杀菌经罐间隙 x=-14 到 UHT 旁 (-14,-19)、1 号线走道北侧 (12,-46.5)（南侧是无菌罐排）、2/3 号线经东纵脊 x=76 + 线间横通道到 (12,6)/(12,34)；到点 crouch 蹲姿 + 工具臂，作业存续与 faultLeft 同源（自然修好/抢修清零才收工，回岗位任务才完）。<b>CIP 班组 ×2</b>（蓝背心 + 软管卷，岗位 CIP 站控制柜旁）：stations[2].cipLeft&gt;0 派单到泵阀作业位 (-33,-51.2)/(-25,-51.2) valve 姿势，cipLeft 清零离场。<b>质检员</b>（白背心 + 样品瓶，岗位实验室 (38,-50)）：只认 QC.samples 递增（stepQC 同一事件同源，不另掷随机），路线出门 → 东纵脊 x=76 → 罐南通道 → 无菌罐取样口 (-9,-24)，取样停留 CONFIG.r11.qcSampleSec 后携瓶返回（propOn=back），忙碌错过不补队。人员净距：PERSON_OBSTACLES（薄带/一体机/逐罐/杀菌链/CIP 泵组等设备占地）逐帧采样写 __navStats.personMinEquip（减人员半径 0.35），与车辆四值同行显示；实验室本体不入表（质检员岗位在其内，属作业区非穿越对象）。重置 crewReset 回岗位清任务。<b>④ 性能与回归（D 项）</b>：DrawCall 二探与四探针（AGV 会车解脱 / 日报↔KPI 交叉 / R10 三段补证回归 / 20,000 步长跑守恒无 NaN）由当轮审计探针在真实页面实跑，数字写交付汇报，不在本节预填；人员新增网格约 40（4 人 × makeWorker 9 件 + 道具 4），护栏仍为同机位 ≤700。<b>⑤ 手势安全区紧急修复（同轮真机反馈）</b>：用户实报底部按钮与安卓 Home 手势条重叠、点按钮先退出。修法：:root 新增令牌 <b>--sab</b>=env(safe-area-inset-bottom, 0px)、<b>--bottom-lift</b>=max(36px, calc(var(--sab) + 16px))，全部贴底可交互元素统一起抬且热区下沿不进屏幕底部 36px 手势带——.control-bar（原 bottom 12px）与 .show-stack 两颗唤回钮（原 14px）改 var(--bottom-lift)；.hint-chip / .info-card 改 calc(var(--bottom-lift) + 74px)、.tour-cap 改 +76px、≤900px .dispatch 与 .info-card 改 +138px（均为相对旧基线的等距抬升）；.drawer 本体全高不贴底锚定，其滚动内容 .drawer-body 底部内边距改 calc(var(--sab) + 36px) 保末行元素离底 ≥36px；body 加 padding-bottom:var(--sab) 作安全垫高。按钮尺寸/热区一律未缩（.panel-show min-height 44px、≤900px .btn min-height 40px 不变），只上移位置。此后禁止再写裸 px 贴底值，新增贴底元素必须引用 --bottom-lift。</div></div>
       <div class="dcell wide"><div class="l">R12 PDCA 打包轮（订单交期罚金 + ECO 节能 + 故障备件体系 + 性能/回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 12 轮打包交付，参数全在 <b>CONFIG.r12</b>，读数口 <b>window.__r12()</b>。<b>① 交期与延误罚金（A 项）</b>：取代 R10 的固定 +480 分钟交期——dueOffsetMin = max(dueMinMinutes=30, ceil((在前量+本单量) ÷ nominalCapPerMin × dueSlack=1.5))；nominalCapPerMin = 当前设定下 min(供应, 调配=罐数×blendPerTank×blendFactor, 杀菌=sterilize×flowFactor, 灌装=在线线数×filler×fillFactor)，下限 60。在前量：入队时 = 当前单剩余 + 已排队各单量。当前单交期 S.orderDueMin：首单/重置/手动换产落单时 setCurrentOrderDue（按剩余量核定），改订单目标滑杆即按剩余量重核，队列同产品续单沿用入队交期、异产品经 S.pendingDueMin 由 completeChangeover 落单时采用。<b>罚金口径（唯一）= 每逾期 1 仿真分钟 penaltyPerMinute=¥12（按分钟 flat，不按瓶）</b>，订单完成分支 settleOrderDue 一次性结算进 curL().fine；fine 与 spare 均并入 ledgerCost，总利润 totalProfit() 同源扣减（无第二套账）。预警：当前单订单卡与队列行同口径——剩余 &lt; dueWarnMinutes=60 变黄（.due-warn / .qdue.warn）、逾期变红并显示罚金累积中；日报格「当日延误罚金」（DAYREP 快照加 fine 字段做差）+ 下载文本同行。<b>② ECO 节能（B 项）</b>：控制台 #ecoBtn 开关（renderEcoBtn 同步文案/aria）。生效点只有两处：step 流量入账——电 ×(1−ecoPowerSave=0.18)、汽 ×(1−ecoSteamSave=0.12)（水不打折；CIP/换产事件整场消耗不打折）；fillRate ×(1−ecoCapCut=0.06)（灌装上限打折，按钮日志明示每线 瓶/分 前后值）。节省按反事实累计 ECO.savedKwh/savedSteamKg/savedYuan（毛耗=实耗÷(1−折扣) 还原），日报行「ECO 累计节省（会话）」与下载文本同源；单瓶电耗按 ECO.onPower/onFinished 与 offPower/offFinished 两组分开累计，抽屉公用工程区两格 + 日报一行同读。ECO 只改系数不改任何在制量，切换不破守恒；重置关 ECO 并清累计。<b>③ 故障与备件（C 项）</b>：库存 SPARES {stock 初值 spareInit=3, used, restocked, emergency}；故障统一入口 <b>applyFaultStart(obj, baseDur, label)</b>——随机故障（step）与场景「2 号线故障」都走它：有备件 stock−1、used+1、时长=baseDur；无备件时长 ×noSpareTimeFactor=2.2、curL().spare += emergencyFee=¥1200、faultMeta={spare:false, waitLeft: 加时部分}。faultMeta.waitLeft 在 step 与 faultLeft 同步递减；<b>维修工等待表现</b>：updateCrewMember 每帧判定 c.waiting（目标 faultMeta 为无备件单且 waitLeft&gt;0），crewWorkPose 的 waiting 分支 = 直立待命 + 双臂放下 + 朝向小幅张望，备件「送达」（waitLeft 清零）自动转蹲姿作业；__crew() 输出 waiting。修复完成统一经 <b>faultCleared</b>（step 自然递减到 0 与 repairStation/repairLine 抢修都调）记 FAULTLOG.repaired/repairSumMin；FAULTLOG.runMin 在 step 运行推进时累计，MTBF=runMin/events、MTTR=repairSumMin/repaired（mtbfMin/mttrMin）。补货 restockSpare（调度台 #spareBtn，上限 spareMax=9）：stock+1 且 curL().spare += sparePrice=¥350——收费进台账，绝不凭空恢复。抽屉「设备可靠性与备件」五格 + 日报「故障与备件」行 + 精益看板同读 FAULTLOG/SPARES。<b>④ 性能与回归（D 项）</b>：Draw Call 以同机位（全厂俯瞰·待机）renderer.info 实测为准，数字写当轮交付汇报；回归探针包五项（20,000 步守恒长跑 / 三段补证回归 / AGV 会车解脱 / CSS 安全区断言——全量扫描 position:fixed 交互元素 bottom 计算值 ≥36px 手势下限，防 R11 修复回退 / ECO 开关两段单瓶电耗差与 CONFIG 百分比误差 &lt;2%）由当轮审计探针在真实页面实跑，结论写交付汇报、不在本节预填。<b>重置口径</b>：ECO 关并清累计、备件回初值、FAULTLOG 清零、当前单交期重新核定、stations/lines 的 faultMeta/faultStartMin 清空，均在 resetBtn 处理器内与既有复位同级。</div></div>
+      <div class="dcell wide"><div class="l">R13 PDCA 打包轮（第五产品苏打气泡水 + 班次夜班 + 原料供应链预警 + DrawCall 实测补证）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 13 轮打包交付，新参数全在 <b>CONFIG.r13</b>（灭菌参数在 CONFIG.sterilizeProcess.soda），读数口 <b>window.__r13()</b>，探针口 <b>window.__r13Probe</b>（step/frames 定速推进、setRawLevel 压罐存、setSimMin 跳班次时刻）。<b>① 苏打气泡水（A 项）</b>：PRODUCTS 新增 soda（售价 ¥2.80 / 成本 ¥1.45 / blendFactor 1.25 / fillFactor 0.86 / 良品率 0.990；瓶液色浅青 #a5f3fc、瓶盖深青 #0f766e、标签薄荷 #2dd4bf——__setProductColor(hex, labelHex) 第二参数驱动产线饰条与货架箱贴带走标签色，盖色进产品行）。配方 CONFIG.recipes.soda：5000 L 批、混合 8 分；物料行 处理水（water 源）/ 矿物质浓缩液 / 碳酸氢钠（minor 源）/ CO₂ 210 kg（minor 源，备注行明示「灌装前碳酸化机注入、不走调配罐」）；配方无 syrup/conc 源——activeStages 按源类型自动跳过糖浆/浓缩液泵送段，与矿泉水同路。灭菌参数 sterilizeProcess.soda = 95°C / 保持 10 s / 预热 70°C / 冷却出口 8°C / 均质 40·10 bar / flowFactor 1.15，<b>依据</b>：碳酸化在热处理之后注入（CO₂ 遇热逸出，故灭菌对象是处理水基底）、低甜度水基底热负荷低可低温短时、深冷出口利于 CO₂ 溶解——参数注释放 CONFIG 内。兼容面自检：账本/切产 UI/批次/日报/抽检/班组/精益看板/换算系数全部遍历 PRODUCTS 派生，全文件 grep 无 PRODUCTS[ 数字下标写死、无「4 产品」字面量假设（订单/换型含排空预约/日报/看板/QC 均自动兼容）。<b>② 班次与夜班（B 项）</b>：班次是 <b>S.simMin 的纯派生</b>（shiftInfoAt：以 dayStartMinute=480 为界、白班 720 分 + 夜班 720 分循环；shiftSegments 把跨界步切段）——派生意味着交接<b>不触发任何重置</b>，在制批次 BP、换型、AGV/叉车任务、订单与交期全都照常延续，step 只在跨界时写一条交接日志（SHIFT.changes 计数）。人工成本：每步按段 minutes ×（每班人工 ÷ 班时长）计入 curL().fixedCost 与 S.fixedCost（与既有 fixedCostPerHour 的固定成本<b>并存累加</b>、口径独立）；夜班 ¥6,760/班 = 白班 ¥5,200 × 1.30 津贴。产能系数 shiftCapacityFactor() 乘到供应/调配/杀菌三工位 rateFn、产线 fillRate 与交期 nominalCapPerMin 五处（白班 ×1.0 / 夜班 ×0.92）。分班小计 SHIFT.totals{day,night}：人工按段实计，产量/报废/利润由 step 首尾快照做差按段时长权重分摊（跨界步才分摊）；日报格两行 + 归档摘要 + 下载文本同源；「新的一天」翻页先取摘要行再清 totals，重置同步清零。夜班视觉：nightMixAt 交接前后 30 分钟线性过渡，updateScene 插值日光（→0.16)/半球（→0.30)/环境（→0.05）强度、日光色温→冷蓝、曝光（→0.78)、雾色（→#1d2a3a)，背景过半切夜空纹理；窗带与控制室玻璃 emissive 拉高成暖黄窗光（2.1)、三条天花灯带（共用一材质）发光 2.6；只改既有光源与已注册材质，不新建光源。注：R3 节「始终白天、无夜间模式」的口径自本轮起由本节取代。<b>③ 原料供应链预警（C 项）</b>：状态机扩为 idle → <b>ordered（提前期倒计时）</b> → unloading → departed → idle。下单触发 = 液位 ≤ 安全线 safetyFrac=0.42 <b>或</b> ETA ≤ 提前期 leadMinutes=18 + 缓冲 12 分；ETA = 罐存瓶当量 ÷ useRate（供应消耗指数平滑，α=0.25，单位与既有 rawTankBottlesPerFull 同源）。<b>R2 的 30% 阈值保留为红线 criticalFrac=0.30</b>（rawRefillThreshold 即此值、CONFIG 同步）——在途跌破红线时一次性告急日志点名「等见底再补必断料」。到场计数 arrivals 在 ordered→unloading 一刻 +1（与 R2「到场才计」同义）。<b>断料是真的</b>:step 的 supMove 按 RAW.level × rawTankBottlesPerFull 封顶（原 0.03 地板删除），罐存见底即进料归零；断料起止写日志（stockouts/stockoutMin 累计）、进日报「原料供应（当日）」行与归档摘要。预警面：调度台 #rawAlert 预警行（ok 绿 / warn 黄 / critical 红 / stockout 红闪）、精益看板原料行、抽屉公用工程 usRaw 格（ETA/下单/到场/断料同源）。<b>④ DrawCall 实测（D 项）</b>：本节不预填数字——实测由当轮以 window.__perfSnapshot() 在全厂俯瞰机位读 renderer.info.render.calls，写进当轮交付汇报与抽屉「真机性能」区来源说明（#perfSource）；drawCallBreakdown()/window.__drawCalls() 给按场景子树的可见可渲染对象分解（instanced 按 1 计），超 650 线时据此定位前三贡献者当轮压减。<b>⑤ 回归探针（E 项）</b>：守恒 20,000 步 / 三段补证 / AGV 会车 / CSS 安全区断言 / ECO 能耗差复验沿用既有口；新增两项——罚金三处对账（Σ ledger.fine = totalFine() = 日报 delta.fine，__r13().fineAudit 三读同源）与苏打水全链冒烟（下单→生产→入库→发货一波，perProd 与各统计面出现苏打行）。结论随当轮交付汇报，不在本节预填。</div></div>
       <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
@@ -791,6 +802,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R10 细化 · 日报与补证：跑一段生产后抽屉「生产日报」当日总产量 = KPI 累计产量 − __dayrep 基线（交叉一致）、各产品占比合计 100%、换型（立即/排空）与波次计数随事件递增；点「新的一天」后历史区多一行摘要且当日各项归零重计，连点 8 次历史最多 7 行；重置后历史清空。运行时三段证据（入库闭环不提前加库存 / 出库取 seq 最小货位且 __whCheck().ok 恒 true / 排空预约在制三点下降并自动触发、S.lastSettle 含报废余量）以当轮交付汇报的探针实测为准</li>
       <li>R11 打包轮：藏控制台+调度台、折相机条、切到「物流特写」机位、手动恢复一次画质后点「重置」——五项界面状态全部原样（window.__uiPrefs() 与重置前一致），生产数据归零；点抽屉「恢复默认界面」后两面板显示、机位回全厂俯瞰、画质回设备档；跑一次立即换型与一次排空换型，控制台 #smedNote 各留一行小结（排空那次三段齐全、总 = 三段之和、第二次同模式带 ±差值），window.__smed().stats 两模式 n 各 ≥1、精益看板与日报平均值同源；触发 2 号线故障场景——维修工从北通道岗位出发经东纵脊到 (12,6) 蹲姿作业，故障计时结束（或点抢修）后回岗位 mode 回 idle，全程 __navStats.personMinEquip &gt; 0；开 CIP 开关等 cipLeft&gt;0——CIP 班组两人到泵阀位、结束离场；跑满 45 仿真分钟一次抽检——质检员出实验室到无菌罐取样口再携瓶返回（window.__crew().qc 依次 go/work/back/idle），QC.samples 与 lastSample 对齐</li>
       <li>R12 打包轮：新入队订单交期 = 按（在前量+本单量）÷名义瓶颈产能×1.5 核定而非固定 480 分（window.__r12().orderDueMin 与订单卡倒计时一致）；把当前单目标调小跑完且已过交期——完成日志含逾期分钟与罚金、总利润相应减少、日报「当日延误罚金」&gt;0；剩余交期 &lt;60 分时当前单与队列行变黄、逾期变红；控制台开 ECO——按钮明示电 −18%/汽 −12%/灌装上限 −6%，跑一段后抽屉「单瓶电耗 · ECO 开」低于「ECO 关」约 18%、日报 ECO 累计节省 &gt;¥0，关 ECO 后 fillRate 恢复；备件耗尽后触发故障——时长为标准 ×2.2、紧急采购费进台账、维修工到场呈等待姿势（window.__crew().maint.waiting=true），waitLeft 过后转蹲姿作业；调度台补备件收费 ¥350 且库存 +1；故障修复后抽屉 MTBF/MTTR 有数、window.__r12().faults.repaired ≥1；重置后 ECO 关、备件回 3、罚金与故障统计清零</li>
+      <li>R13 打包轮：产品切换行出现第 5 个「苏打气泡水」（window.__r13().products 长度 5、soda 配方与灭菌参数齐全）；切到苏打水跑一段——批次卡配方含 CO₂ 行、杀菌卡读数向 95°C/8°C 靠拢、台账 soda 行有数；把模拟时刻推进跨过 20:00——顶栏时钟出现「夜班」、厂区灯光转夜（窗光/灯带亮）、日报出现白/夜班小计两行且夜班人工单价更高（window.__r13().shift.totals）；班次交接瞬间在制批次与 AGV 任务不中断（步前步后 BP.state 与物流状态连续）；window.__r13Probe.setRawLevel(0.10) 压低罐存跑——调度台预警行变红、日志出现下单与（若见底）断料行、日报「原料供应」行下单/断料有数，罐车在提前期 18 分钟后才到场（ordered 态可见）；罚金三处对账 window.__r13().fineAudit 三值相等；Draw Call 以 __perfSnapshot 实测为准并写入抽屉来源说明</li>
     </ul>
   </div>
 </aside>
@@ -876,7 +888,12 @@ var CONFIG = {
     lemon:  { uhtTempC:137, holdSec:4, preheatC:95, coolOutC:25, homogP1:150, homogP2:30, flowFactor:1.00 },
     orange: { uhtTempC:136, holdSec:6, preheatC:92, coolOutC:22, homogP1:200, homogP2:50, flowFactor:0.92 },
     cola:   { uhtTempC:133, holdSec:4, preheatC:88, coolOutC:20, homogP1:120, homogP2:25, flowFactor:1.05 },
-    water:  { uhtTempC:85,  holdSec:2, preheatC:60, coolOutC:18, homogP1:80,  homogP2:15, flowFactor:1.20 }
+    water:  { uhtTempC:85,  holdSec:2, preheatC:60, coolOutC:18, homogP1:80,  homogP2:15, flowFactor:1.20 },
+    /* R13 苏打气泡水：CO₂ 必须在基水完成热处理并深冷后注入（温度越低 CO₂ 溶解度越高），
+     * 故热处理段取 95℃/10s 的低温短时口径（对象是已 RO/臭氧处理的水基、无糖无果肉，
+     * 微生物负荷远低于茶/果汁，不需要 133~137℃ UHT）；均质仅作矿物质分散，压力低；
+     * coolOutC=8℃ 对应碳酸化前深冷，flowFactor=1.15（低黏度近水，但低于纯水 1.20）。 */
+    soda:   { uhtTempC:95,  holdSec:10, preheatC:70, coolOutC:8,  homogP1:40,  homogP2:10, flowFactor:1.15 }
   },
   asepticStockCap: 30000,       // 无菌罐群总可用库存上限（瓶当量，5 罐均分；满罐时杀菌段 BLOCKED 背压）
   asepticStockInit: 4500,       // 开局无菌罐预存量（瓶当量，约小半批，开工即可灌、随后靠杀菌续供）
@@ -963,6 +980,36 @@ var CONFIG = {
     ecoPowerSave: 0.18, ecoSteamSave: 0.12, ecoCapCut: 0.06,
     spareInit: 3, sparePrice: 350, spareMax: 9,
     noSpareTimeFactor: 2.2, emergencyFee: 1200
+  },
+  /* ---- R13 打包轮参数（第五产品 / 班次与夜班 / 原料供应链预警，改节奏只改这里） ----
+   * 班次：dayStartMinute=480（08:00）起白班，dayMinutes / nightMinutes 各 720（12 小时两班倒）；
+   * 班次只按 S.simMin 派生，不重置任何在制/批次/物流任务。人工成本按班折算到分钟计入
+   * 当前产品台账 fixedCost（与既有 fixedCostPerHour 的折旧/基础人工并行，不互相替代）：
+   * 夜班每班 ¥6,760 = 白班 ¥5,200 × 1.30 夜班津贴系数；夜班产能系数 nightCapacityFactor
+   * 乘到供应/调配/杀菌/灌装四处额定速率（人员密度低、巡检间隔长，取 0.92）。
+   * 原料预警：safetyFrac=安全库存线（42%）；criticalFrac=0.30 沿用 R2 既有低位阈值作红线；
+   * 下单触发 = 液位 ≤ safetyFrac 或预计耗尽 ETA ≤ leadMinutes + orderEtaBufferMinutes；
+   * leadMinutes=罐车下单后到场提前期（18 分钟，到场前状态 ordered、车在场外）；
+   * ETA = 罐存瓶当量 ÷ 平滑后的当前供应消耗速率（forecastSmoothing 为指数平滑系数）。
+   * 液位真到 emptyFrac=0 时供应被实物库存截断（step 的 supMove 按罐存封顶），断料计时入账。 */
+  r13: {
+    shifts: {
+      dayStartMinute: 480, dayMinutes: 720, nightMinutes: 720,
+      dayName: "白班", nightName: "夜班",
+      dayLaborCostPerShift: 5200, nightLaborCostPerShift: 6760,
+      dayCapacityFactor: 1.0, nightCapacityFactor: 0.92,
+      visualTransitionMinutes: 30
+    },
+    raw: {
+      safetyFrac: 0.42, criticalFrac: 0.30,
+      leadMinutes: 18, orderEtaBufferMinutes: 12, forecastSmoothing: 0.25,
+      emptyFrac: 0
+    },
+    night: {
+      sunIntensity: 0.16, hemiIntensity: 0.30, ambientIntensity: 0.05, exposure: 0.78,
+      fogColor: 0x1d2a3a, skyTop: "#0d1b2e", skyHorizon: "#1d2a3a", skyGround: "#141c22",
+      windowEmissive: 2.1, stripEmissive: 2.6
+    }
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -1078,10 +1125,14 @@ var STATUS = { RUNNING:"run", FAULT:"fault", STARVED:"starved", BLOCKED:"blocked
  * blendFactor/fillFactor：同一设备跑不同产品的工艺系数（碳酸灌装慢、矿泉水快）；
  * price/cost/quality 进入分产品账本，换产后互不追溯（见 ledger）。 */
 var PRODUCTS = [
-  { id:"lemon",  name:"冰红茶", full:"冰红茶 · 便利店渠道", color:"#d97706", price:2.40, cost:1.55, blendFactor:1.0,  fillFactor:1.0,  quality:0.992 },
-  { id:"orange", name:"橙汁",   full:"NFC 橙汁 · 商超渠道",   color:"#f97316", price:3.60, cost:2.45, blendFactor:0.8,  fillFactor:0.9,  quality:0.988 },
-  { id:"cola",   name:"碳酸可乐", full:"碳酸可乐 · 餐饮渠道", color:"#7c2d12", price:2.10, cost:1.30, blendFactor:1.1,  fillFactor:0.82, quality:0.985 },
-  { id:"water",  name:"矿泉水", full:"矿泉水 · 电商渠道",     color:"#38bdf8", price:1.50, cost:0.82, blendFactor:1.35, fillFactor:1.25, quality:0.996 }
+  { id:"lemon",  name:"冰红茶", full:"冰红茶 · 便利店渠道", color:"#d97706", capColor:"#92400e", labelColor:"#f59e0b", price:2.40, cost:1.55, blendFactor:1.0,  fillFactor:1.0,  quality:0.992 },
+  { id:"orange", name:"橙汁",   full:"NFC 橙汁 · 商超渠道",   color:"#f97316", capColor:"#c2410c", labelColor:"#fb923c", price:3.60, cost:2.45, blendFactor:0.8,  fillFactor:0.9,  quality:0.988 },
+  { id:"cola",   name:"碳酸可乐", full:"碳酸可乐 · 餐饮渠道", color:"#7c2d12", capColor:"#991b1b", labelColor:"#b91c1c", price:2.10, cost:1.30, blendFactor:1.1,  fillFactor:0.82, quality:0.985 },
+  { id:"water",  name:"矿泉水", full:"矿泉水 · 电商渠道",     color:"#38bdf8", capColor:"#0284c7", labelColor:"#7dd3fc", price:1.50, cost:0.82, blendFactor:1.35, fillFactor:1.25, quality:0.996 },
+  /* R13 第五产品：苏打气泡水。color=瓶液色（近透明的浅青，气泡水本体无色、取 CO₂ 气泡的冷青色调）、
+   * capColor=深青瓶盖、labelColor=青绿标签；blendFactor 高（基水无糖浆/果胶、调配简单），
+   * fillFactor 低（碳酸灌装易起泡、须降速稳压），price/cost 含 CO₂ 与耐压瓶成本。 */
+  { id:"soda",   name:"苏打气泡水", full:"苏打气泡水 · 便利店渠道", color:"#a5f3fc", capColor:"#0f766e", labelColor:"#2dd4bf", price:2.80, cost:1.45, blendFactor:1.25, fillFactor:0.86, quality:0.990 }
 ];
 var product = PRODUCTS[0];
 
@@ -1124,7 +1175,15 @@ CONFIG.recipes = {
     { name:"CO₂（灌装前注入）", amount:190, unit:"kg", source:"minor", from:"CO₂ 储罐 · 灌装前碳酸化" } ] },
   water: { name:"矿泉水配方（近乎直供）", batchL:5000, mixMinutes:6, note:"矿泉水调配最简：处理水加矿物质后短时搅拌均匀即出料，无糖浆与浓缩液阶段（批次时钟自动跳过空阶段）。", ingredients:[
     { name:"处理水",       amount:4960, unit:"L",  source:"water", from:"水处理缓冲罐" },
-    { name:"矿物质浓缩液", amount:40,   unit:"L",  source:"minor", from:"小料投加站（矿物质罐）" } ] }
+    { name:"矿物质浓缩液", amount:40,   unit:"L",  source:"minor", from:"小料投加站（矿物质罐）" } ] },
+  /* R13 苏打气泡水配方：调配罐里只做基水（处理水 + 矿物质 + 碳酸氢钠调 pH），CO₂ 与可乐同
+   * 口径——不在调配罐投加，基水热处理并深冷至 8℃ 后、灌装前在碳酸化机注入（低温利溶解）；
+   * 无糖浆/浓缩液来源，批次阶段序列自动跳过 syrup/conc 两段（activeStages 按来源过滤）。 */
+  soda: { name:"苏打气泡水配方（基水 + 灌装前碳酸化）", batchL:5000, mixMinutes:8, note:"CO₂ 不在调配罐投加：基水完成热处理并深冷至 8℃ 后，于灌装前在碳酸化机注入（低温下 CO₂ 溶解度更高、灌装不起泡溢）。", ingredients:[
+    { name:"处理水",       amount:4915, unit:"L",  source:"water", from:"水处理缓冲罐" },
+    { name:"矿物质浓缩液", amount:35,   unit:"L",  source:"minor", from:"小料投加站（矿物质罐）" },
+    { name:"碳酸氢钠",     amount:4,    unit:"kg", source:"minor", from:"小料投加站" },
+    { name:"CO₂（灌装前注入）", amount:210, unit:"kg", source:"minor", from:"CO₂ 储罐 · 灌装前碳酸化机" } ] }
 };
 function recipeOf(p){ return CONFIG.recipes[p.id]; }
 /* 某产品实际执行的阶段序列：配方里没有对应来源的送料阶段自动跳过（如矿泉水无糖浆/浓缩液阶段） */
@@ -1166,8 +1225,29 @@ function sterBatchInfo(){
 var UTIL = { steamLoad: 0, steamPressure: 0.95, airRunning: 0, airPressure: 0.72, roRunning: false,
              rawWaterLevel: CONFIG.r2.rawWaterInit, softWaterLevel: CONFIG.r2.softWaterInit,
              coldRunning: false, coldUnitsRunning: 1, coldTemp: -21.5, coldDoor: 0 };
-var RAW = { level: CONFIG.r2.rawTankInit, tanker: "idle", tankerLeft: 0, arrivals: 0 };
+/* R13：RAW 扩展供应链预警字段——orders 下单次数（下单 ≠ 到场）/ stockouts 断料次数 /
+ * stockoutMin 累计断料分钟 / useRate 平滑后的供应消耗速率（瓶/分，ETA 分母）/
+ * etaMin 预计耗尽分钟（useRate 未建立时 Infinity）/ minLevel 本轮最低液位 / critLogged 红线日志防重。
+ * tanker 状态机：idle → ordered（已下单、提前期倒计时、车仍在场外）→ unloading（到场卸料）→ departed → idle。 */
+var RAW = { level: CONFIG.r2.rawTankInit, tanker: "idle", tankerLeft: 0, arrivals: 0,
+            orders: 0, stockouts: 0, stockoutMin: 0, stockoutActive: false,
+            useRate: 0, etaMin: Infinity, minLevel: CONFIG.r2.rawTankInit, critLogged: false };
 var WH = { inCases: 0, outCases: 0, stockCases: CONFIG.whBaseCases, producedCases: 0, head: 0, sinceProduce: 999 };
+/* R13 原料预警状态（调度台预警行 / 精益看板 / 抽屉公用工程格同读这一处）：
+ * stockout 见底且罐车未在卸料；critical 跌破 R2 既有 30% 红线；warn 低于安全线或 ETA 进入
+ * 「提前期 + 60 分钟」窗口；其余 ok。状态只读 RAW，不改任何量。 */
+function rawAlertState(){
+  var R13R = CONFIG.r13.raw;
+  if(RAW.level <= R13R.emptyFrac && RAW.tanker !== "unloading") return "stockout";
+  if(RAW.level < R13R.criticalFrac) return "critical";
+  if(RAW.level < R13R.safetyFrac || (isFinite(RAW.etaMin) && RAW.etaMin <= R13R.leadMinutes + R13R.orderEtaBufferMinutes + 30)) return "warn";
+  return "ok";
+}
+function rawEtaText(){
+  if(!isFinite(RAW.etaMin)) return "—（尚无消耗速率）";
+  if(RAW.etaMin >= 180) return Math.floor(RAW.etaMin / 60) + " 小时 " + Math.round(RAW.etaMin % 60) + " 分";
+  return Math.round(RAW.etaMin) + " 分钟";
+}
 var SHIP = { active: false, loadCases: 0, targetCases: 0, loadAcc: 0, trips: 0, nextWaveAt: CONFIG.r2.shipWaveOrderStep };
 /* ================= R9 · 逐货位物流状态（LOGI / SLOTS） =================
  * LOGI = 渲染侧物流任务状态（与内核 WH 同源守恒，事件点见 syncWhStock）：
@@ -1225,12 +1305,45 @@ function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
   }
   if(drawing) UTIL.softWaterLevel = Math.max(0.05, UTIL.softWaterLevel - R.waterDrawPerMin*dtMin);
   UTIL.rawWaterLevel = Math.min(0.97, UTIL.rawWaterLevel + 0.012*dtMin);   /* 市政原水常压补水（慢于 RO 抽水：重载时原水仍净降、停产时缓慢回满） */
-  /* --- 原料罐区：供应流量按满罐折合量消耗聚合液位；跌破阈值触发罐车到场卸料（泵台联动，液位回升到高位离场） --- */
-  if(supMoveVal > 0) RAW.level = Math.max(0.03, RAW.level - supMoveVal / R.rawTankBottlesPerFull);
+  /* --- 原料罐区（R13 供应链预警重做；R2 的 30% 阈值保留为 critical 红线）：
+   * 消耗按实物流 supMove 扣罐存（step 已按罐存封顶 supMove，到 0 即真断料，不再有 0.03 地板）；
+   * useRate 为供应消耗的指数平滑（瓶/分），ETA = 罐存瓶当量 ÷ useRate。下单触发 =
+   * 液位 ≤ 安全线 safetyFrac 或 ETA ≤ 提前期 + 缓冲；下单后先 ordered 倒计时 leadMinutes
+   * （车在场外、画面不动），到点才 unloading（到场次数 arrivals 在这一刻 +1）。
+   * 等到见底才下单的情形会在提前期内真断料：stockoutActive 期间 step 的 supMove 被罐存
+   * 截断为 0、断料分钟累计入账、进日报。 --- */
+  var R13R = CONFIG.r13.raw;
+  if(supMoveVal > 0 && dtMin > 0){
+    var instRate = supMoveVal / dtMin;
+    RAW.useRate = RAW.useRate > 0 ? RAW.useRate + (instRate - RAW.useRate) * R13R.forecastSmoothing : instRate;
+  }
+  if(supMoveVal > 0) RAW.level = Math.max(0, RAW.level - supMoveVal / R.rawTankBottlesPerFull);
+  if(RAW.level < RAW.minLevel) RAW.minLevel = RAW.level;
+  RAW.etaMin = RAW.useRate > 1 ? (RAW.level * R.rawTankBottlesPerFull) / RAW.useRate : Infinity;
+  if(RAW.level <= R13R.emptyFrac && RAW.tanker !== "unloading"){
+    if(!RAW.stockoutActive){
+      RAW.stockoutActive = true; RAW.stockouts++;
+      log("⛔ 原料断料：罐区已见底，进料停线（供应流量被实物库存截断为 0）。"+(RAW.tanker === "ordered" ? "补料罐车已在途，约 "+Math.ceil(RAW.tankerLeft)+" 分钟后到场。" : "尚未下单补料。"), "bad");
+    }
+    RAW.stockoutMin += dtMin;
+  } else if(RAW.stockoutActive && RAW.level > R13R.emptyFrac){
+    RAW.stockoutActive = false;
+    log("原料补给恢复：罐区液位回升，进料恢复。本轮累计断料 "+RAW.stockoutMin.toFixed(1)+" 分钟（计 "+RAW.stockouts+" 次）。","good");
+  }
+  if(RAW.level < R13R.criticalFrac && RAW.tanker === "ordered" && !RAW.critLogged){
+    RAW.critLogged = true;
+    log("🔴 原料告急：液位已跌破 "+Math.round(R13R.criticalFrac*100)+"% 红线（现 "+Math.round(RAW.level*100)+"%），罐车仍在途（约 "+Math.ceil(RAW.tankerLeft)+" 分钟到场）——安全库存应在液位到安全线 "+Math.round(R13R.safetyFrac*100)+"% 时就下单，等见底再补必断料。","bad");
+  }
   if(RAW.tanker === "idle"){
-    if(RAW.level < R.rawRefillThreshold){
+    if(RAW.level <= R13R.safetyFrac || RAW.etaMin <= R13R.leadMinutes + R13R.orderEtaBufferMinutes){
+      RAW.tanker = "ordered"; RAW.tankerLeft = R13R.leadMinutes; RAW.orders++; RAW.critLogged = false;
+      log("原料预警下单：罐区液位 "+Math.round(RAW.level*100)+"%（安全线 "+Math.round(R13R.safetyFrac*100)+"%）"+(isFinite(RAW.etaMin) ? "、按当前消耗预计 "+Math.round(RAW.etaMin)+" 分钟耗尽" : "")+"，已下单补料——罐车有 "+R13R.leadMinutes+" 分钟提前期，约 "+R13R.leadMinutes+" 分钟后到场卸料。","bad");
+    }
+  } else if(RAW.tanker === "ordered"){
+    RAW.tankerLeft -= dtMin;
+    if(RAW.tankerLeft <= 0){
       RAW.tanker = "unloading"; RAW.tankerLeft = R.tankerUnloadMinutes; RAW.arrivals++;
-      log("原料罐区液位低至 "+Math.round(RAW.level*100)+"%（阈值 "+Math.round(R.rawRefillThreshold*100)+"%）：罐车到场，在卸料泵台卸料补仓。","bad");
+      log("原料罐车到场（下单后 "+R13R.leadMinutes+" 分钟），在卸料泵台卸料补仓。","good");
     }
   } else if(RAW.tanker === "unloading"){
     RAW.tankerLeft -= dtMin;
@@ -1276,9 +1389,9 @@ function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
  * Station 字段：queue 待处理量 / done 累计处理 / faultLeft 剩余故障分钟 /
  * lastMove·lastCap·lastDt 上一步实际流量与额定能力（供利用率与瓶颈计算，避免渲染层反推）。 */
 var stations = [
-  { id:"supply",    icon:"🚚", name:"原料供应", en:"Raw Supply", queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.supply; } },
-  { id:"blend",     icon:"🛢️", name:"调配",     en:"Blending",   queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.tanks*CONFIG.blendPerTank*product.blendFactor; } },
-  { id:"sterilize", icon:"🌡️", name:"杀菌 UHT", en:"Sterilize",  queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, cipLeft:0, sinceCip:0, rateFn:function(){ return S.sterilize; } }
+  { id:"supply",    icon:"🚚", name:"原料供应", en:"Raw Supply", queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.supply * shiftCapacityFactor(); } },   /* R13：班次产能系数（夜班 ×0.92） */
+  { id:"blend",     icon:"🛢️", name:"调配",     en:"Blending",   queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.tanks*CONFIG.blendPerTank*product.blendFactor * shiftCapacityFactor(); } },   /* R13：同上 */
+  { id:"sterilize", icon:"🌡️", name:"杀菌 UHT", en:"Sterilize",  queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, cipLeft:0, sinceCip:0, rateFn:function(){ return S.sterilize * shiftCapacityFactor(); } }   /* R13：同上 */
 ];
 /* ================= [M1] 仿真内核 · 灌装产线 Line =================
  * Line 字段：on 是否启用 / queue 待灌装队列 / capQ 已灌装待封盖队列 / fillRate() 本线灌装速度。
@@ -1287,7 +1400,7 @@ var CAP_RATE = CONFIG.capRate, PACK_RATE = CONFIG.packRate;
 var lines = [];
 for(var _li=0; _li<CONFIG.lineCount; _li++){ (function(i){
   lines.push({ idx:i, name:(i+1)+" 号灌装线", on: i<CONFIG.defaults.activeLines, queue:0, capQ:0, done:0, faults:0, faultLeft:0, lastMove:0,
-    fillRate:function(){ return S.filler*product.fillFactor*(ECO.on ? 1-CONFIG.r12.ecoCapCut : 1); } });   /* R12：ECO 开启时灌装上限打折（变频降速），关掉即恢复 */
+    fillRate:function(){ return S.filler*product.fillFactor*(ECO.on ? 1-CONFIG.r12.ecoCapCut : 1) * shiftCapacityFactor(); } });   /* R12：ECO 开启时灌装上限打折（变频降速），关掉即恢复；R13：再乘班次产能系数（夜班 ×0.92） */
 })(_li); }
 var QUEUE_CAP = CONFIG.queueCap, LINE_Q_CAP = CONFIG.lineQueueCap;
 var CO_MINUTES = CONFIG.changeoverMinutes, CO_FEE = CONFIG.changeoverFee;
@@ -1390,10 +1503,11 @@ var FAULTLOG = { events: 0, repaired: 0, repairSumMin: 0, runMin: 0 };
 function mtbfMin(){ return FAULTLOG.events > 0 ? FAULTLOG.runMin / FAULTLOG.events : null; }
 function mttrMin(){ return FAULTLOG.repaired > 0 ? FAULTLOG.repairSumMin / FAULTLOG.repaired : null; }
 function nominalCapPerMin(p){
-  var fill = Math.max(1, activeLines().length) * S.filler * p.fillFactor;
-  var blend = S.tanks * CONFIG.blendPerTank * p.blendFactor;
-  var ster = S.sterilize * sterProcOf(p).flowFactor;
-  return Math.max(60, Math.min(S.supply, blend, ster, fill));
+  var cf = shiftCapacityFactor();   /* R13：交期名义产能与实线同口径带班次系数（夜班核定更宽松） */
+  var fill = Math.max(1, activeLines().length) * S.filler * p.fillFactor * cf;
+  var blend = S.tanks * CONFIG.blendPerTank * p.blendFactor * cf;
+  var ster = S.sterilize * sterProcOf(p).flowFactor * cf;
+  return Math.max(60, Math.min(S.supply * cf, blend, ster, fill));
 }
 function dueOffsetMin(target, ahead, p){
   return Math.max(CONFIG.r12.dueMinMinutes, Math.ceil((ahead + target) / nominalCapPerMin(p) * CONFIG.r12.dueSlack));
@@ -1454,6 +1568,115 @@ window.__r12 = function(){
     orderDueMin: S.orderDueMin, totalFine: totalFine(), totalSpareCost: totalSpareCost()
   };
 };
+/* ================= [M1] R13 · 班次与夜班（SHIFT） =================
+ * 班次是 S.simMin 的纯派生：dayStartMinute 起白班、dayMinutes 后夜班、nightMinutes 后回白班，
+ * 两班各 720 分钟（12 小时）。派生意味着交接不触发任何状态重置——在制批次 BP、换型、
+ * AGV/叉车任务、订单与队列全都不受影响（step 只在跨界时多写一条交接日志）。
+ * 人工成本：step 顶部按区间分段（shiftSegments 把跨界区间切开）逐段计入当前产品台账
+ * fixedCost 与 S.fixedCost，单价 = 每班人工 ÷ 班时长（夜班含 30% 津贴）；产能系数经
+ * shiftCapacityFactor() 乘到供应/调配/杀菌/灌装四处额定速率与名义产能（交期）上。
+ * 分班小计 SHIFT.totals（当前生产日口径，随「新的一天」/重置清零）：产量/报废/利润增量
+ * 由 step 首尾快照做差、按段时长权重分摊（跨界步才需要分摊，普通步整段归一班）。 */
+function newShiftTotals(){ return { minutes: 0, finished: 0, rejected: 0, profit: 0, laborCost: 0 }; }
+var SHIFT = { totals: { day: newShiftTotals(), night: newShiftTotals() }, changes: 0 };
+function shiftInfoAt(min){
+  var C = CONFIG.r13.shifts;
+  var cycle = C.dayMinutes + C.nightMinutes;
+  var cyc = ((min - C.dayStartMinute) % cycle + cycle) % cycle;
+  var isDay = cyc < C.dayMinutes;
+  var len = isDay ? C.dayMinutes : C.nightMinutes;
+  var pos = isDay ? cyc : cyc - C.dayMinutes;   /* 班内位置（0..len）：夜班必须先减白班时长，remain 才成立 */
+  var cost = isDay ? C.dayLaborCostPerShift : C.nightLaborCostPerShift;
+  return { key: isDay ? "day" : "night", name: isDay ? C.dayName : C.nightName,
+           pos: pos, len: len, remain: len - pos,
+           laborPerMin: cost / len, capFactor: isDay ? C.dayCapacityFactor : C.nightCapacityFactor };
+}
+function currentShift(){ return shiftInfoAt(S.simMin); }
+function shiftCapacityFactor(){ return shiftInfoAt(S.simMin).capFactor; }
+function shiftSegments(fromMin, dtMin){
+  var segs = [], t = fromMin, left = dtMin, guard = 0;
+  while(left > 1e-9 && guard++ < 8){
+    var inf = shiftInfoAt(t);
+    var take = Math.min(left, Math.max(1e-9, inf.remain));
+    segs.push({ key: inf.key, name: inf.name, minutes: take, laborPerMin: inf.laborPerMin });
+    left -= take; t += take;
+  }
+  return segs;
+}
+function accrueShiftLabor(segs){
+  segs.forEach(function(sg){
+    var cost = sg.minutes * sg.laborPerMin;
+    if(cost <= 0) return;
+    S.fixedCost += cost;
+    curL().fixedCost += cost;
+    SHIFT.totals[sg.key].laborCost += cost;
+    SHIFT.totals[sg.key].minutes += sg.minutes;
+  });
+}
+function settleShiftStats(segs, fin0, rej0, prof0){
+  var totMin = segs.reduce(function(a, sg){ return a + sg.minutes; }, 0);
+  if(totMin <= 0) return;
+  var dFin = S.finished - fin0, dRej = S.rejected - rej0, dProf = totalProfit() - prof0;
+  segs.forEach(function(sg){
+    var w = sg.minutes / totMin, T = SHIFT.totals[sg.key];
+    T.finished += dFin * w; T.rejected += dRej * w; T.profit += dProf * w;
+  });
+}
+/* 夜班视觉混合量（0=白天 / 1=深夜）：在交接点前后 visualTransitionMinutes 内线性过渡，
+ * updateScene 据此插值日光/半球/环境光强、曝光、雾色与窗光/灯带发光强度。 */
+function nightMixAt(min){
+  var T = CONFIG.r13.shifts.visualTransitionMinutes;
+  var mod = ((min % 1440) + 1440) % 1440;
+  var dusk = CONFIG.r13.shifts.dayStartMinute + CONFIG.r13.shifts.dayMinutes;   /* 夜班起点（分钟/日） */
+  var dawn = CONFIG.r13.shifts.dayStartMinute;                                   /* 白班起点 */
+  if(mod >= dusk + T / 2 || mod < dawn - T / 2) return 1;
+  if(mod >= dawn + T / 2 && mod < dusk - T / 2) return 0;
+  if(mod >= dawn - T / 2 && mod < dawn + T / 2) return 1 - (mod - (dawn - T / 2)) / T;
+  return (mod - (dusk - T / 2)) / T;
+}
+window.__r13 = function(){
+  return {
+    products: PRODUCTS.map(function(p){ return { id: p.id, name: p.name, color: p.color, capColor: p.capColor, labelColor: p.labelColor,
+      recipe: !!CONFIG.recipes[p.id], ster: sterProcOf(p), ledgerFinished: ledger[p.id].finished, ledgerFine: ledger[p.id].fine || 0 }; }),
+    currentProduct: product.id,
+    shift: { now: shiftInfoAt(S.simMin), capacityFactor: shiftCapacityFactor(), changes: SHIFT.changes, nightMix: nightMixAt(S.simMin),
+             totals: { day: SHIFT.totals.day, night: SHIFT.totals.night } },
+    raw: { level: RAW.level, etaMin: isFinite(RAW.etaMin) ? RAW.etaMin : null, useRate: RAW.useRate,
+           tanker: RAW.tanker, tankerLeft: RAW.tankerLeft, orders: RAW.orders, arrivals: RAW.arrivals,
+           stockouts: RAW.stockouts, stockoutMin: RAW.stockoutMin, stockoutActive: RAW.stockoutActive,
+           alert: rawAlertState(), minLevel: RAW.minLevel },
+    fineAudit: { ledgerSum: PRODUCTS.reduce(function(a, p){ return a + (ledger[p.id].fine || 0); }, 0),
+                 totalFine: totalFine(), dayrepFine: dayrepDelta().fine },
+    perf: (typeof window.__perfSnapshot === "function") ? window.__perfSnapshot() : null,
+    drawBreakdown: (typeof drawCallBreakdown === "function") ? drawCallBreakdown() : null
+  };
+};
+/* R13 验收探针口（与既有 __pdcaCheck/__r12 同惯例）：harness 用它定点推进内核/帧、
+ * 压低罐存与跳班次时刻，全部走真实 step/updateScene，不旁路任何结算。 */
+window.__r13Probe = {
+  step: function(n, dt){ for(var i = 0; i < n; i++) step(dt || 0.55); return window.__r13(); },
+  /* pump = step 批量推进 + 周期性 renderKpis：订单完成/罚金结算/队列接单都挂在 renderKpis
+   * 的订单分支上（与主循环 8 帧节奏同源），无头环境帧冻结时靠它把结算泵出来，口径与实页一致。 */
+  pump: function(n, dt){
+    var d = dt || 0.55;
+    for(var i = 0; i < n; i++){ step(d); if(i % 200 === 199) renderKpis(); }
+    renderKpis();
+    return window.__r13();
+  },
+  frames: function(n, dt){
+    var d = dt || 0.05, t0 = 1000;
+    for(var i = 0; i < n; i++){
+      if(S.running) step(d * CONFIG.simMinutesPerRealSecond * S.speed);
+      updateScene(d, t0 + i * d);
+      if(i % 8 === 7) renderKpis();
+    }
+    renderKpis();
+    return window.__r13();
+  },
+  setRawLevel: function(f){ RAW.level = Math.max(0, Math.min(0.98, f)); RAW.minLevel = Math.min(RAW.minLevel, RAW.level); return window.__r13().raw; },
+  setSimMin: function(m){ S.simMin = m; return shiftInfoAt(S.simMin); },
+  snapshot: function(){ return window.__r13(); }
+};
 /* ================= [M1] R10 细化 · 生产日报分段（DAYREP）+ 换型/波次计数 =================
  * 日报按「当前生产日」分段：DAYREP.base 是本段起点对全厂累计量的快照（懒初始化，
  * 首次渲染或「新的一天」/重置后取当时累计值），当日量 = 当前累计 − base，全程与台账
@@ -1469,6 +1692,7 @@ function dayrepSnapshot(){
     profit: totalProfit(), trips: SHIP.trips, waves: WAVES,
     fine: totalFine(),
     coI: CO_STATS.immediate, coD: CO_STATS.drained,
+    rawOrders: RAW.orders, rawStockouts: RAW.stockouts, rawStockoutMin: RAW.stockoutMin,   /* R13：原料下单/断料当日做差 */
     perProd: PRODUCTS.map(function(p){ return ledger[p.id].finished; })
   };
 }
@@ -1480,12 +1704,15 @@ function dayrepDelta(){
     water: S.waterM3 - b.water, power: S.powerKwh - b.power, steam: S.steamKg - b.steam,
     profit: totalProfit() - b.profit, trips: SHIP.trips - b.trips, waves: WAVES - b.waves,
     fine: totalFine() - (b.fine || 0),
+    rawOrders: RAW.orders - (b.rawOrders || 0), rawStockouts: RAW.stockouts - (b.rawStockouts || 0), rawStockoutMin: RAW.stockoutMin - (b.rawStockoutMin || 0),   /* R13 */
     coI: CO_STATS.immediate - b.coI, coD: CO_STATS.drained - b.coD,
     perProd: PRODUCTS.map(function(p, i){ return ledger[p.id].finished - b.perProd[i]; })
   };
 }
 function dayrepSummaryLine(d){
-  return "产量 " + fmt(d.finished) + " 瓶 · 利润 " + fmtMoney(d.profit) + " · 换型 " + (d.coI + d.coD) + " 次（立即 " + d.coI + " / 排空 " + d.coD + "）· 波次 " + d.waves + " · 发车 " + d.trips;
+  return "产量 " + fmt(d.finished) + " 瓶 · 利润 " + fmtMoney(d.profit) + " · 换型 " + (d.coI + d.coD) + " 次（立即 " + d.coI + " / 排空 " + d.coD + "）· 波次 " + d.waves + " · 发车 " + d.trips
+    + " · 白班 " + fmt(SHIFT.totals.day.finished) + " 瓶 / 夜班 " + fmt(SHIFT.totals.night.finished) + " 瓶"   /* R13：归档行带班次小计（SHIFT.totals 在翻页后才清） */
+    + (d.rawStockouts > 0 ? " · 断料 " + d.rawStockouts + " 次 / " + d.rawStockoutMin.toFixed(1) + " 分" : " · 无断料");   /* R13 */
 }
 function renderDayHistory(){
   var el = $("dayHistory");
@@ -1658,7 +1885,7 @@ function applyProduct(p){
   $("orderName").textContent = p.full;
   $("ePrice").textContent = "¥" + p.price.toFixed(2);
   $("eCost").textContent = "¥" + p.cost.toFixed(2);
-  if(window.__setProductColor) window.__setProductColor(p.color);
+  if(window.__setProductColor) window.__setProductColor(p.color, p.labelColor);
 }
 function startChangeover(np, opts){
   opts = opts || {};
@@ -1734,10 +1961,12 @@ $("orderQueueList").addEventListener("click", function(e){
 });
 $("newDayBtn").addEventListener("click", function(){
   var d = dayrepDelta();
-  DAYREP.history.unshift({ at: fmtSimClock(S.simMin), line: dayrepSummaryLine(d) });
+  var line = dayrepSummaryLine(d);   /* R13：先取行（含班次小计）再清班次当日累计，顺序不可反 */
+  DAYREP.history.unshift({ at: fmtSimClock(S.simMin), line: line });
   if(DAYREP.history.length > 7) DAYREP.history.length = 7;
   DAYREP.base = dayrepSnapshot();
-  log("生产日报翻页：当日已归档（" + dayrepSummaryLine(d) + "），新的一天从此刻重新分段汇总。历史最多留 7 行。","good");
+  SHIFT.totals.day = newShiftTotals(); SHIFT.totals.night = newShiftTotals();   /* R13：班次小计是当前生产日口径，随翻页清零（班次本身不间断） */
+  log("生产日报翻页：当日已归档（" + line + "），新的一天从此刻重新分段汇总。历史最多留 7 行。","good");
   renderDayHistory(); renderKpis();
 });
 $("reportDlBtn").addEventListener("click", function(){
@@ -1761,6 +1990,9 @@ $("reportDlBtn").addEventListener("click", function(){
     "ECO 累计节省（会话）：" + fmtMoney(ECO.savedYuan) + " · 电 " + fmt(ECO.savedKwh) + " kWh · 汽 " + fmt(ECO.savedSteamKg) + " kg",
     "故障与备件（会话累计）：故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件库存 " + SPARES.stock + " 件（领用 " + SPARES.used + " · 补货 " + SPARES.restocked + " · 紧急采购 " + SPARES.emergency + " 次）",
     "当日发货波次：" + dd.waves + " 波 · 已发 " + dd.trips + " 车",
+    "班次小计 · 白班：产量 " + fmt(SHIFT.totals.day.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.day.profit) + " · 人工成本 " + fmtMoney(SHIFT.totals.day.laborCost),
+    "班次小计 · 夜班：产量 " + fmt(SHIFT.totals.night.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.night.profit) + " · 人工成本 " + fmtMoney(SHIFT.totals.night.laborCost) + "（夜班津贴 ×1.30 · 产能系数 ×" + CONFIG.r13.shifts.nightCapacityFactor + "）",
+    "原料供应（当日）：补料下单 " + dd.rawOrders + " 次 · 断料 " + dd.rawStockouts + " 次 / " + dd.rawStockoutMin.toFixed(1) + " 分 · 当前液位 " + Math.round(RAW.level*100) + "% · 预计耗尽 " + rawEtaText(),
     "当前库存：" + WH.stockCases + " 托",
     "质检抽检（累计）：" + QC.samples + " 次（不合格 " + QC.fails + " · 临界 " + QC.marginals + "）· 当前有效良品率 " + (effQuality()*100).toFixed(1) + "%"
   ];
@@ -1900,7 +2132,18 @@ function pushSample(produced, dtMin){
  * dtMin = 仿真分钟增量，由主循环按 CONFIG.simMinutesPerRealSecond × 倍速换算。 */
 function step(dtMin){
   if(!(dtMin > 0) || !isFinite(dtMin)) return;   /* R4 边界守卫：异常 dt 直接跳步，杜绝 NaN 污染库存/账本 */
+  /* R13 班次结算准备：先按区间起点切班次段（跨界步切两段），首尾快照供 settleShiftStats
+   * 在步末把本步产量/报废/利润增量按段分摊；人工成本在此按段入账（在制产品即当前 product）。 */
+  var shSegs = shiftSegments(S.simMin, dtMin);
+  var shFin0 = S.finished, shRej0 = S.rejected, shProf0 = totalProfit();
+  var shPrevKey = shiftInfoAt(S.simMin).key;
   S.simMin += dtMin;
+  accrueShiftLabor(shSegs);
+  var shNowInfo = shiftInfoAt(S.simMin);
+  if(shNowInfo.key !== shPrevKey){
+    SHIFT.changes++;
+    log("🌗 班次交接：" + (shPrevKey === "day" ? "白班" : "夜班") + " → " + shNowInfo.name + "（在制批次、订单与物流任务照常延续，不停线交接）。" + (shNowInfo.key === "night" ? "夜班人工带 1.30 津贴系数计入成本、产能系数 ×" + CONFIG.r13.shifts.nightCapacityFactor + "、厂区切换夜间照明。" : "人工与产能系数恢复白班口径，厂区恢复日间照明。"), "good");
+  }
   if(S.running) FAULTLOG.runMin += dtMin;   /* R12：MTBF 分子（累计运行时长，只在运行推进时计） */
   var fc = dtMin * (CONFIG.fixedCostPerHour/60);
   S.fixedCost += fc;
@@ -1913,6 +2156,7 @@ function step(dtMin){
     ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
     stepR2(dtMin, 0, 0, 0);   /* R2：换型期间公用工程降到清线负荷、仓储波次冻结推进（stepR2 内部按状态判定） */
     if(S.changeover.left<=0) completeChangeover();
+    settleShiftStats(shSegs, shFin0, shRej0, shProf0);   /* R13：换型步同样结班次分摊（产量 0、利润增量含人工/固定成本） */
     pushSample(0, dtMin);
     return;
   }
@@ -1990,7 +2234,7 @@ function step(dtMin){
   blend.lastMove = blendMove; blend.lastCap = blendCap; blend.lastDt = dtMin;
   /* supply -> blend queue */
   var supCap = supply.faultLeft>0 ? 0 : supply.rateFn();
-  var supMove = draining ? 0 : Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue));   /* R6：排空期停注新料，否则在制永远排不空 */
+  var supMove = draining ? 0 : Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue), RAW.level * CONFIG.r2.rawTankBottlesPerFull);   /* R6：排空期停注新料；R13：供应流量按原料罐实物库存封顶——罐存见底即 supMove=0 真断料，不再有无源之水 */
   blend.queue += supMove;
   supply.lastMove = supMove; supply.lastCap = supCap; supply.lastDt = dtMin;
   supply.done += supMove; blend.done += blendMove; ster.done += sterMove;
@@ -2033,6 +2277,7 @@ function step(dtMin){
     log("灌装排空完成：无菌库存与在制已全部成瓶（预约期间共灌装 "+fmt(S.finished - res.startFinished)+" 瓶），自动执行换型 →「"+res.to.name+"」。","good");
     startChangeover(res.to, { drained:true, drainedInfo:{ produced: S.finished - res.startFinished, startWip: res.startWip }, drainMinutes: S.simMin - (res.t0 || S.simMin) });   /* R11：排空期实测（预约 t0 → 触发）随 opts 传入 SMED */
   }
+  settleShiftStats(shSegs, shFin0, shRej0, shProf0);   /* R13：本步产量/报废/利润增量按班次段分摊入 SHIFT.totals */
 }
 
 /* ================= [M1] 仿真内核 · 派生指标（只读，供 UI 与渲染） =================
@@ -2126,7 +2371,7 @@ function renderKpis(){
     $("usAir").textContent = "运行 "+UTIL.airRunning+" / "+CONFIG.r2.airCompCount+" 台 · 储气 "+UTIL.airPressure.toFixed(2)+" MPa";
     $("usWater").textContent = (UTIL.roRunning ? "RO 产水中" : "RO 待机")+" · 原水 "+Math.round(UTIL.rawWaterLevel*100)+"% → 软水 "+Math.round(UTIL.softWaterLevel*100)+"%"+(curBlendStage() && curBlendStage().source==="water" && S.running ? " · 调配进水中" : "");
     $("usCold").textContent = (UTIL.coldRunning ? "制冷运行 "+UTIL.coldUnitsRunning+" 台" : "停机保温 1 台")+" · 库温 "+UTIL.coldTemp.toFixed(1)+"℃ · 库存 "+WH.stockCases+" 箱";
-    $("usRaw").textContent = "液位 "+Math.round(RAW.level*100)+"% · "+(RAW.tanker==="unloading" ? "罐车卸料中（余 "+Math.ceil(RAW.tankerLeft)+" 分）" : RAW.tanker==="departed" ? "罐车离场中" : RAW.level < CONFIG.r2.rawRefillThreshold+0.05 ? "接近阈值 · 罐车待命" : "罐车待命")+" · 到场 "+RAW.arrivals+" 次";
+    $("usRaw").textContent = "液位 "+Math.round(RAW.level*100)+"% · 预计耗尽 "+rawEtaText()+" · "+(RAW.tanker==="unloading" ? "罐车卸料中（余 "+Math.ceil(RAW.tankerLeft)+" 分）" : RAW.tanker==="ordered" ? "已下单 · 罐车在途（约 "+Math.ceil(RAW.tankerLeft)+" 分到场）" : RAW.tanker==="departed" ? "罐车离场中" : "罐车待命")+" · 下单 "+RAW.orders+" 次 / 到场 "+RAW.arrivals+" 次"+(RAW.stockouts ? " · 断料 "+RAW.stockouts+" 次 / "+RAW.stockoutMin.toFixed(1)+" 分" : "");   /* R13：ETA/下单/断料同源 */
     $("usWh").textContent = "入库 "+WH.inCases+" · 出库 "+WH.outCases+" · 库存 "+WH.stockCases+" 托 · 已发 "+SHIP.trips+" 车 · 下线暂存待取 "+LOGI.stage.length+" 托";
   }
   $("eQuality").textContent = (effQuality()*100).toFixed(1)+"%" + (QC.penaltyLeft>0 ? "（抽检整改期 · 标称 "+(product.quality*100).toFixed(1)+"%）" : "");
@@ -2189,7 +2434,7 @@ function renderKpis(){
   var day = Math.floor(S.simMin/1440)+1;
   var hh = String(Math.floor((S.simMin%1440)/60)).padStart(2,"0");
   var mm = String(Math.floor(S.simMin%60)).padStart(2,"0");
-  $("clock").innerHTML = "第 "+day+" 天 <span>·</span> "+hh+":"+mm;
+  $("clock").innerHTML = "第 "+day+" 天 <span>·</span> "+hh+":"+mm+" <span>·</span> "+shiftInfoAt(S.simMin).name;   /* R13：顶栏时钟带当前班次 */
   /* 控制台唤回钮状态（隐藏时也能一眼看出线在不在跑）：与 S 同步，renderKpis 每轮刷新；仅属控制台这颗钮，调度台唤回钮无状态点、互不影响（R6 独立隐藏） */
   var cDot = $("consoleDot"), cSt = $("consoleStatus");
   if(cDot && cSt){
@@ -2264,6 +2509,19 @@ function renderKpis(){
     }
     var spOut = $("spareOut");
     if(spOut) spOut.textContent = SPARES.stock + " 件" + (SPARES.stock === 0 ? "（缺货）" : "") + " · 已领用 " + SPARES.used + " 件";
+    /* R13：调度台原料预警行 + 精益看板原料行（与 rawAlertState 同源同节奏刷新） */
+    var raEl = $("rawAlert");
+    if(raEl){
+      var raSt = rawAlertState();
+      var raTxt = "原料库存：液位 " + Math.round(RAW.level*100) + "%（安全线 " + Math.round(CONFIG.r13.raw.safetyFrac*100) + "%）· 预计耗尽 " + rawEtaText() + "（消耗 " + fmt(RAW.useRate) + " 瓶/分）";
+      if(raSt === "warn") raTxt = "⚠ 原料预警：" + raTxt + (RAW.tanker === "ordered" ? " · 已下单，罐车约 " + Math.ceil(RAW.tankerLeft) + " 分钟到场" : "");
+      else if(raSt === "critical") raTxt = "🔴 原料告急（跌破 " + Math.round(CONFIG.r13.raw.criticalFrac*100) + "% 红线）：" + raTxt + (RAW.tanker === "ordered" ? " · 罐车在途，约 " + Math.ceil(RAW.tankerLeft) + " 分钟到场" : "");
+      else if(raSt === "stockout") raTxt = "⛔ 原料断料：罐区见底、进料已停。" + (RAW.tanker === "ordered" ? "罐车约 " + Math.ceil(RAW.tankerLeft) + " 分钟到场" : RAW.tanker === "unloading" ? "罐车卸料中" : "尚未下单") + " · 累计断料 " + RAW.stockoutMin.toFixed(1) + " 分";
+      raEl.className = "supply-alert " + raSt;
+      raEl.textContent = raTxt;
+      var rlT = $("rawLeanTxt");
+      if(rlT) rlT.textContent = "液位 " + Math.round(RAW.level*100) + "% · ETA " + rawEtaText() + " · 下单 " + RAW.orders + " 次 · 断料 " + RAW.stockouts + " 次 / " + RAW.stockoutMin.toFixed(1) + " 分";
+    }
     var rep = $("shiftReport");
     if(rep){
       var dd = dayrepDelta();
@@ -2286,7 +2544,10 @@ function renderKpis(){
         ["单瓶电耗 ECO 开 / 关（每千瓶）", (ECO.onFinished > 0 ? (ECO.onPower / ECO.onFinished * 1000).toFixed(1) : "—") + " / " + (ECO.offFinished > 0 ? (ECO.offPower / ECO.offFinished * 1000).toFixed(1) : "—") + " kWh"],
         ["故障与备件（会话累计）", "故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件领用 " + SPARES.used + " 件 · 紧急采购 " + SPARES.emergency + " 次"],
         ["发货波次（当日）", dd.waves + " 波 · 已发 " + dd.trips + " 车"],
-        ["当前库存", WH.stockCases + " 托（下线暂存 " + LOGI.stage.length + " 托 · 交接位 " + LOGI.handover.filter(function(h){ return !!h; }).length + " 托）"]
+        ["当前库存", WH.stockCases + " 托（下线暂存 " + LOGI.stage.length + " 托 · 交接位 " + LOGI.handover.filter(function(h){ return !!h; }).length + " 托）"],
+        ["班次小计 · 白班（当前生产日）", "产量 " + fmt(SHIFT.totals.day.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.day.profit) + " · 人工 " + fmtMoney(SHIFT.totals.day.laborCost) + "（¥" + fmt(CONFIG.r13.shifts.dayLaborCostPerShift) + "/班）"],   /* R13 */
+        ["班次小计 · 夜班（当前生产日）", "产量 " + fmt(SHIFT.totals.night.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.night.profit) + " · 人工 " + fmtMoney(SHIFT.totals.night.laborCost) + "（¥" + fmt(CONFIG.r13.shifts.nightLaborCostPerShift) + "/班 · 津贴 ×1.30 · 产能 ×" + CONFIG.r13.shifts.nightCapacityFactor + "）"],   /* R13 */
+        ["原料供应（当日）", "补料下单 " + dd.rawOrders + " 次 · 断料 " + dd.rawStockouts + " 次 / " + dd.rawStockoutMin.toFixed(1) + " 分 · 当前液位 " + Math.round(RAW.level*100) + "% · ETA " + rawEtaText()]   /* R13 */
       ];
       rep.innerHTML = cells.map(function(c){ return '<div class="dcell"><div class="l">' + c[0] + '</div><div class="v" style="font-size:13px">' + c[1] + '</div></div>'; }).join("");
       renderDayHistory();
@@ -2349,6 +2610,10 @@ var D = { blendLiquids:[], blendDiscs:[], agitators:[], sightLiquids:[], lineDyn
   /* R2 联动可视注册：utilDyn = 公用工程动态件（锅炉火焰/表针、空压灯与机组、水处理液位/RO 灯、冷库门/机组灯，由 updateScene 按 UTIL 驱动）；
    * whCasePos/whTapePos = 货架箱位坐标（FIFO 窗口渲染用）；rawTanker = 原料罐车组（按 RAW.tanker 在卸料位/场外间滑动） */
   utilDyn:{}, whCasePos:[], whTapePos:[], rawTanker:null,
+  /* R13 夜班视觉注册表：shiftLights{hemi/sun/amb}、nightWindowMats（墙面窗带 + 控制室玻璃，
+   * 注册后 merge 逻辑按热材质排除、不会把发光量冻进合并桶）、nightStripMat（天花灯带共用材质）、
+   * dayBg/nightBg 两张背景纹理（nightMix>0.5 时切换）。 */
+  shiftLights:null, nightWindowMats:[], nightStripMat:null, dayBg:null, nightBg:null, nightBgOn:false,
   /* R5 静态合并注册：staticGroups = 纯静态 builder 根组（backdrop/signage/safety/qcLab/peopleGround），
    * 建场末尾由 mergeAllStaticGroups() 按材质签名合并（见 buildScene 前 R5 一节）；mergeStats = 合并前后网格数实测 */
   staticGroups:[], mergeStats:null };
@@ -2698,6 +2963,14 @@ function buildShell(){
     var sk = new THREE.Mesh(new THREE.BoxGeometry(300, 0.15, 5), new THREE.MeshStandardMaterial({ color:0xcfe8f2, roughness:0.2, metalness:0, transparent:true, opacity:0.55 }));
     sk.position.set(0, CONFIG.factory.roofY+0.9, pz); roof.add(sk); D.roofMats.push(sk.material);
   });
+  /* R13 夜班灯带：三条沿厂房长向的天花灯带共用一个发光材质（白天近乎不亮、夜班拉高），
+   * 挂在墙顶下方（y=13.4）不随顶棚组淡出，材质注册在 D.nightStripMat 供 updateScene 驱动。 */
+  var stripMat = new THREE.MeshStandardMaterial({ color:0xdfe7ea, emissive:0xffd9a0, emissiveIntensity:0.05, roughness:0.5, metalness:0.1 });
+  D.nightStripMat = stripMat;
+  [-36, 0, 36].forEach(function(pz){
+    var sm = new THREE.Mesh(new THREE.BoxGeometry(280, 0.12, 0.4), stripMat);
+    sm.position.set(0, 13.4, pz); g.add(sm);
+  });
   /* overhead crane */
   var crane = new THREE.Group(); roof.add(crane);
   B(crane, 300, 0.7, 0.8, roofDark, 0, CONFIG.factory.roofY-2.4, -44); B(crane, 300, 0.7, 0.8, roofDark, 0, CONFIG.factory.roofY-2.4, 44);
@@ -2711,6 +2984,7 @@ function buildShell(){
   /* walls: north full, west/east, south with 3 dock doors */
   var wallMat = new THREE.MeshStandardMaterial({ color:0xaeb8bc, roughness:0.8, metalness:0.1, transparent:true }); D.wallMat = wallMat;
   var winMat = new THREE.MeshStandardMaterial({ color:0xbfe3ef, roughness:0.15, metalness:0.1, emissive:0x39525e, emissiveIntensity:0.5, transparent:true, opacity:0.9 });
+  D.nightWindowMats.push(winMat);   /* R13：窗带注册为夜班窗光（夜里 emissive 拉高成暖黄窗光） */
   D.wallMeshes.push(B(g, 300, CONFIG.factory.wallH, 0.6, wallMat, 0, 0, -58.3));
   var win = new THREE.Mesh(new THREE.BoxGeometry(300, 2.6, 0.2), winMat); win.position.set(0, 12.2, -57.9); g.add(win);
   D.wallMeshes.push(B(g, 0.6, CONFIG.factory.wallH, 116, wallMat, -150.3, 0, 0));
@@ -2732,6 +3006,7 @@ function buildShell(){
   var office = new THREE.Group(); g.add(office);
   B(office, 16, 0.4, 7, DARKSTEEL, -52, 5.6, -35);
   var glass = new THREE.Mesh(new THREE.BoxGeometry(15.4, 3.4, 6.4), new THREE.MeshStandardMaterial({ color:0x9fd4e8, roughness:CONFIG.mats.glass.rough, metalness:CONFIG.mats.glass.metal, transparent:true, opacity:CONFIG.mats.glass.opacity, emissive:0x2c4a56, emissiveIntensity:0.6 }));
+  D.nightWindowMats.push(glass.material);   /* R13：控制室玻璃同注册夜班窗光 */
   glass.position.set(-52, 7.5, -35); office.add(glass);
   B(office, 16, 0.4, 7, DARKSTEEL, -52, 9.3, -35);
   CY(office, 0.18, 0.18, 5.6, DARKSTEEL, -59, 0, -37.5); CY(office, 0.18, 0.18, 5.6, DARKSTEEL, -45, 0, -37.5);
@@ -4842,6 +5117,13 @@ function buildScene(){
     gr.addColorStop(0, CONFIG.light.skyTop); gr.addColorStop(0.52, CONFIG.light.skyHorizon); gr.addColorStop(0.62, CONFIG.light.skyGround); gr.addColorStop(1, CONFIG.light.skyGround);
     ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h);
   });
+  /* R13 夜班背景：同法程序生成的深夜渐变（颜色在 CONFIG.r13.night），updateScene 按 nightMix 切换 */
+  D.dayBg = scene.background;
+  D.nightBg = canvasTex(32, 512, function(ctx, w, h){
+    var grn = ctx.createLinearGradient(0, 0, 0, h);
+    grn.addColorStop(0, CONFIG.r13.night.skyTop); grn.addColorStop(0.52, CONFIG.r13.night.skyHorizon); grn.addColorStop(0.62, CONFIG.r13.night.skyGround); grn.addColorStop(1, CONFIG.r13.night.skyGround);
+    ctx.fillStyle = grn; ctx.fillRect(0, 0, w, h);
+  });
   scene.fog = new THREE.Fog(CONFIG.light.fogColor, CONFIG.light.fogNear, CONFIG.light.fogFar);   // 远景雾：给厂界纵深，剪影/邻厂在雾里渐隐（参数在 CONFIG.light）
   camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.5, 1200);
   renderer = new THREE.WebGLRenderer({ antialias:true });
@@ -4889,7 +5171,9 @@ function buildScene(){
   sun.shadow.camera.top = CONFIG.factory.floorD/2 + 42; sun.shadow.camera.bottom = -(CONFIG.factory.floorD/2 + 42);
   sun.shadow.camera.far = 480; sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02;
   scene.add(sun);
-  scene.add(new THREE.AmbientLight(0xffffff, CONFIG.light.ambientIntensity));
+  var ambLight = new THREE.AmbientLight(0xffffff, CONFIG.light.ambientIntensity);
+  scene.add(ambLight);
+  D.shiftLights = { hemi: hemi, sun: sun, amb: ambLight };   /* R13：夜班照明插值的灯光句柄（updateScene 只改强度/色温，不新建光源、不增 draw call） */
   /* R3 阴影分级（CONFIG.light.shadowTiers）：high/mid = 贴图边长、low = 关阴影；
    * 切档时必须释放旧 shadow.map 才会按新尺寸重建；只切 castShadow 不动 shadowMap.enabled，避免全场材质重编译。 */
   window.__shadowTier = null;
@@ -4942,11 +5226,14 @@ function buildScene(){
   mergeAllStaticGroups();   /* R5：纯静态组按材质合并（在小件阴影规则之后执行，合并网格继承来源 cast/receive 标记；策略与范围见 buildScene 前 R5 一节） */
   window.__setShadowTier(window.__shadowTier);   /* R4：粒子系统此时已建好，重调一次让当前档的粒子保留比例（drawRange）真正落到几何上 */
 }
-window.__setProductColor = function(hex){
+window.__setProductColor = function(hex, labelHex){
   if(bottleMat) bottleMat.color.set(hex);
   if(blendLiquidMat) blendLiquidMat.color.set(hex);
   if(sightLiquidMat) sightLiquidMat.color.set(hex);
-  D.stripeMats.forEach(function(m){ m.color.set(hex); });
+  /* R13：标签色独立于瓶液色——产线饰条（标签带语义）与货架箱贴带改走 labelColor，未传时回退瓶液色 */
+  var lc = labelHex || hex;
+  D.stripeMats.forEach(function(m){ m.color.set(lc); });
+  if(D.whTape && D.whTape.material) D.whTape.material.color.set(lc);
 };
 /* ================================================================
    [M2] 渲染驱动 updateScene — 只读内核状态 → 动画参数（瓶流/转速/液面/灯色）
@@ -4958,6 +5245,8 @@ var _prodC = null, _turbidC = null; /* 调配主罐液色渐变用（懒初始�
  * 由 updateScene 每帧向 CONFIG.sterilizeProcess 的工艺目标趋近（温度慢、压力快），待机/停机回落——
  * 信息卡与动态参数牌都只读它，所以牌面数字会随运行状态真实变化，不是贴死静态字。 */
 var STER_DYN = { tempC: 28, preheatC: 24, coolOutC: 26, homogP1: 0, homogP2: 0 };
+/* R13 夜班插值用的预分配颜色（懒初始化，避免每帧分配）：日雾/夜雾、日光/月光、窗光日/夜色 */
+var _dayFogC = null, _nightFogC = null, _daySunC = null, _nightSunC = null, _dayWinC = null, _nightWinC = null;
 var sceneFrame = 0; /* updateScene 帧计数：LOD 降频与粒子隔帧更新共用 */
 var _lodCenter = null;
 function lineFlow(l){
@@ -4975,6 +5264,27 @@ function updateScene(dt, t){
   if(!_prodC){ _prodC = new THREE.Color(0xffffff); _turbidC = new THREE.Color(0x8a8f7a); }
   if(!_lodCenter) _lodCenter = new THREE.Vector3();
   sceneFrame++;
+  /* --- R13 夜班照明：按 nightMix（交接前后 30 分钟渐变）插值全厂光照与发光件 ---
+   * 只改既有光源强度/色温、曝光、雾色与已注册材质的 emissive，不新建光源、不改任何内核状态；
+   * 背景纹理在 mix 过半时切换日/夜两张程序渐变（D.dayBg / D.nightBg）。 */
+  if(D.shiftLights && renderer){
+    if(!_dayFogC){ _dayFogC = new THREE.Color(CONFIG.light.fogColor); _nightFogC = new THREE.Color(CONFIG.r13.night.fogColor); _daySunC = new THREE.Color(CONFIG.light.sunColor); _nightSunC = new THREE.Color(0x8fb4ff); _dayWinC = new THREE.Color(0x39525e); _nightWinC = new THREE.Color(0xffca7a); }
+    var nmix = nightMixAt(S.simMin), NL = CONFIG.r13.night, LL = CONFIG.light;
+    D.shiftLights.sun.intensity = LL.sunIntensity + (NL.sunIntensity - LL.sunIntensity) * nmix;
+    D.shiftLights.sun.color.copy(_daySunC).lerp(_nightSunC, nmix);
+    D.shiftLights.hemi.intensity = LL.hemiIntensity + (NL.hemiIntensity - LL.hemiIntensity) * nmix;
+    D.shiftLights.amb.intensity = LL.ambientIntensity + (NL.ambientIntensity - LL.ambientIntensity) * nmix;
+    renderer.toneMappingExposure = LL.exposure + (NL.exposure - LL.exposure) * nmix;
+    if(scene.fog) scene.fog.color.copy(_dayFogC).lerp(_nightFogC, nmix);
+    var wantNightBg = nmix > 0.5;
+    if(D.dayBg && D.nightBg && wantNightBg !== D.nightBgOn){ D.nightBgOn = wantNightBg; scene.background = wantNightBg ? D.nightBg : D.dayBg; }
+    for(var nwi = 0; nwi < D.nightWindowMats.length; nwi++){
+      var wm = D.nightWindowMats[nwi];
+      wm.emissive.copy(_dayWinC).lerp(_nightWinC, nmix);
+      wm.emissiveIntensity = 0.5 + (NL.windowEmissive - 0.5) * nmix;
+    }
+    if(D.nightStripMat) D.nightStripMat.emissiveIntensity = 0.05 + (NL.stripEmissive - 0.05) * nmix;
+  }
   /* --- filling lines --- */
   lines.forEach(function(l, i){
     var dyn = D.lineDyn[i]; if(!dyn) return;
@@ -6222,6 +6532,9 @@ $("resetBtn").addEventListener("click", function(){
   UTIL.rawWaterLevel = CONFIG.r2.rawWaterInit; UTIL.softWaterLevel = CONFIG.r2.softWaterInit;
   UTIL.coldRunning = false; UTIL.coldUnitsRunning = 1; UTIL.coldTemp = -21.5; UTIL.coldDoor = 0;
   RAW.level = CONFIG.r2.rawTankInit; RAW.tanker = "idle"; RAW.tankerLeft = 0; RAW.arrivals = 0;
+  /* R13：供应链预警与班次当日小计全量复位（班次本身按 simMin 派生，simMin 已回 08:00 白班起点） */
+  RAW.orders = 0; RAW.stockouts = 0; RAW.stockoutMin = 0; RAW.stockoutActive = false; RAW.useRate = 0; RAW.etaMin = Infinity; RAW.minLevel = CONFIG.r2.rawTankInit; RAW.critLogged = false;
+  SHIFT.totals.day = newShiftTotals(); SHIFT.totals.night = newShiftTotals(); SHIFT.changes = 0;
   WH.inCases = 0; WH.outCases = 0; WH.stockCases = CONFIG.whBaseCases; WH.producedCases = 0; WH.head = 0; WH.sinceProduce = 999;
   SHIP.active = false; SHIP.loadCases = 0; SHIP.targetCases = 0; SHIP.loadAcc = 0; SHIP.trips = 0; SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;
   if(D.truck){ D.truck.rstate = "waiting"; D.truck.rt = 0; }
@@ -6346,6 +6659,35 @@ function perfAvgFps(){
   return perfFrameTimes.length / s;
 }
 window.__perfAvgFps = perfAvgFps;
+/* R13 Draw Call 分解（D 项欠账补证）：renderer.info.render.calls 是含阴影通道的总口径，
+ * 这里按场景直接子树的可见可渲染对象数给出近似贡献分解（instanced 按 1 个对象计，
+ * 与一次 draw call 对应），供 calls 超线时定位前三大贡献者；window.__drawCalls() 可单独读。 */
+function drawCallBreakdown(){
+  if(!renderer || !scene) return null;
+  var rows = [], totR = 0, totS = 0;
+  scene.children.forEach(function(ch, i){
+    var n = 0, shadow = 0;
+    ch.traverse(function(o){ if((o.isMesh || o.isLine || o.isPoints) && o.visible){ n++; if(o.castShadow) shadow++; } });
+    totR += n; totS += shadow;
+    if(n > 0) rows.push({ child: i, name: ch.name || ch.type, renderables: n, shadowCasters: shadow });
+  });
+  rows.sort(function(a, b){ return b.renderables - a.renderables; });
+  return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles,
+           programs: (renderer.info.programs || []).length, totalRenderables: totR, totalShadowCasters: totS, top: rows.slice(0, 5) };
+}
+window.__drawCalls = drawCallBreakdown;
+/* R13 调试口：场景直接子节点清单（定位 Draw Call 大户用；只读遍历，不改状态） */
+window.__sceneMap = function(){
+  if(!scene) return null;
+  var _v = new THREE.Vector3();
+  return scene.children.map(function(ch, i){
+    var n = 0, s = 0, sx = 0, sz = 0;
+    ch.traverse(function(o){ if((o.isMesh || o.isLine || o.isPoints) && o.visible){ n++; if(o.castShadow) s++; o.getWorldPosition(_v); sx += _v.x; sz += _v.z; } });
+    return { i: i, type: ch.type, name: ch.name || "", kids: ch.children ? ch.children.length : 0,
+             x: Math.round(ch.position.x), z: Math.round(ch.position.z), renderables: n, casters: s,
+             cx: n ? Math.round(sx / n) : 0, cz: n ? Math.round(sz / n) : 0 };
+  }).filter(function(r){ return r.renderables > 0; });
+};
 window.__perfSnapshot = function(){
   return { fpsAvg60: Math.round(perfAvgFps()*10)/10, perfTier: window.__perfTier || "?", shadowTier: window.__shadowTier || "?",
            qualityLevel: qualityLevel, pixelRatio: renderer ? renderer.getPixelRatio() : null,
