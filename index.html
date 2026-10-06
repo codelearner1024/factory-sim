@@ -222,6 +222,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 .qrow .qmeta{color:var(--muted);font-size:11.5px;font-weight:600}
 .qrow .qdue{margin-left:auto;text-align:right;white-space:nowrap}
 .qrow .qdue.over{color:var(--red)}
+.qrow .qdue.warn{color:var(--amber)}
+/* R12：当前订单卡交期倒计时预警色（renderKpis 按剩余分钟切换） */
+.due-warn{color:var(--amber)} .due-over{color:var(--red)}
+/* R12：ECO 开关开启态（与 .tgl.on 同口径） */
+.btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .qrow .qx{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;width:26px;height:26px;flex:0 0 auto;font-size:12px;line-height:1}
 .qempty{color:var(--muted);font-size:12.5px;font-weight:600;padding:8px 2px 2px}
 .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -506,12 +511,18 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     </div>
     <div class="ctl">
       <button class="btn" id="enqueueBtn" style="width:100%;justify-content:center">＋ 把当前产品 + 目标加入订单队列</button>
-      <p class="hint" style="margin:6px 2px 0">R10 多订单排队：当前单完成后自动接下一单（同产品免换型、异产品自动走换型）；每单带交期，队列与到期提醒在数据抽屉「订单队列」里看。</p>
+      <p class="hint" style="margin:6px 2px 0">R10 多订单排队：当前单完成后自动接下一单（同产品免换型、异产品自动走换型）。R12 交期：按订单量与当前产能（名义瓶颈 × 1.5 富余）自动核定，当前单与队列单都有倒计时，剩余不足 60 分钟变黄、逾期变红，逾期完成按 ¥12/分钟计延误罚金从利润扣（台账单列）。</p>
     </div>
     <div class="sec-label">扰动</div>
     <div class="toggles">
       <button class="tgl on" id="faultTgl">⚠ 随机故障：开</button>
       <button class="tgl" id="cipTgl">🧼 CIP 清洗：关</button>
+    </div>
+    <div class="sec-label">关键备件（故障维修的命脉）</div>
+    <div class="ctl">
+      <div class="lab"><label>备件库存</label><output id="spareOut">3 件 · 已领用 0 件</output></div>
+      <button class="btn" id="spareBtn" style="width:100%;justify-content:center">🔩 补 1 件备件（¥350 · 计入成本）</button>
+      <p class="hint" style="margin:6px 2px 0">有备件：故障走标准时长并领用 1 件。缺货：时长 ×2.2 + 紧急采购费 ¥1,200（均进成本台账），维修工在现场等备件。MTBF / MTTR 与备件消耗在数据抽屉「设备可靠性与备件」看。</p>
     </div>
     <div class="sec-label">一键场景</div>
     <div class="scenarios">
@@ -544,6 +555,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
   <div class="ops-hint">拖动旋转 · 滚轮缩放 · 右键平移 · ⬆⬇ 按钮（长按）或 W/S 键前后移动</div>
   <div class="smed-note" id="smedNote" role="status"></div>
   <button class="btn" id="roofBtn">🏠 顶棚：自动</button>
+  <button class="btn" id="ecoBtn" title="ECO 节能模式：变频降速 + 余热回收——流量电耗 −18%、汽耗 −12%，代价灌装上限 −6%；关掉即恢复原参数" aria-pressed="false">🌿 ECO 节能：关</button>
   <button class="btn" id="resetBtn">↺ 重置</button>
   <button class="btn panel-hide-btn" id="controlHideBtn" title="只隐藏控制台（调度台不受影响），唤回钮在右下角" aria-label="隐藏控制台">✕ 隐藏控制台</button>
 </div>
@@ -591,13 +603,14 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     <div class="orderbar">
       <div class="row"><div>📦 <span id="orderName">冰红茶 · 便利店渠道</span></div><div><span>目标</span> <b class="mono" id="orderTargetTxt">30,000 瓶</b></div></div>
       <div class="row" style="margin-top:3px"><div><span>已完成</span> <b class="mono" id="orderDoneTxt">0</b></div><div><b class="mono" id="orderEta">—</b></div></div>
+      <div class="row" style="margin-top:3px"><div><span>交期</span> <b class="mono" id="orderDueTxt">—</b></div><div><b class="mono" id="orderDueLeft">—</b></div></div>
       <div class="progress"><i id="orderProg"></i></div>
       <div class="settle-note" id="settleNote"></div>
       <div class="done-banner" id="doneBanner">🎉 订单完成！可以加大目标、切换产品，或点「旺季爆单」继续压测。</div>
     </div>
 
     <h3>订单队列（多订单排队 · 交期）</h3>
-    <p class="hint">在调度台选好产品与订单目标后点「加入订单队列」排单。当前单达标后自动接单：同产品直接续单，异产品自动走换型流程。每单交期 = 入队后 8 个仿真小时，逾期会标红——交期风险先看预计完工（当前单 ETA 口径）再决定要不要加线提速。</p>
+    <p class="hint">在调度台选好产品与订单目标后点「加入订单队列」排单。当前单达标后自动接单：同产品直接续单，异产品自动走换型流程。交期（R12）= 按订单量与当前产能自动核定：（排队在前量 + 本单量）÷ 名义瓶颈产能 × 1.5 富余，下限 30 分钟；剩余不足 60 分钟变黄预警、逾期变红；逾期完成按 ¥12/逾期分钟计延误罚金，结算进该产品台账并从利润扣除，日报汇总当日罚金。</p>
     <div id="orderQueueList"><div class="qempty">队列为空 · 当前只有正在执行的这一单</div></div>
 
     <h3>整线产能曲线</h3>
@@ -625,7 +638,10 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell"><div class="l">单瓶能耗 · 用水（每千瓶）</div><div class="v mono" id="ePerWater">—</div></div>
       <div class="dcell"><div class="l">单瓶能耗 · 用电（每千瓶）</div><div class="v mono" id="ePerPower">—</div></div>
       <div class="dcell"><div class="l">单瓶能耗 · 用汽（每千瓶）</div><div class="v mono" id="ePerSteam">—</div></div>
+      <div class="dcell"><div class="l">单瓶电耗 · ECO 开（每千瓶）</div><div class="v mono" id="ecoPerOn">—</div></div>
+      <div class="dcell"><div class="l">单瓶电耗 · ECO 关（每千瓶）</div><div class="v mono" id="ecoPerOff">—</div></div>
     </div>
+    <p class="hint">ECO 节能模式（控制台开关）：开启后变频降速 + 余热回收，流量电耗 −18%、汽耗 −12%（CONFIG.r12），代价是灌装上限 −6%。上方两格按 ECO 开/关分别累计单瓶电耗，可直接对比；节省额（反事实口径：毛耗 − 实耗）在生产日报「ECO 累计节省」行。</p>
 
     <h3>公用工程状态（联动总览）</h3>
     <p class="hint">辅助系统跟随生产负荷呼吸：锅炉负荷随杀菌用汽、空压台数随开线数、水处理随调配进水、冷库随入库节奏启停，数值与 3D 场景里的火焰/烟气/状态灯/液位同源（内核 UTIL/RAW/WH/SHIP，参数在 CONFIG.r2）。</p>
@@ -659,6 +675,16 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">当前有效良品率</div><div class="v mono" id="qcEff" style="font-size:13px">—</div></div>
     </div>
 
+    <h3>设备可靠性与备件（MTBF / MTTR · 关键备件）</h3>
+    <p class="hint">故障修复时长取决于备件：有备件走标准时长并领用 1 件；无备件时长 ×2.2 并收紧急采购费（进成本台账），多出的时间维修工在现场等待备件送达。补货在调度台「关键备件」区（收费进台账，不凭空恢复）。MTBF = 累计运行时长 ÷ 故障次数，MTTR = 已修复故障的平均实际时长（自然修好与抢修同口径）。</p>
+    <div class="econ">
+      <div class="dcell"><div class="l">MTBF · 平均故障间隔（运行分钟）</div><div class="v mono" id="relMtbf" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">MTTR · 平均修复时长（分钟）</div><div class="v mono" id="relMttr" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">故障次数 / 已修复</div><div class="v mono" id="relFaults" style="font-size:13px">0 / 0</div></div>
+      <div class="dcell"><div class="l">备件库存 / 累计领用</div><div class="v mono" id="relSpares" style="font-size:13px">—</div></div>
+      <div class="dcell wide"><div class="l">备件费用（补货 + 紧急采购 · 已计入成本台账）</div><div class="v mono" id="relSpareCost" style="font-size:13px">¥0</div></div>
+    </div>
+
     <h3>精益改善看板（工厂持续改进）</h3>
     <ul class="doclist lean">
       <li><span class="stchip">已落地</span><b>绘制调用治理</b> — 设备静态件深合并，Draw Call 2,867 → 592（R7）</li>
@@ -670,6 +696,9 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li><span class="stchip">已落地</span><b>维修 / CIP 班组到场作业</b> — 故障时维修工赶赴设备抢修、CIP 时班组到罐区就位、抽检时质检员取样往返（R11）</li>
       <li><span class="stchip">已落地</span><b>换型 SMED 计时</b> — 排空 / 清洗 / 调机首件三段实测计时 + 同模式对比（R11）</li>
       <li id="smedLean"><span class="stchip doing">统计中</span><b>平均换型时长（本次会话累计）</b> — <span id="smedAvgTxt">尚无完成的换型记录</span></li>
+      <li><span class="stchip">已落地</span><b>订单交期与延误罚金</b> — 交期按量与产能自动核定、黄/红预警、逾期 ¥12/分钟从利润扣（R12）</li>
+      <li><span class="stchip">已落地</span><b>ECO 节能模式</b> — 电 −18% / 汽 −12%，灌装上限 −6%，单瓶能耗开/关分开可比（R12）</li>
+      <li><span class="stchip">已落地</span><b>备件与可靠性体系</b> — 备件库存领用/补货、缺货加时 + 紧急采购、MTBF/MTTR 累计（R12）</li>
       <li><span class="stchip todo">待排期</span><b>灌装转盘 36 头实例化</b> — Draw Call 再下探的剩余空间在动态件</li>
     </ul>
 
@@ -700,6 +729,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">R10 PDCA 打包轮（多订单队列 + 质检抽检 + 单瓶能耗 + 班次日报 + 物流特写/巡游新站 + 新手速览 + 精益看板）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户要求停止单点挤牙膏式迭代，改为 PDCA 持续循环、每轮打包交付。本轮一次落地七项，参数全在 <b>CONFIG.r10</b>。<b>① 多订单排队与交期</b>：调度台「加入订单队列」把当前选中产品 + 当前订单目标入队 ORDERQ {pid,target,dueMin=入队时刻+480 仿真分钟}；renderKpis 的订单完成分支（orderDoneLogged 首次置位时 ORDERS_DONE++）在无换型/无预约时调 advanceOrderQueue 自动接单——同产品直接续单（orderDone 清零、SHIP 波次重置、滑杆同步），异产品走既有 startChangeover 换型流程后再落新目标。抽屉「订单队列」逐单显示目标/交期/剩余分钟、逾期标红、可逐单撤销（renderOrderQueue 与 renderKpis 同节奏刷新交期）。<b>② 质检抽检</b>：stepQC 在 step 内推进（运行且非换型时）：每 45 仿真分钟抽检一次，概率 fail 0.08 / marginal 0.17；有效良品率 effQuality() = 标称 quality − 整改扣减（fail 0.006/30 分、marginal 0.003/20 分，下限 0.90），step 良品结算与 oee 同读 effQuality，标称值不改写；fail 另从 ASEPTIC.stock 隔离报废 min(120, stock) 瓶并计 rejected/成本（物理扣库存，守恒不破）。抽屉有抽检计数/最近结果/有效良品率三格，eQuality 同步显示有效值。<b>③ 单瓶能耗</b>：公用工程消耗区新增每千瓶水（L）/电（kWh）/汽（kg）三格 = S 三总量 ÷ S.finished × 1000，无产出显 —。<b>④ 班次日报</b>：抽屉日报卡八项（产量/实际报废率/OEE/利润/完成订单与发货/库存/抽检/单瓶能耗）全部与账本同源、renderKpis 同节奏刷新；「下载日报」用 Blob 生成 .txt（静态页无后端，下载即交付，不假装保存）。<b>⑤ 物流特写 + 巡游新站</b>：PRESETS.logistics (52,20,40 → 88,3,-6) 同框下线暂存位/车道/货架；TOUR_STOPS 新增 wp7「智慧物流」站（buildTour 路点/目标各插一点，月台/公用/实验室 wp 顺延 8/9/10，alignTourStops 按弧长自动重算 u，勿手写）；仓库站文案同步改为 R9 逐货位口径。<b>⑥ 新手速览</b>：#onboard 首次打开即显（会话内关闭即走，不持久化——静态页无跨会话存储口径），三钮分别接 playBtn / tourBtn / openDrawer 的既有入口。<b>⑦ 精益改善看板</b>：抽屉内工厂口径的改善清单（已落地/进行中/待排期），与本节各轮记录对应。<b>自检口</b>：window.__pdcaCheck() = { wh 守恒, slotsTaken, orderQueueLen, ordersDone, qc, tourStops, tourStopUs, effQuality }；window.__orderQueue() / __qcState() 单项读数。重置全量复位 ORDERQ/ORDERS_DONE/QC。</div></div>
       <div class="dcell wide"><div class="l">R10 细化（生产日报分段口径 + 运行时补证口 + 界面持久化结论）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>日报分段</b>：DAYREP.base = 当前生产日起点对全厂累计量（产量/报废/三表/利润/发车/波次/换型/各产品产量）的快照，当日量 = 累计 − base 做差，与 KPI 同源交叉一致（自检：日报当日总产量 + base.finished = KPI 累计产量）。换型计数 CO_STATS 在 startChangeover 按 drained 分立即/排空两路；波次计数 WAVES 在 stepR2 激活点 +1（形成口径，与 SHIP.trips 发车口径分开）。「新的一天」按钮把当日摘要 unshift 进 DAYREP.history（封顶 7 行）并重取 base；重置清 history/计数、base 置空懒初始化。读数口 window.__dayrep()。<b>运行时补证</b>：入库/出库/排空三段证据由审计探针在真实页面内实跑记录（__whCheck / __logiState / __getReservation / SLOTS.seq / S.lastSettle），结论写当轮交付汇报，不在本节预填。<b>界面持久化结论</b>：本页为纯静态构建且运行在沙盒 iframe 中，localStorage 在应用内 webview / 隐私会话会被清且跨设备不通——跨刷新恢复界面状态需要服务端存储支撑，本轮不以 localStorage 冒充达标；面板隐藏/折叠/机位均为会话内状态（既有口径不变）。<b>补证发现并已修复的真 bug（AGV 会车死锁）</b>：内核 harness 实跑发现两台 AGV 在 NW 角/暂存位一带相向时，跟驰判定让双方互相判「前方有车」双双停车、可冻结 400 秒以上。修法两处：① agvBlockedAhead 的投影方向改用「指向当前路点的方向」（agvDrive 传入），不再用原地冻结的车头朝向（否则靠边路点永远转不了头）；② 让行超时（CONFIG.r9.yieldEscapeSec=4s）且对方也在让行时，出库车横移靠边让行（sideStep=2.4、x 钳制 71.6..80.6、靠边点不叠加、冷却 12s），入库车先行，触发时写日志。修复后 harness 三段全过：入库 putXfer 时刻 inCases 0→1 且此前 stock 恒 26；出库取 seq 1（库存 seq 1..27 中最老）→交接位→叉车装车 outCases+1、stock=26+入−出 恒等；排空在制 4880→4160→2960→0 自动触发、结算报废 0 瓶。</div></div>
       <div class="dcell wide"><div class="l">R11 PDCA 打包轮（界面偏好会话内保持 + SMED 换型计时 + 人员任务化 + 性能二探/回归探针）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 11 轮打包交付，参数全在 <b>CONFIG.r11</b>。<b>① 界面偏好（A 项，R10 的 C 项降级落地）</b>：R10 已确认沙盒 localStorage 不可靠、不冒充跨刷新持久化；本轮落地<b>会话内保持</b>——偏好登记处 <b>UIPREFS</b>（window.__uiPrefs() 可读）：控制台/调度台隐藏、调度台折叠、相机条折叠（setMoveCollapsed 同步登记）、选中机位（goPreset 登记，巡游/拖动接管不清）、画质档（renderKpis 按既有节奏回读 __shadowTier/qualityLevel）。<b>重置模拟只重置生产状态，绝不碰 UIPREFS</b>（resetBtn 处理器内明示）；刷新页面回默认——抽屉真机性能区小字如实标注「仅本次打开期间保留」。<b>「恢复默认界面」</b>钮（#uiResetBtn → resetUIPrefs）一次清全部：两面板显示、折叠按屏宽默认、restoreQuality 回设备档、goPreset("overview")。<b>② SMED 换型计时（B 项）</b>：三段全部由既有状态机实测、无新编时长——排空期 = 预约 t0（reserveChangeover 记 S.simMin）→ 排空触发（经 opts.drainMinutes 传入，立即换型恒 0）；清洗期 = S.changeover 存续仿真分钟（即 CO_MINUTES 倒计时实测，停机即时换型为 0）；调机首件期 = completeChangeover → step 里新产品良品首次下线（ledger 超过完成时刻基线）时 smedFinalize 定版。定版动作：控制台 #smedNote 留一行小结（总 = 排空 + 清洗 + 首件，较同模式上次 ±差值，首次注明无对比）+ 写日志 + SMED.stats 按 immediate/drained 分开累计；精益看板 #smedAvgTxt 行与日报卡「平均换型时长（会话累计 · SMED）」格、日报下载文本同读 stats。读数口 window.__smed()。换型中途再换型覆盖 cur/awaiting 不计；重置清 SMED 与小结行。<b>③ 人员任务化（C 项）</b>：D.crew 三岗位（makeWorker 同机制，建场在 merge 前且经 D 注册保动态不合并）+ 状态机 idle→go→work→back→idle（updateCrew 在 updateScene 工人段后推进）。<b>维修工</b>（红背心白盔 + 工具箱，岗位北通道 (52,-42)）：crewFindFault 工位优先/先故障先修，派单路线全走既有通道——供应经罐间隙 x=-30 + 罐南通道到 (-79,-13)、调配 (-40,-24.5)、杀菌经罐间隙 x=-14 到 UHT 旁 (-14,-19)、1 号线走道北侧 (12,-46.5)（南侧是无菌罐排）、2/3 号线经东纵脊 x=76 + 线间横通道到 (12,6)/(12,34)；到点 crouch 蹲姿 + 工具臂，作业存续与 faultLeft 同源（自然修好/抢修清零才收工，回岗位任务才完）。<b>CIP 班组 ×2</b>（蓝背心 + 软管卷，岗位 CIP 站控制柜旁）：stations[2].cipLeft&gt;0 派单到泵阀作业位 (-33,-51.2)/(-25,-51.2) valve 姿势，cipLeft 清零离场。<b>质检员</b>（白背心 + 样品瓶，岗位实验室 (38,-50)）：只认 QC.samples 递增（stepQC 同一事件同源，不另掷随机），路线出门 → 东纵脊 x=76 → 罐南通道 → 无菌罐取样口 (-9,-24)，取样停留 CONFIG.r11.qcSampleSec 后携瓶返回（propOn=back），忙碌错过不补队。人员净距：PERSON_OBSTACLES（薄带/一体机/逐罐/杀菌链/CIP 泵组等设备占地）逐帧采样写 __navStats.personMinEquip（减人员半径 0.35），与车辆四值同行显示；实验室本体不入表（质检员岗位在其内，属作业区非穿越对象）。重置 crewReset 回岗位清任务。<b>④ 性能与回归（D 项）</b>：DrawCall 二探与四探针（AGV 会车解脱 / 日报↔KPI 交叉 / R10 三段补证回归 / 20,000 步长跑守恒无 NaN）由当轮审计探针在真实页面实跑，数字写交付汇报，不在本节预填；人员新增网格约 40（4 人 × makeWorker 9 件 + 道具 4），护栏仍为同机位 ≤700。<b>⑤ 手势安全区紧急修复（同轮真机反馈）</b>：用户实报底部按钮与安卓 Home 手势条重叠、点按钮先退出。修法：:root 新增令牌 <b>--sab</b>=env(safe-area-inset-bottom, 0px)、<b>--bottom-lift</b>=max(36px, calc(var(--sab) + 16px))，全部贴底可交互元素统一起抬且热区下沿不进屏幕底部 36px 手势带——.control-bar（原 bottom 12px）与 .show-stack 两颗唤回钮（原 14px）改 var(--bottom-lift)；.hint-chip / .info-card 改 calc(var(--bottom-lift) + 74px)、.tour-cap 改 +76px、≤900px .dispatch 与 .info-card 改 +138px（均为相对旧基线的等距抬升）；.drawer 本体全高不贴底锚定，其滚动内容 .drawer-body 底部内边距改 calc(var(--sab) + 36px) 保末行元素离底 ≥36px；body 加 padding-bottom:var(--sab) 作安全垫高。按钮尺寸/热区一律未缩（.panel-show min-height 44px、≤900px .btn min-height 40px 不变），只上移位置。此后禁止再写裸 px 贴底值，新增贴底元素必须引用 --bottom-lift。</div></div>
+      <div class="dcell wide"><div class="l">R12 PDCA 打包轮（订单交期罚金 + ECO 节能 + 故障备件体系 + 性能/回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 12 轮打包交付，参数全在 <b>CONFIG.r12</b>，读数口 <b>window.__r12()</b>。<b>① 交期与延误罚金（A 项）</b>：取代 R10 的固定 +480 分钟交期——dueOffsetMin = max(dueMinMinutes=30, ceil((在前量+本单量) ÷ nominalCapPerMin × dueSlack=1.5))；nominalCapPerMin = 当前设定下 min(供应, 调配=罐数×blendPerTank×blendFactor, 杀菌=sterilize×flowFactor, 灌装=在线线数×filler×fillFactor)，下限 60。在前量：入队时 = 当前单剩余 + 已排队各单量。当前单交期 S.orderDueMin：首单/重置/手动换产落单时 setCurrentOrderDue（按剩余量核定），改订单目标滑杆即按剩余量重核，队列同产品续单沿用入队交期、异产品经 S.pendingDueMin 由 completeChangeover 落单时采用。<b>罚金口径（唯一）= 每逾期 1 仿真分钟 penaltyPerMinute=¥12（按分钟 flat，不按瓶）</b>，订单完成分支 settleOrderDue 一次性结算进 curL().fine；fine 与 spare 均并入 ledgerCost，总利润 totalProfit() 同源扣减（无第二套账）。预警：当前单订单卡与队列行同口径——剩余 &lt; dueWarnMinutes=60 变黄（.due-warn / .qdue.warn）、逾期变红并显示罚金累积中；日报格「当日延误罚金」（DAYREP 快照加 fine 字段做差）+ 下载文本同行。<b>② ECO 节能（B 项）</b>：控制台 #ecoBtn 开关（renderEcoBtn 同步文案/aria）。生效点只有两处：step 流量入账——电 ×(1−ecoPowerSave=0.18)、汽 ×(1−ecoSteamSave=0.12)（水不打折；CIP/换产事件整场消耗不打折）；fillRate ×(1−ecoCapCut=0.06)（灌装上限打折，按钮日志明示每线 瓶/分 前后值）。节省按反事实累计 ECO.savedKwh/savedSteamKg/savedYuan（毛耗=实耗÷(1−折扣) 还原），日报行「ECO 累计节省（会话）」与下载文本同源；单瓶电耗按 ECO.onPower/onFinished 与 offPower/offFinished 两组分开累计，抽屉公用工程区两格 + 日报一行同读。ECO 只改系数不改任何在制量，切换不破守恒；重置关 ECO 并清累计。<b>③ 故障与备件（C 项）</b>：库存 SPARES {stock 初值 spareInit=3, used, restocked, emergency}；故障统一入口 <b>applyFaultStart(obj, baseDur, label)</b>——随机故障（step）与场景「2 号线故障」都走它：有备件 stock−1、used+1、时长=baseDur；无备件时长 ×noSpareTimeFactor=2.2、curL().spare += emergencyFee=¥1200、faultMeta={spare:false, waitLeft: 加时部分}。faultMeta.waitLeft 在 step 与 faultLeft 同步递减；<b>维修工等待表现</b>：updateCrewMember 每帧判定 c.waiting（目标 faultMeta 为无备件单且 waitLeft&gt;0），crewWorkPose 的 waiting 分支 = 直立待命 + 双臂放下 + 朝向小幅张望，备件「送达」（waitLeft 清零）自动转蹲姿作业；__crew() 输出 waiting。修复完成统一经 <b>faultCleared</b>（step 自然递减到 0 与 repairStation/repairLine 抢修都调）记 FAULTLOG.repaired/repairSumMin；FAULTLOG.runMin 在 step 运行推进时累计，MTBF=runMin/events、MTTR=repairSumMin/repaired（mtbfMin/mttrMin）。补货 restockSpare（调度台 #spareBtn，上限 spareMax=9）：stock+1 且 curL().spare += sparePrice=¥350——收费进台账，绝不凭空恢复。抽屉「设备可靠性与备件」五格 + 日报「故障与备件」行 + 精益看板同读 FAULTLOG/SPARES。<b>④ 性能与回归（D 项）</b>：Draw Call 以同机位（全厂俯瞰·待机）renderer.info 实测为准，数字写当轮交付汇报；回归探针包五项（20,000 步守恒长跑 / 三段补证回归 / AGV 会车解脱 / CSS 安全区断言——全量扫描 position:fixed 交互元素 bottom 计算值 ≥36px 手势下限，防 R11 修复回退 / ECO 开关两段单瓶电耗差与 CONFIG 百分比误差 &lt;2%）由当轮审计探针在真实页面实跑，结论写交付汇报、不在本节预填。<b>重置口径</b>：ECO 关并清累计、备件回初值、FAULTLOG 清零、当前单交期重新核定、stations/lines 的 faultMeta/faultStartMin 清空，均在 resetBtn 处理器内与既有复位同级。</div></div>
       <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
@@ -760,6 +790,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R10 打包轮：首次打开出现新手速览（关掉/三钮均可走通）；调度台选异产品+目标点「加入订单队列」后抽屉队列出现该单（交期 = 入队 +8 仿真小时、可撤销）；把当前单目标调到最小并开工跑完，队列自动接单（同产品续单不换型、异产品走换型），window.__pdcaCheck().ordersDone 递增；跑满 45 仿真分钟后抽屉质检三格有抽检记录、window.__qcState().samples ≥1，整改期内 eQuality 显示有效良品率低于标称；有产出后单瓶能耗三格与日报卡八项有数、点「下载日报」得到 .txt；机位「物流特写」同框暂存位/车道/货架，巡游共 10 站且第 7 站为「智慧物流」（window.__tourStopUs 长度 10）；重置后队列清空、抽检归零</li>
       <li>R10 细化 · 日报与补证：跑一段生产后抽屉「生产日报」当日总产量 = KPI 累计产量 − __dayrep 基线（交叉一致）、各产品占比合计 100%、换型（立即/排空）与波次计数随事件递增；点「新的一天」后历史区多一行摘要且当日各项归零重计，连点 8 次历史最多 7 行；重置后历史清空。运行时三段证据（入库闭环不提前加库存 / 出库取 seq 最小货位且 __whCheck().ok 恒 true / 排空预约在制三点下降并自动触发、S.lastSettle 含报废余量）以当轮交付汇报的探针实测为准</li>
       <li>R11 打包轮：藏控制台+调度台、折相机条、切到「物流特写」机位、手动恢复一次画质后点「重置」——五项界面状态全部原样（window.__uiPrefs() 与重置前一致），生产数据归零；点抽屉「恢复默认界面」后两面板显示、机位回全厂俯瞰、画质回设备档；跑一次立即换型与一次排空换型，控制台 #smedNote 各留一行小结（排空那次三段齐全、总 = 三段之和、第二次同模式带 ±差值），window.__smed().stats 两模式 n 各 ≥1、精益看板与日报平均值同源；触发 2 号线故障场景——维修工从北通道岗位出发经东纵脊到 (12,6) 蹲姿作业，故障计时结束（或点抢修）后回岗位 mode 回 idle，全程 __navStats.personMinEquip &gt; 0；开 CIP 开关等 cipLeft&gt;0——CIP 班组两人到泵阀位、结束离场；跑满 45 仿真分钟一次抽检——质检员出实验室到无菌罐取样口再携瓶返回（window.__crew().qc 依次 go/work/back/idle），QC.samples 与 lastSample 对齐</li>
+      <li>R12 打包轮：新入队订单交期 = 按（在前量+本单量）÷名义瓶颈产能×1.5 核定而非固定 480 分（window.__r12().orderDueMin 与订单卡倒计时一致）；把当前单目标调小跑完且已过交期——完成日志含逾期分钟与罚金、总利润相应减少、日报「当日延误罚金」&gt;0；剩余交期 &lt;60 分时当前单与队列行变黄、逾期变红；控制台开 ECO——按钮明示电 −18%/汽 −12%/灌装上限 −6%，跑一段后抽屉「单瓶电耗 · ECO 开」低于「ECO 关」约 18%、日报 ECO 累计节省 &gt;¥0，关 ECO 后 fillRate 恢复；备件耗尽后触发故障——时长为标准 ×2.2、紧急采购费进台账、维修工到场呈等待姿势（window.__crew().maint.waiting=true），waitLeft 过后转蹲姿作业；调度台补备件收费 ¥350 且库存 +1；故障修复后抽屉 MTBF/MTTR 有数、window.__r12().faults.repaired ≥1；重置后 ECO 关、备件回 3、罚金与故障统计清零</li>
     </ul>
   </div>
 </aside>
@@ -895,7 +926,7 @@ var CONFIG = {
     yieldEscapeSec: 4, sideStep: 2.4   /* R10 补证修复：跟驰会车死锁解开——出库车让行超时后靠边（横移 sideStep，x 钳制 71.6..80.6），入库车先行 */
   },
   /* ---- R10 打包轮参数（多订单队列 / 质检抽检 / 交期，改节奏只改这里） ----
-   * orderDueMinutes 每单交期（入队时刻 + 此值，仿真分钟；480 = 一个班次）；
+   * orderDueMinutes 每单交期（R10 旧口径：入队时刻 + 480；R12 起已被 CONFIG.r12 的按量/产能核定取代，本字段保留仅作对照、不再被引用）；
    * qcIntervalMinutes 实验室抽检间隔（仿真分钟）；qcFailProb / qcMarginalProb 单次抽检
    * 不合格 / 临界概率；qcHoldMax 不合格时从无菌库存隔离报废的上限（瓶）；
    * qcFailPenalty / qcMarginalPenalty 整改期内有效良品率扣减（绝对值），
@@ -914,6 +945,24 @@ var CONFIG = {
     crewSpeed: 2.6, maintSpeed: 3.1,
     qcSampleSec: 3.5,
     smedHistoryCap: 10
+  },
+  /* ---- R12 打包轮参数（订单交期罚金 / ECO 节能 / 故障备件体系，改节奏只改这里） ----
+   * 交期：dueOffset = (排队在前量 + 本单量) ÷ 名义瓶颈产能 × dueSlack 富余系数，下限 dueMinMinutes；
+   * 名义瓶颈产能 = min(供应, 调配, 杀菌, 灌装合计) 的当前设定值（见 nominalCapPerMin）。
+   * 罚金口径 = 每逾期 1 仿真分钟 penaltyPerMinute 元（ flat 按分钟计，不按瓶），订单完成
+   * 时一次性结算进该产品台账 fine 字段、从总利润扣。dueWarnMinutes = 当前单/队列单剩余
+   * 交期低于此值时订单卡变黄预警，逾期变红。
+   * ECO：开启后流量电耗 ×(1−ecoPowerSave)、汽耗 ×(1−ecoSteamSave)（只作用于 step 的按
+   * 流量入账，CIP/换产事件整场消耗不打折）；代价 fillRate ×(1−ecoCapCut)（灌装上限打折，
+   * 控制台按钮与抽屉明示百分比）。节省额按反事实口径累计（实际 ÷ (1−折扣) 还原毛耗 − 实际）。
+   * 备件：spareInit 初始库存 / sparePrice 补货单价（补货按钮收费进当前产品台账 spare 字段）/
+   * spareMax 库存上限；故障时有备件领用 1 件走标准时长，无备件时长 ×noSpareTimeFactor
+   * 且收 emergencyFee 紧急采购费（进台账 spare），多出的时长即维修工现场等待备件期。 */
+  r12: {
+    dueSlack: 1.5, dueMinMinutes: 30, dueWarnMinutes: 60, penaltyPerMinute: 12,
+    ecoPowerSave: 0.18, ecoSteamSave: 0.12, ecoCapCut: 0.06,
+    spareInit: 3, sparePrice: 350, spareMax: 9,
+    noSpareTimeFactor: 2.2, emergencyFee: 1200
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -1238,7 +1287,7 @@ var CAP_RATE = CONFIG.capRate, PACK_RATE = CONFIG.packRate;
 var lines = [];
 for(var _li=0; _li<CONFIG.lineCount; _li++){ (function(i){
   lines.push({ idx:i, name:(i+1)+" 号灌装线", on: i<CONFIG.defaults.activeLines, queue:0, capQ:0, done:0, faults:0, faultLeft:0, lastMove:0,
-    fillRate:function(){ return S.filler*product.fillFactor; } });
+    fillRate:function(){ return S.filler*product.fillFactor*(ECO.on ? 1-CONFIG.r12.ecoCapCut : 1); } });   /* R12：ECO 开启时灌装上限打折（变频降速），关掉即恢复 */
 })(_li); }
 var QUEUE_CAP = CONFIG.queueCap, LINE_Q_CAP = CONFIG.lineQueueCap;
 var CO_MINUTES = CONFIG.changeoverMinutes, CO_FEE = CONFIG.changeoverFee;
@@ -1248,10 +1297,14 @@ var CO_MINUTES = CONFIG.changeoverMinutes, CO_FEE = CONFIG.changeoverFee;
  * finished/revenue/varCost/水电蒸汽三项用量（waterM3/powerKwh/steamKg）/fixedCost/coCost，
  * 总利润 = 各产品利润之和。三项用量各自按 CONFIG.utilities 的单价计价（见 ledgerCost）。 */
 var ledger = {};
-PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0 }; });
+PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0 }; });
 function curL(){ return ledger[product.id]; }
 function utilCost(L){ var u = CONFIG.utilities; return L.waterM3*u.water.pricePerM3 + L.powerKwh*u.power.pricePerKwh + L.steamKg*u.steam.pricePerKg; }
-function ledgerCost(L){ return L.varCost + utilCost(L) + L.fixedCost + L.coCost; }
+/* R12：fine = 订单延误罚金、spare = 备件补货 + 紧急采购费，均并入成本——总利润
+ * totalProfit() 仍为各产品台账利润之和，罚金/备件费从同一本账扣，不另立第二套账。 */
+function ledgerCost(L){ return L.varCost + utilCost(L) + L.fixedCost + L.coCost + (L.fine||0) + (L.spare||0); }
+function totalFine(){ return PRODUCTS.reduce(function(a,p){ return a + (ledger[p.id].fine||0); }, 0); }
+function totalSpareCost(){ return PRODUCTS.reduce(function(a,p){ return a + (ledger[p.id].spare||0); }, 0); }
 /* 公用工程入账：同时累加全厂总量 S 与指定产品账本 L（L 可为 null=只记全厂）。
  * 流量消耗、CIP 事件、换产事件都走这里入账，禁止在别处直接改这六个字段。 */
 function chargeUtilities(L, wM3, pKwh, sKg){
@@ -1273,7 +1326,10 @@ var S = {
   /* R6 排空换型预约：null 或 { to:目标产品, fromName, startWip:预约时在制总量, startFinished:预约时累计产量 }。
    * 非空即「已预约」：step 停新料注入、顺流排空，totalWip ≤ CONFIG.drainChangeover.epsilonBottles 时自动执行换型。 */
   reservation:null,
-  selected:null, orderDoneLogged:false
+  selected:null, orderDoneLogged:false,
+  /* R12：当前订单交期（仿真分钟，setCurrentOrderDue / 接单时赋值，0 = 尚未赋值由渲染懒初始化）；
+   * pendingDueMin = 队列异产品接单时先存的交期，completeChangeover 落单时优先采用（队列交期为准）。 */
+  orderDueMin:0, pendingDueMin:null
 };
 var history = [], sampleAcc = 0, sampleCount = 0;
 /* ================= [M1] R10 · 质检抽检 QC + 订单队列 ORDERQ =================
@@ -1319,6 +1375,85 @@ function stepQC(dtMin){
 }
 var ORDERQ = [];
 var ORDERS_DONE = 0;
+/* ================= [M1] R12 · 交期罚金 / ECO 节能 / 备件与故障统计 =================
+ * 交期：dueOffsetMin(量, 在前量, 产品) = max(下限, ceil((在前量+量) ÷ 名义瓶颈产能 × 富余系数))。
+ * 名义瓶颈产能取当前设定下 min(供应, 调配, 杀菌, 灌装合计)，与 bottleneck() 的实测口径
+ * 互补（交期要在开工前给出，只能用设定值）。罚金口径 = 每逾期 1 分钟 penaltyPerMinute 元，
+ * 订单完成分支 settleOrderDue 一次性结算进 curL().fine（并入 ledgerCost → 总利润同源扣减）。
+ * ECO：开关只改 step 的流量电/汽入账系数与 fillRate 上限，不动任何在制量，切换不破守恒；
+ * saved* 按反事实累计（毛耗 − 实耗）供日报「ECO 累计节省」行；on/off 两组单瓶电耗分开累计。
+ * 备件：SPARES.stock 是唯一库存数；故障统一经 applyFaultStart 领件/判缺货，修复完成
+ * （自然修好或抢修）经 faultCleared 记 MTTR；FAULTLOG.runMin 累计运行时长出 MTBF。 */
+var ECO = { on:false, savedKwh:0, savedSteamKg:0, savedYuan:0, onPower:0, onFinished:0, offPower:0, offFinished:0 };
+var SPARES = { stock: CONFIG.r12.spareInit, used: 0, restocked: 0, emergency: 0 };
+var FAULTLOG = { events: 0, repaired: 0, repairSumMin: 0, runMin: 0 };
+function mtbfMin(){ return FAULTLOG.events > 0 ? FAULTLOG.runMin / FAULTLOG.events : null; }
+function mttrMin(){ return FAULTLOG.repaired > 0 ? FAULTLOG.repairSumMin / FAULTLOG.repaired : null; }
+function nominalCapPerMin(p){
+  var fill = Math.max(1, activeLines().length) * S.filler * p.fillFactor;
+  var blend = S.tanks * CONFIG.blendPerTank * p.blendFactor;
+  var ster = S.sterilize * sterProcOf(p).flowFactor;
+  return Math.max(60, Math.min(S.supply, blend, ster, fill));
+}
+function dueOffsetMin(target, ahead, p){
+  return Math.max(CONFIG.r12.dueMinMinutes, Math.ceil((ahead + target) / nominalCapPerMin(p) * CONFIG.r12.dueSlack));
+}
+function setCurrentOrderDue(){
+  S.orderDueMin = S.simMin + dueOffsetMin(Math.max(0, S.orderTarget - S.orderDone), 0, product);
+}
+function settleOrderDue(){
+  var od = { dueMin: S.orderDueMin, overdueMin: 0, fine: 0 };
+  if(S.orderDueMin && S.simMin > S.orderDueMin){
+    od.overdueMin = Math.round((S.simMin - S.orderDueMin) * 10) / 10;
+    od.fine = Math.round(od.overdueMin * CONFIG.r12.penaltyPerMinute);
+    if(od.fine > 0) curL().fine += od.fine;
+  }
+  return od;
+}
+/* 故障统一入口（随机故障与场景故障都走这里）：有备件领用 1 件、标准时长；
+ * 无备件时长 ×noSpareTimeFactor 且收紧急采购费，多出的时长记 faultMeta.waitLeft，
+ * 即维修工在现场等待备件的时长（R11 维修工据此呈等待姿势，见 updateCrewMember）。 */
+function applyFaultStart(obj, baseDur, label){
+  obj.faults++; FAULTLOG.events++;
+  obj.faultStartMin = S.simMin;
+  if(SPARES.stock > 0){
+    SPARES.stock--; SPARES.used++;
+    obj.faultLeft = baseDur;
+    obj.faultMeta = { spare: true, waitLeft: 0 };
+    log("「" + label + "」突发故障停机，预计 " + Math.ceil(baseDur) + " 分钟修好。关键备件有货：已领用 1 件（余 " + SPARES.stock + " 件），维修工正赶赴现场。点 3D 场景里的设备可抢修。", "bad");
+  } else {
+    var dur = baseDur * CONFIG.r12.noSpareTimeFactor;
+    obj.faultLeft = dur;
+    obj.faultMeta = { spare: false, waitLeft: dur - baseDur };
+    SPARES.emergency++;
+    curL().spare += CONFIG.r12.emergencyFee;
+    log("「" + label + "」突发故障停机，但关键备件缺货！已下紧急采购单（费用 ¥" + fmt(CONFIG.r12.emergencyFee) + " 计入当前产品成本台账），备件送达前维修工只能在现场等待——预计总时长 " + Math.ceil(dur) + " 分钟（无备件 ×" + CONFIG.r12.noSpareTimeFactor + "）。请在调度台及时补备件。", "bad");
+  }
+}
+function faultCleared(obj){
+  if(obj.faultStartMin != null && obj.faultStartMin !== undefined){
+    FAULTLOG.repaired++;
+    FAULTLOG.repairSumMin += Math.max(0, S.simMin - obj.faultStartMin);
+    obj.faultStartMin = null;
+  }
+  obj.faultMeta = null;
+}
+function restockSpare(){
+  if(SPARES.stock >= CONFIG.r12.spareMax){ log("备件库存已达上限 " + CONFIG.r12.spareMax + " 件，不必再补。"); return; }
+  SPARES.stock++; SPARES.restocked++;
+  curL().spare += CONFIG.r12.sparePrice;
+  log("备件补货：关键备件 +1 件（现库存 " + SPARES.stock + " 件），采购费 ¥" + fmt(CONFIG.r12.sparePrice) + " 已计入当前产品成本台账。", "good");
+}
+window.__r12 = function(){
+  return {
+    eco: { on: ECO.on, savedKwh: ECO.savedKwh, savedSteamKg: ECO.savedSteamKg, savedYuan: ECO.savedYuan,
+           perBottleOn: ECO.onFinished > 0 ? ECO.onPower / ECO.onFinished : null,
+           perBottleOff: ECO.offFinished > 0 ? ECO.offPower / ECO.offFinished : null },
+    spares: { stock: SPARES.stock, used: SPARES.used, restocked: SPARES.restocked, emergency: SPARES.emergency },
+    faults: { events: FAULTLOG.events, repaired: FAULTLOG.repaired, mtbf: mtbfMin(), mttr: mttrMin() },
+    orderDueMin: S.orderDueMin, totalFine: totalFine(), totalSpareCost: totalSpareCost()
+  };
+};
 /* ================= [M1] R10 细化 · 生产日报分段（DAYREP）+ 换型/波次计数 =================
  * 日报按「当前生产日」分段：DAYREP.base 是本段起点对全厂累计量的快照（懒初始化，
  * 首次渲染或「新的一天」/重置后取当时累计值），当日量 = 当前累计 − base，全程与台账
@@ -1332,6 +1467,7 @@ function dayrepSnapshot(){
     finished: S.finished, rejected: S.rejected,
     water: S.waterM3, power: S.powerKwh, steam: S.steamKg,
     profit: totalProfit(), trips: SHIP.trips, waves: WAVES,
+    fine: totalFine(),
     coI: CO_STATS.immediate, coD: CO_STATS.drained,
     perProd: PRODUCTS.map(function(p){ return ledger[p.id].finished; })
   };
@@ -1343,6 +1479,7 @@ function dayrepDelta(){
     finished: S.finished - b.finished, rejected: S.rejected - b.rejected,
     water: S.waterM3 - b.water, power: S.powerKwh - b.power, steam: S.steamKg - b.steam,
     profit: totalProfit() - b.profit, trips: SHIP.trips - b.trips, waves: WAVES - b.waves,
+    fine: totalFine() - (b.fine || 0),
     coI: CO_STATS.immediate - b.coI, coD: CO_STATS.drained - b.coD,
     perProd: PRODUCTS.map(function(p, i){ return ledger[p.id].finished - b.perProd[i]; })
   };
@@ -1405,9 +1542,12 @@ function fmtSimClock(min){
   return "D"+day+" "+hh+":"+mm;
 }
 function enqueueCurrentOrder(){
-  var entry = { pid: product.id, target: S.orderTarget, dueMin: S.simMin + CONFIG.r10.orderDueMinutes };
+  /* R12：交期按量与当前产能自动给出——在前量 = 当前单剩余 + 已排队各单量，
+   * 交期偏移 = (在前量 + 本单量) ÷ 名义瓶颈产能 × 富余系数（见 dueOffsetMin）。 */
+  var ahead = Math.max(0, S.orderTarget - S.orderDone) + ORDERQ.reduce(function(a, q){ return a + q.target; }, 0);
+  var entry = { pid: product.id, target: S.orderTarget, dueMin: S.simMin + dueOffsetMin(S.orderTarget, ahead, product) };
   ORDERQ.push(entry);
-  log("订单入队：第 "+ORDERQ.length+" 单「"+product.full+"」目标 "+fmt(entry.target)+" 瓶，交期 "+fmtSimClock(entry.dueMin)+" 前。当前单完成后自动接单。","good");
+  log("订单入队：第 "+ORDERQ.length+" 单「"+product.full+"」目标 "+fmt(entry.target)+" 瓶，交期 "+fmtSimClock(entry.dueMin)+" 前（按当前产能与排队量自动核定）。当前单完成后自动接单。","good");
   renderOrderQueue();
 }
 function advanceOrderQueue(){
@@ -1418,10 +1558,12 @@ function advanceOrderQueue(){
     S.orderTarget = nxt.target;
     if(typeof setRange === "function") setRange("orderRange", nxt.target);
     S.orderDone = 0; S.orderDoneLogged = false;
+    S.orderDueMin = nxt.dueMin;   /* R12：续单沿用入队时核定的交期 */
     SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;
     log("订单队列自动接单：「"+np.full+"」目标 "+fmt(nxt.target)+" 瓶（同产品免换型直接续单），交期 "+fmtSimClock(nxt.dueMin)+" 。","good");
   } else {
     log("订单队列自动接单：「"+np.full+"」目标 "+fmt(nxt.target)+" 瓶，交期 "+fmtSimClock(nxt.dueMin)+" ——异产品，自动走换型流程。","good");
+    S.pendingDueMin = nxt.dueMin;   /* R12：异产品交期先存，completeChangeover 落单时采用 */
     startChangeover(np);
     S.orderTarget = nxt.target;
     if(typeof setRange === "function") setRange("orderRange", nxt.target);
@@ -1437,7 +1579,8 @@ function renderOrderQueue(){
     var p = prodById(q.pid);
     var left = Math.round(q.dueMin - S.simMin);
     var dueTxt = left >= 0 ? "交期 "+fmtSimClock(q.dueMin)+" · 剩 "+left+" 分" : "已逾期 "+Math.abs(left)+" 分";
-    html += '<div class="qrow"><span class="dot" style="background:'+p.color+'"></span><span>第 '+(i+1)+' 单 · '+p.name+'</span><span class="qmeta">目标 '+fmt(q.target)+' 瓶</span><span class="qdue'+(left<0?" over":"")+'">'+dueTxt+'</span><button class="qx" data-qi="'+i+'" title="撤销这单排队" aria-label="撤销排队">✕</button></div>';
+    var dueCls = left < 0 ? " over" : (left < CONFIG.r12.dueWarnMinutes ? " warn" : "");   /* R12：剩余交期不足变黄预警、逾期变红 */
+    html += '<div class="qrow"><span class="dot" style="background:'+p.color+'"></span><span>第 '+(i+1)+' 单 · '+p.name+'</span><span class="qmeta">目标 '+fmt(q.target)+' 瓶</span><span class="qdue'+dueCls+'">'+dueTxt+'</span><button class="qx" data-qi="'+i+'" title="撤销这单排队" aria-label="撤销排队">✕</button></div>';
   });
   el.innerHTML = html;
 }
@@ -1614,6 +1757,9 @@ $("reportDlBtn").addEventListener("click", function(){
     dd.finished > 0 ? "当日单瓶耗（每千瓶）：水 " + (dd.water / dd.finished * 1000 * 1000).toFixed(0) + " L · 电 " + (dd.power / dd.finished * 1000).toFixed(1) + " kWh · 汽 " + (dd.steam / dd.finished * 1000).toFixed(1) + " kg" : "当日单瓶耗：尚无产出",
     "当日换型：立即 " + dd.coI + " 次 · 排空 " + dd.coD + " 次",
     "平均换型时长（会话累计 · SMED 三段实测）：立即 " + (smedAvg("immediate") === null ? "—" : smedAvg("immediate").toFixed(1) + " 分钟（" + SMED.stats.immediate.n + " 次）") + " · 排空 " + (smedAvg("drained") === null ? "—" : smedAvg("drained").toFixed(1) + " 分钟（" + SMED.stats.drained.n + " 次）"),
+    "当日延误罚金：" + fmtMoney(dd.fine) + "（口径 ¥" + CONFIG.r12.penaltyPerMinute + "/逾期分钟 · 已从利润扣除）",
+    "ECO 累计节省（会话）：" + fmtMoney(ECO.savedYuan) + " · 电 " + fmt(ECO.savedKwh) + " kWh · 汽 " + fmt(ECO.savedSteamKg) + " kg",
+    "故障与备件（会话累计）：故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件库存 " + SPARES.stock + " 件（领用 " + SPARES.used + " · 补货 " + SPARES.restocked + " · 紧急采购 " + SPARES.emergency + " 次）",
     "当日发货波次：" + dd.waves + " 波 · 已发 " + dd.trips + " 车",
     "当前库存：" + WH.stockCases + " 托",
     "质检抽检（累计）：" + QC.samples + " 次（不合格 " + QC.fails + " · 临界 " + QC.marginals + "）· 当前有效良品率 " + (effQuality()*100).toFixed(1) + "%"
@@ -1667,6 +1813,8 @@ function completeChangeover(){
   applyProduct(np);
   SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;   /* R2：新订单的发货波次节点从头计（仓库成品库存不清，属已入库成品） */
   S.orderDone = 0; S.orderDoneLogged = false;
+  /* R12：新单交期——队列接单的异产品单沿用入队时核定的交期（pendingDueMin），其余（手动换产）按新单量与当前产能重新核定 */
+  if(S.pendingDueMin){ S.orderDueMin = S.pendingDueMin; S.pendingDueMin = null; } else setCurrentOrderDue();
   log("换型完成！已切换到「"+np.name+"」，新订单开始计数（目标 "+fmt(S.orderTarget)+" 瓶），该产品单独记账。换产清洗消耗水 "+he.waterM3+" m³ · 蒸汽 "+he.steamKg+" kg · 电 "+he.powerKwh+" kWh 已计入其账本。"+(wasDrained?"（本次为排空换型：结算小结见数据抽屉订单区，在制报废按排空后余量如实列出。）":""),"good");
   renderAll();
 }
@@ -1753,6 +1901,7 @@ function pushSample(produced, dtMin){
 function step(dtMin){
   if(!(dtMin > 0) || !isFinite(dtMin)) return;   /* R4 边界守卫：异常 dt 直接跳步，杜绝 NaN 污染库存/账本 */
   S.simMin += dtMin;
+  if(S.running) FAULTLOG.runMin += dtMin;   /* R12：MTBF 分子（累计运行时长，只在运行推进时计） */
   var fc = dtMin * (CONFIG.fixedCostPerHour/60);
   S.fixedCost += fc;
   curL().fixedCost += fc;
@@ -1772,9 +1921,9 @@ function step(dtMin){
   var draining = !!S.reservation;   /* R6 排空预约中：停新料、冻批次时钟、顺流排空（见 reserveChangeover 口径） */
   if(!draining) advanceBlendBatch(dtMin);   /* 调配批次时钟与生产同步推进（换型/排空预约时冻结：不开新批，当前批随队列顺流成瓶） */
   stations.forEach(function(st){
-    if(st.faultLeft>0){ st.faultLeft = Math.max(0, st.faultLeft-dtMin); }
+    if(st.faultLeft>0){ st.faultLeft = Math.max(0, st.faultLeft-dtMin); if(st.faultMeta && st.faultMeta.waitLeft>0) st.faultMeta.waitLeft = Math.max(0, st.faultMeta.waitLeft-dtMin); if(st.faultLeft===0) faultCleared(st); }   /* R12：等待备件期同步递减、修好记 MTTR */
   });
-  lines.forEach(function(l){ if(l.faultLeft>0) l.faultLeft = Math.max(0, l.faultLeft-dtMin); });
+  lines.forEach(function(l){ if(l.faultLeft>0){ l.faultLeft = Math.max(0, l.faultLeft-dtMin); if(l.faultMeta && l.faultMeta.waitLeft>0) l.faultMeta.waitLeft = Math.max(0, l.faultMeta.waitLeft-dtMin); if(l.faultLeft===0) faultCleared(l); } });
   if(ster.cipLeft>0){ ster.cipLeft = Math.max(0, ster.cipLeft-dtMin); if(ster.cipLeft===0) log("杀菌机 CIP 清洗完成，恢复生产。","good"); }
   else if(S.cipOn && S.running){
     ster.sinceCip += dtMin;
@@ -1786,14 +1935,12 @@ function step(dtMin){
   if(S.faultsOn){
     stations.forEach(function(st){
       if(st.faultLeft<=0 && Math.random() < dtMin*CONFIG.faultProbPerMin){
-        st.faultLeft = CONFIG.faultMinMinutes+Math.random()*CONFIG.faultSpanMinutes; st.faults++;
-        log("「"+st.name+"」突发故障停机，预计 "+Math.ceil(st.faultLeft)+" 分钟修好。点 3D 场景里的设备可抢修。","bad");
+        applyFaultStart(st, CONFIG.faultMinMinutes+Math.random()*CONFIG.faultSpanMinutes, st.name);   /* R12：统一走备件判定 */
       }
     });
     lines.forEach(function(l){
       if(l.on && l.faultLeft<=0 && Math.random() < dtMin*CONFIG.faultProbPerMin){
-        l.faultLeft = CONFIG.faultMinMinutes+Math.random()*CONFIG.faultSpanMinutes; l.faults++;
-        log("「"+l.name+"」灌装机突发故障停机，预计 "+Math.ceil(l.faultLeft)+" 分钟。该线停转，其余线继续生产。点该线设备可抢修。","bad");
+        applyFaultStart(l, CONFIG.faultMinMinutes+Math.random()*CONFIG.faultSpanMinutes, l.name + " 灌装机");
       }
     });
   }
@@ -1859,7 +2006,17 @@ function step(dtMin){
   /* 公用工程按流量三分记账：水（m³）/ 电（kWh）/ 蒸汽（kg）各有系数与单价，见 CONFIG.utilities */
   var uu = CONFIG.utilities;
   var L = curL();
-  chargeUtilities(L, totalFlow*uu.water.perFlow, totalFlow*uu.power.perFlow, totalFlow*uu.steam.perFlow);
+  /* R12 ECO：流量电/汽按节能百分比打折入账（水不打折；CIP/换产事件整场消耗不走这里、不打折）。
+   * saved* 按反事实累计（毛耗 − 实耗）；单瓶电耗按 ECO 开/关分开累计供抽屉与日报对比。 */
+  var pUse = totalFlow*uu.power.perFlow, sUse = totalFlow*uu.steam.perFlow;
+  if(ECO.on){
+    var pFull = pUse, sFull = sUse;
+    pUse *= 1 - CONFIG.r12.ecoPowerSave; sUse *= 1 - CONFIG.r12.ecoSteamSave;
+    ECO.savedKwh += pFull - pUse; ECO.savedSteamKg += sFull - sUse;
+    ECO.savedYuan += (pFull - pUse) * uu.power.pricePerKwh + (sFull - sUse) * uu.steam.pricePerKg;
+  }
+  chargeUtilities(L, totalFlow*uu.water.perFlow, pUse, sUse);
+  if(ECO.on){ ECO.onPower += pUse; ECO.onFinished += good; } else { ECO.offPower += pUse; ECO.offFinished += good; }
   L.finished += good;
   L.rejected += produced - good;
   L.revenue += good * product.price;
@@ -2004,13 +2161,27 @@ function renderKpis(){
   $("orderProg").style.width = pctDone+"%";
   $("orderDoneTxt").textContent = fmt(S.orderDone);
   $("orderTargetTxt").textContent = fmt(S.orderTarget)+" 瓶";
+  /* R12：当前单交期倒计时（懒初始化首单交期；剩余不足变黄、逾期变红，完成结算后显示结算结果） */
+  if(!S.orderDueMin && !S.orderDoneLogged) setCurrentOrderDue();
+  var odTxt = $("orderDueTxt"), odLeft = $("orderDueLeft");
+  if(odTxt && odLeft){
+    if(S.orderDoneLogged){
+      odTxt.textContent = S.orderDueMin ? fmtSimClock(S.orderDueMin) : "—";
+      odLeft.textContent = "已结算"; odLeft.className = "mono";
+    } else if(S.orderDueMin){
+      var dLeft = Math.round(S.orderDueMin - S.simMin);
+      odTxt.textContent = fmtSimClock(S.orderDueMin);
+      odLeft.textContent = dLeft >= 0 ? "剩 " + dLeft + " 分" : "已逾期 " + Math.abs(dLeft) + " 分 · 罚金累积中";
+      odLeft.className = "mono" + (dLeft < 0 ? " due-over" : (dLeft < CONFIG.r12.dueWarnMinutes ? " due-warn" : ""));
+    } else { odTxt.textContent = "—"; odLeft.textContent = "—"; odLeft.className = "mono"; }
+  }
   if(S.lastSettle){ $("settleNote").textContent = "🧾 " + S.lastSettle; $("settleNote").classList.add("show"); }
   else { $("settleNote").classList.remove("show"); }
   var rate = lineRatePerHour();
   if(S.orderDone>=S.orderTarget){
     $("orderEta").textContent = "已完成 ✓";
     $("doneBanner").classList.add("show");
-    if(!S.orderDoneLogged){ S.orderDoneLogged=true; ORDERS_DONE++; log("订单完成！本单共 "+fmt(S.orderDone)+" 瓶。当前产品累计利润 "+fmtMoney(ledgerProfit(curL()))+"，全厂总利润 "+fmtMoney(profit)+"。","good"); if(ORDERQ.length && !S.changeover && !S.reservation) advanceOrderQueue(); }
+    if(!S.orderDoneLogged){ S.orderDoneLogged=true; ORDERS_DONE++; var od12 = settleOrderDue(); if(od12.fine > 0) log("⏰ 本单逾期交付：交期 "+fmtSimClock(od12.dueMin)+"，实际逾期 "+od12.overdueMin+" 分钟，按 ¥"+CONFIG.r12.penaltyPerMinute+"/分钟计延误罚金 "+fmtMoney(od12.fine)+"，已计入「"+product.name+"」台账并从利润扣除（台账单列「延误罚金」口径见交接文档 R12 节）。","bad"); log("订单完成！本单共 "+fmt(S.orderDone)+" 瓶。当前产品累计利润 "+fmtMoney(ledgerProfit(curL()))+"，全厂总利润 "+fmtMoney(totalProfit())+"。","good"); if(ORDERQ.length && !S.changeover && !S.reservation) advanceOrderQueue(); }
   } else {
     $("doneBanner").classList.remove("show");
     $("orderEta").textContent = S.changeover ? "换型中，暂停计数" : S.reservation ? "已预约排空换型 →「"+S.reservation.to.name+"」，排空后自动换型并结单" : rate>10 ? "预计还需 "+Math.max(1,Math.ceil((S.orderTarget-S.orderDone)/rate*60))+" 分钟" : "等待产能爬坡";
@@ -2077,6 +2248,22 @@ function renderKpis(){
     $("qcCounts").textContent = QC.samples + " / " + QC.fails + "（临界 " + QC.marginals + "）";
     $("qcLast").textContent = QC.samples ? QC.lastResult + " · " + fmtSimClock(QC.lastAt) : "尚未抽检";
     $("qcEff").textContent = (effQuality()*100).toFixed(1) + "%" + (QC.penaltyLeft > 0 ? "（整改期剩 " + Math.ceil(QC.penaltyLeft) + " 分 · 标称 " + (product.quality*100).toFixed(1) + "%）" : "（= 标称值）");
+    /* R12：ECO 单瓶电耗开/关对比 + 可靠性与备件读数（与 ECO/SPARES/FAULTLOG 同源同节奏刷新） */
+    var ecoOnEl = $("ecoPerOn"), ecoOffEl = $("ecoPerOff");
+    if(ecoOnEl && ecoOffEl){
+      ecoOnEl.textContent = ECO.onFinished > 0 ? (ECO.onPower / ECO.onFinished * 1000).toFixed(1) + " kWh / 千瓶" : "—";
+      ecoOffEl.textContent = ECO.offFinished > 0 ? (ECO.offPower / ECO.offFinished * 1000).toFixed(1) + " kWh / 千瓶" : "—";
+    }
+    var rMt = $("relMtbf");
+    if(rMt){
+      rMt.textContent = mtbfMin() === null ? "—（尚无故障）" : Math.round(mtbfMin()) + " 分";
+      $("relMttr").textContent = mttrMin() === null ? "—（尚无修复记录）" : mttrMin().toFixed(1) + " 分";
+      $("relFaults").textContent = FAULTLOG.events + " / " + FAULTLOG.repaired;
+      $("relSpares").textContent = SPARES.stock + " 件 / " + SPARES.used + " 件" + (SPARES.stock === 0 ? "（缺货！下次故障将走紧急采购）" : "");
+      $("relSpareCost").textContent = fmtMoney(totalSpareCost()) + "（补货 " + SPARES.restocked + " 次 · 紧急采购 " + SPARES.emergency + " 次）";
+    }
+    var spOut = $("spareOut");
+    if(spOut) spOut.textContent = SPARES.stock + " 件" + (SPARES.stock === 0 ? "（缺货）" : "") + " · 已领用 " + SPARES.used + " 件";
     var rep = $("shiftReport");
     if(rep){
       var dd = dayrepDelta();
@@ -2094,6 +2281,10 @@ function renderKpis(){
         ["单瓶耗（当日 · 每千瓶）", dd.finished > 0 ? "水 " + (dd.water / dd.finished * 1000 * 1000).toFixed(0) + " L · 电 " + (dd.power / dd.finished * 1000).toFixed(1) + " kWh · 汽 " + (dd.steam / dd.finished * 1000).toFixed(1) + " kg" : "—"],
         ["换型次数（当日）", "立即 " + dd.coI + " 次 · 排空 " + dd.coD + " 次"],
         ["平均换型时长（会话累计 · SMED）", "立即 " + (smedAvg("immediate") === null ? "—" : smedAvg("immediate").toFixed(1) + " 分（" + SMED.stats.immediate.n + " 次）") + " · 排空 " + (smedAvg("drained") === null ? "—" : smedAvg("drained").toFixed(1) + " 分（" + SMED.stats.drained.n + " 次）")],
+        ["当日延误罚金", fmtMoney(dd.fine) + "（会话累计 " + fmtMoney(totalFine()) + " · 口径 ¥" + CONFIG.r12.penaltyPerMinute + "/逾期分钟）"],
+        ["ECO 累计节省（会话）", fmtMoney(ECO.savedYuan) + " · 电 " + fmt(ECO.savedKwh) + " kWh · 汽 " + fmt(ECO.savedSteamKg) + " kg" + (ECO.on ? "（ECO 开启中）" : "")],
+        ["单瓶电耗 ECO 开 / 关（每千瓶）", (ECO.onFinished > 0 ? (ECO.onPower / ECO.onFinished * 1000).toFixed(1) : "—") + " / " + (ECO.offFinished > 0 ? (ECO.offPower / ECO.offFinished * 1000).toFixed(1) : "—") + " kWh"],
+        ["故障与备件（会话累计）", "故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件领用 " + SPARES.used + " 件 · 紧急采购 " + SPARES.emergency + " 次"],
         ["发货波次（当日）", dd.waves + " 波 · 已发 " + dd.trips + " 车"],
         ["当前库存", WH.stockCases + " 托（下线暂存 " + LOGI.stage.length + " 托 · 交接位 " + LOGI.handover.filter(function(h){ return !!h; }).length + " 托）"]
       ];
@@ -3856,7 +4047,7 @@ var PERSON_OBSTACLES = [
   [-37.75,-50.1,-36.25,-48.9], [-29.75,-50.1,-28.25,-48.9], [-21.75,-50.1,-20.25,-48.9]  /* CIP 泵组三台（作业位在其间/南侧） */
 ];
 function crewInit(c){
-  c.mode = "idle"; c.path = []; c.pathI = 0; c.pathGo = []; c.workT = 0; c.workDur = null; c.target = null; c.faceYaw = 0;
+  c.mode = "idle"; c.path = []; c.pathI = 0; c.pathGo = []; c.workT = 0; c.workDur = null; c.target = null; c.faceYaw = 0; c.waiting = false;   /* R12：等待备件状态（维修工专用） */
 }
 function buildCrew(){
   var maint = makeWorker(0xc22e2e, 0xf5f2e8);   /* 红背心白盔：维修工，岗位在北人行通道东段 */
@@ -3897,7 +4088,7 @@ function crewReset(){
 }
 window.__crew = function(){
   if(!D.crew) return null;
-  function s(c){ return { mode: c.mode, x: Math.round(c.g.position.x*10)/10, z: Math.round(c.g.position.z*10)/10, target: c.target ? c.target.name : null }; }
+  function s(c){ return { mode: c.mode, x: Math.round(c.g.position.x*10)/10, z: Math.round(c.g.position.z*10)/10, target: c.target ? c.target.name : null, waiting: !!c.waiting }; }
   return { maint: s(D.crew.maint), cip: D.crew.cip.map(s), qc: s(D.crew.qc), qcLastSample: D.crew.qc.lastSample, qcSamples: QC.samples };
 };
 function crewDispatch(c, pathGo, faceYaw, workDur){
@@ -3937,7 +4128,13 @@ function crewWorkPose(c, dt, t){
   c.g.rotation.y += dl * Math.min(1, dt*5);
   c.legL.rotation.x *= 0.75; c.legR.rotation.x *= 0.75;
   var k = Math.min(1, dt*6);
-  if(c.workPose === "crouch"){          /* 维修：弯腰蹲姿 + 工具臂往复作业 */
+  if(c.waiting){                       /* R12：等待备件——直立待命、放下工具臂、偶尔张望（送达后 faultMeta.waitLeft 清零自动转作业姿势） */
+    c.body.rotation.x += (0 - c.body.rotation.x) * k;
+    c.body.position.y *= 0.8;
+    c.armR.rotation.x = -0.12 + Math.sin(t*1.1) * 0.05;
+    c.armL.rotation.x = -0.12 + Math.cos(t*0.9) * 0.05;
+    c.g.rotation.y += Math.sin(t*0.6) * 0.0016;   /* 张望：朝向小幅来回 */
+  } else if(c.workPose === "crouch"){          /* 维修：弯腰蹲姿 + 工具臂往复作业 */
     c.body.rotation.x += (0.34 - c.body.rotation.x) * k;
     c.body.position.y += (-0.1 - c.body.position.y) * k;
     c.armR.rotation.x = -1.15 + Math.sin(t*7) * 0.22;
@@ -3967,6 +4164,8 @@ function updateCrewMember(c, dt, t){
     return;
   }
   if(c.mode === "work"){
+    /* R12：维修工等待备件判定——目标故障为无备件单且等待期未过（faultMeta.waitLeft 由 step 与故障同步递减） */
+    c.waiting = !!(c.target && c.target.ref && c.target.ref.faultMeta && !c.target.ref.faultMeta.spare && c.target.ref.faultMeta.waitLeft > 0);
     crewWorkPose(c, dt, t);
     if(c.workDur !== null && c.workDur !== undefined){
       c.workT += dt;
@@ -5530,12 +5729,12 @@ function pickAt(cx, cy){
   }
 }
 function repairStation(st){
-  if(st.faultLeft>0){ st.faultLeft=0; S.fixedCost+=CONFIG.repairFee; curL().fixedCost+=CONFIG.repairFee; log("维修队抢修完成：「"+st.name+"」恢复运行（维修费 ¥"+CONFIG.repairFee+" 已计入当前产品成本）。","good"); }
+  if(st.faultLeft>0){ st.faultLeft=0; faultCleared(st); S.fixedCost+=CONFIG.repairFee; curL().fixedCost+=CONFIG.repairFee; log("维修队抢修完成：「"+st.name+"」恢复运行（维修费 ¥"+CONFIG.repairFee+" 已计入当前产品成本）。","good"); }   /* R12：抢修同样记 MTTR */
   else if(st.id==="sterilize" && st.cipLeft>0){ st.cipLeft=0; log("杀菌机清洗提前结束并完成验证，恢复生产。"); }
   renderAll();
 }
 function repairLine(l){
-  if(l.faultLeft>0){ l.faultLeft=0; S.fixedCost+=CONFIG.repairFee; curL().fixedCost+=CONFIG.repairFee; log("维修队抢修完成：「"+l.name+"」灌装机恢复运行（维修费 ¥"+CONFIG.repairFee+" 已计入当前产品成本）。","good"); }
+  if(l.faultLeft>0){ l.faultLeft=0; faultCleared(l); S.fixedCost+=CONFIG.repairFee; curL().fixedCost+=CONFIG.repairFee; log("维修队抢修完成：「"+l.name+"」灌装机恢复运行（维修费 ¥"+CONFIG.repairFee+" 已计入当前产品成本）。","good"); }   /* R12：抢修同样记 MTTR */
   renderAll();
 }
 function rowHtml(l, v){ return '<div class="row"><span>'+l+'</span><b>'+v+'</b></div>'; }
@@ -5967,7 +6166,7 @@ bindRange("fillerRange","fillerOut", function(v){ S.filler = v; }, function(v){ 
 bindRange("tankRange","tankOut", function(v){ S.tanks = v; }, function(v){ return v+" 台"; });
 bindRange("sterRange","sterOut", function(v){ S.sterilize = v; }, function(v){ return fmt(v)+" 瓶/分"; });
 bindRange("supplyRange","supplyOut", function(v){ S.supply = v; }, function(v){ return fmt(v)+" 瓶/分"; });
-bindRange("orderRange","orderOut", function(v){ S.orderTarget = v; if(S.orderDone<v) S.orderDoneLogged = false; }, function(v){ return fmt(v)+" 瓶"; });
+bindRange("orderRange","orderOut", function(v){ S.orderTarget = v; if(S.orderDone<v){ S.orderDoneLogged = false; S.orderDueMin = S.simMin + dueOffsetMin(v - S.orderDone, 0, product); } }, function(v){ return fmt(v)+" 瓶"; });   /* R12：改目标即按剩余量重新核定交期 */
 $("faultTgl").addEventListener("click", function(){
   S.faultsOn = !S.faultsOn;
   this.classList.toggle("on", S.faultsOn);
@@ -5981,6 +6180,21 @@ $("cipTgl").addEventListener("click", function(){
   if(S.cipOn) log("CIP 清洗已开启：杀菌机每 "+CONFIG.cipIntervalMinutes+" 分钟强制清洗 "+CONFIG.cipDurationMinutes+" 分钟（北侧 CIP 站同步供酸/碱/热水），所有在线产线一起等料。");
   renderAll();
 });
+/* R12 · ECO 开关与备件补货（控制台/调度台）：只改意图与参数，不直接动在制量 */
+function renderEcoBtn(){
+  var b = $("ecoBtn"); if(!b) return;
+  b.classList.toggle("on", ECO.on);
+  b.setAttribute("aria-pressed", ECO.on ? "true" : "false");
+  b.textContent = ECO.on ? "🌿 ECO 节能：开（电 −18% · 汽 −12% · 灌装上限 −6%）" : "🌿 ECO 节能：关";
+}
+$("ecoBtn").addEventListener("click", function(){
+  ECO.on = !ECO.on;
+  renderEcoBtn();
+  if(ECO.on) log("ECO 节能模式开启：变频降速 + 余热回收生效——流量电耗 −" + Math.round(CONFIG.r12.ecoPowerSave*100) + "%、汽耗 −" + Math.round(CONFIG.r12.ecoSteamSave*100) + "%；代价：灌装上限 −" + Math.round(CONFIG.r12.ecoCapCut*100) + "%（每线 " + fmt(S.filler*product.fillFactor) + " → " + fmt(S.filler*product.fillFactor*(1-CONFIG.r12.ecoCapCut)) + " 瓶/分）。单瓶电耗开/关对比在数据抽屉，节省额进日报。","good");
+  else log("ECO 节能模式关闭：电/汽单位消耗与灌装上限恢复原参数。累计节省保留在日报「ECO 累计节省」行。");
+  renderKpis();
+});
+$("spareBtn").addEventListener("click", function(){ restockSpare(); renderKpis(); });
 $("resetBtn").addEventListener("click", function(){
   S.finished=0; S.rejected=0; S.waterM3=0; S.powerKwh=0; S.steamKg=0; S.fixedCost=0; S.simMin=8*60; S.orderDoneLogged=false;
   S.orderDone=0; S.everRan=false; S.changeover=null; S.lastSettle=""; pendingProduct=null; S.reservation=null; /* R6：重置须清排空预约（静默清，不走 cancelReservation 的日志口径，下面统一写重置日志） */
@@ -5991,12 +6205,17 @@ $("resetBtn").addEventListener("click", function(){
   SMED.cur = null; SMED.awaiting = null; SMED.last.immediate = null; SMED.last.drained = null;
   SMED.stats.immediate.n = 0; SMED.stats.immediate.sum = 0; SMED.stats.drained.n = 0; SMED.stats.drained.sum = 0; SMED.history = [];
   var smN = $("smedNote"); if(smN){ smN.textContent = ""; smN.classList.remove("show"); }
+  /* R12：交期/ECO/备件/故障统计全量复位（属生产状态）；当前单交期按初值重新核定 */
+  S.orderDueMin = 0; S.pendingDueMin = null; setCurrentOrderDue();
+  ECO.on = false; ECO.savedKwh = 0; ECO.savedSteamKg = 0; ECO.savedYuan = 0; ECO.onPower = 0; ECO.onFinished = 0; ECO.offPower = 0; ECO.offFinished = 0; renderEcoBtn();
+  SPARES.stock = CONFIG.r12.spareInit; SPARES.used = 0; SPARES.restocked = 0; SPARES.emergency = 0;
+  FAULTLOG.events = 0; FAULTLOG.repaired = 0; FAULTLOG.repairSumMin = 0; FAULTLOG.runMin = 0;
   renderOrderQueue();
   $("coModal").classList.remove("show");
-  PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0 }; });
+  PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0 }; });
   history=[]; sampleAcc=0; sampleCount=0;
-  stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
-  lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.lastMove=0; });
+  stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.faultMeta=null; st.faultStartMin=null; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
+  lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.faultMeta=null; l.faultStartMin=null; l.lastMove=0; });
   ASEPTIC.stock = CONFIG.asepticStockInit; ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
   /* R2 联动状态全量复位（与 S/账本同口径回初值，货架 FIFO 窗口随 WH 复位自动重排） */
   UTIL.steamLoad = 0; UTIL.steamPressure = 0.95; UTIL.airRunning = 0; UTIL.airPressure = 0.72; UTIL.roRunning = false;
@@ -6048,7 +6267,7 @@ var scenarios = {
     if(activeLines().length < 2) setLines(2);
     if(!S.running) $("playBtn").click();
     var l = lines[1];
-    l.faultLeft = 6; l.faults++;
+    applyFaultStart(l, 6, l.name + " 灌装机");   /* R12：场景故障同样走备件判定（有备件 6 分钟标准时长，缺货自动加时 + 紧急采购费） */
     S.selected = { kind:"line", idx:1 };
     goPreset("filling");
     log("场景「2 号线故障」：2 号线灌装机停机 6 分钟，该线灯变红、瓶流停止，1/3 号线继续生产。点信息卡可抢修。","bad");
