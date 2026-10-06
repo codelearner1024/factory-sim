@@ -519,6 +519,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell"><div class="l">像素比 · 当前 / 设备</div><div class="v mono" id="perfPr">—</div></div>
       <div class="dcell"><div class="l">Draw Call · 上一帧</div><div class="v mono" id="perfCalls">—</div></div>
     </div>
+    <p class="hint mono" id="perfMerge" style="margin-top:6px">静态合并：—</p>
+    <p class="hint mono" id="perfMergeEx" style="margin-top:2px"></p>
 
     <h3>当前订单</h3>
     <div class="orderbar">
@@ -592,6 +594,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">R3 视觉真实感（光影体系 + 材质分级 + 天空远景）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>参数入口</b>：CONFIG.light = { exposure 曝光 / sunColor·sunIntensity 主光（工业冷白）/ hemiSky·hemiGround·hemiIntensity 半球光 / ambientIntensity / skyTop·skyHorizon·skyGround 天空渐变三段 / fogColor·fogNear·fogFar 远景雾 / silhouette 远景剪影色 / shadowTiers 阴影分级 { high 2048 / mid 1024 / low 0=关 } / envIntensity 环境反射强度 }；CONFIG.mats = 八档材质分级 { stainless 不锈钢罐体（粗糙 .22 / 金属 .85）/ steel 管道阀门 / machine 涂装机架 / frame 结构钢件 / plastic 塑料件 / glass 玻璃 / epoxy 环氧地坪 / concrete 水泥 }，M() 预设（STEEL/DARKSTEEL/MACH）与管路流动材质、GLASSMAT、办公室玻璃、地面都只从这两处取值，禁止在 builder 里再散写粗糙度/金属度魔法值。<b>光源结构</b>（buildScene）：半球光 + 方向光主光（PCFSoft 阴影，阴影相机范围按 CONFIG.factory 派生覆盖全厂 360×230，normalBias 0.02）+ 弱环境光；渲染器 sRGB 输出 + ACESFilmic，曝光读 CONFIG.light.exposure。阴影只由主要设备/建筑投射（建场末尾 traverse 把最大边 &lt;3.2 的小件 castShadow 关掉，地面/大平面只接收）。<b>环境反射</b>：buildScene 用程序渐变全景画布经 PMREM 生成 scene.environment，全场 Standard 材质共用、强度统一写 envMapIntensity = CONFIG.light.envIntensity——不锈钢的镜面感全靠它，若关掉环境反射必须同步调低 mats 的 metal 值，否则罐体会发黑。<b>阴影分级与降级</b>：初始档桌面 high / 移动 mid（window.__setShadowTier 可调试切换，切档自动释放旧 shadow.map 重建）；自适应降级链（loop 的 sampleFps）1 级 = 像素比 1.25 + 阴影降 mid，2 级 = 关阴影（low），只降不升。<b>天空与远景</b>：scene.background = 程序渐变画布纹理（顶空→地平线→地面雾色），fogColor 必须与 skyHorizon 同源否则厂界出色带；buildBackdrop 一圈低多边形剪影（北侧缓丘 / 南侧邻厂厂房+双烟囱 / 东侧水塔，MeshBasicMaterial 受雾衰减、无阴影），固定白天、无夜间模式。<b>地面</b>（buildShell）：一张分区颜色贴图（生产区深灰绿环氧 + 边界色带 / 仓储·月台水泥 / 黄色安全线与伸缩缝沿用）+ 一张同构粗糙度贴图（roughnessMap，环氧区半光、水泥区近全粗糙），均为程序画布、无外部图片；改分区范围改 buildShell 里的 epoxyRect 与 fz(34) 月台界线两处、颜色与粗糙度两张图同改。<b>玻璃与液体</b>：GLASSMAT（灌装护罩）/ 办公室玻璃 / 视镜玻璃管走 CONFIG.mats.glass；瓶液 bottleMat 降粗糙（0.16）+ 透明度 0.9 呈透光感，颜色仍由 __setProductColor 驱动；蒸汽/烟气粒子加了冷灰蓝染色（PointsMaterial color）并下调烟气不透明度，新光照下不发白刺眼；警示灯/信标保持发光材质（emissive）方案、不加真实点光源以保性能。</div></div>
       <div class="dcell wide"><div class="l">R4 性能收官 + 全量回归（马拉松收官轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>四轮总览</b>：基线稳定版（控制台可隐藏）→ R1 工艺真实感（杀菌链分产品参数 / 无菌库存守恒 / 灌装转速联动 / 批次衔接）→ R2 仓储物流 + 公用工程联动（锅炉/空压/RO/冷库随负荷、仓库 FIFO 守恒、发货波次装车、原料罐车补给）→ R3 视觉真实感（CONFIG.light/mats 光影材质体系、阴影三档、天空雾与远景、PMREM 环境反射）→ R4 性能收官 + 全量回归（本节）。<b>版本与校验值</b>：各轮快照与 index.html 的 sha256 校验值登记在本地 <b>~/workspace/factory-sim-versions/VERSION_LOG.md</b>（v01 基线 / v02 R1 / v03 R2 / v04 R3），镜像 git 仓库 ~/workspace/factory-sim-repo 有对应标签 <b>v0.1.0–v0.4.0</b>；本轮 R4 代码即马拉松最终版，其快照与标签在收官交付时按同一规矩登记（v05 / v0.5.0）。<b>R4 性能修复</b>：① 粒子减量随画质档真实生效——CONFIG.perf.particleFactor { high 1 / mid 0.6 / low 0.3 }，__setShadowTier 同步 setDrawRange 并缩短 updateScene 的蒸汽/烟气粒子循环；② 自动降级不再静默——sampleFps 触发降级时无论帧率显示开关都写日志并弹出 #qualityNotice 提示条，「恢复高画质」钮（restoreQuality / window.__restoreQuality）一键回初始像素比+阴影+粒子档，恢复后仍可再次自动降级；③ 每帧零分配巡检——遮挡扇形射线（updateOcclusion）的临时向量/盒/命中点全部预分配复用、材质反查改 Map O(1)，resolveCollision 五向推离改标量比较（去数组+sort）；④ 渲染循环零 DOM——pushSample 只置 chartDirty 标志，产能曲线重绘节流到主循环既有 24 帧节奏，KPI/信息卡维持 8/24 帧分频；⑤ resize 改 rAF 合并节流；⑥ 材质去重——视管玻璃管全厂 5 处共用 SIGHTTUBE 一个实例（M() 缓存工厂与 GLASSMAT/SCREENMAT 共享模式此前已在用），瓶/箱/立柱/货架孔位/试剂瓶等高频对象继续 InstancedMesh、表针/液位/火焰只改引用属性不重建几何；⑦ step() 加异常 dt 守卫（NaN/≤0 直接跳步）。<b>R4 回归修复</b>：停机时切产品即时生效——此前暂停状态点确认换产，倒计时只在 step 推进、暂停永不走完会假死；现停机切产品走 startChangeover 结算清线 + completeChangeover 立即完成（结单/报废/换型费/清洗消耗与运行中换产同口径），运行中换产仍走确认→15 分钟倒计时全流程。<b>最终回归结论</b>：A 生产主链 / B 切产品（含停机即时生效）/ C 故障与 CIP / D 公用工程联动 / E 镜头与 UI / F 性能三档 / G 持久与边界——逐项结论见收官交付汇报（构建 + 审计探针实测）。<b>遗留项清单</b>：① 静态几何未做 BufferGeometry 合并——three r128 核心不含 BufferGeometryUtils，高频重复件已全部实例化，剩余一次性网格合并收益低、回归风险高，保留现状；② 巡游解说点 u 为弧长估算，个别点触发可漂移约 1 秒（既有可接受项）；③ 审计/无头环境的软件渲染帧率不代表真机，性能三档的真机帧率区间以实机为准，页面内有帧率显示与自动降级兜底；④ 移动端未设独立低端机档位，靠初始 mid 档 + 自动降级覆盖。除以上四项外无未修复功能缺陷。</div></div>
       <div class="dcell wide"><div class="l">R5 遗留清理 + 真机仪表（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>总览</b>：不动 R1–R4 功能与联动逻辑，专清 R4 遗留清单四项 + 给数据抽屉加真机仪表；全部新参数进 CONFIG（perf.mobileLow / light.shadowTiers.eco / perf.particleFactor.eco）。<b>① 静态几何合并（遗留 ① 已清）</b>：three r128 核心确无 BufferGeometryUtils，故自研 mergeStaticGroup（buildScene 前 R5 一节）：范围只限 D.staticGroups 登记的纯静态根组——远景剪影 / 标识牌面 / 安全标识 / 质检实验室 / 地面导向（组内无任何每帧位姿/可见性更新、组根恒等变换）；按材质签名分桶（贴图按 uuid、其余按类型+颜色+自发光+粗糙/金属+不透明），每桶几何转非索引、烘焙 matrixWorld 后拼接 position/normal/uv，一桶一 Mesh，cast/receive 取来源并集。hitbox（clickables/colorWrite=false）、InstancedMesh 自动跳过；属性集不一致整桶放弃。混合动态组（产线/公用工程/仓库等含转盘/液位/灯/车辆）不合并——高频重复件此前已全部实例化，强行合并会冻死动态件位姿，收益不抵风险（此判断即 R4 保留现状的理由，本轮以「纯静态组全合」方式落地）。合并前后网格数由 mergeAllStaticGroups 在建场时实测、写入 D.mergeStats / window.__mergeStats，控制台有同口径日志（[factory] R5 静态合并：登记组网格 X → Y）；draw call 总数以数据抽屉「真机性能」格的 renderer.info 读数为准，合并组每桶省下的网格即等量 draw call。<b>② 巡游漂移（遗留 ② 已清）</b>：旧 u 按路点序号手估、而 getPointAt 是弧长参数，各段路长悬殊导致约 1 秒早/晚触发。修法：TOUR_STOPS 每站加 wp（路点序号），buildTour 后 alignTourStops() 查曲线弧长表 getLengths(2000)，以 t=wp/N 处的累计弧长占比回填精确 u（误差 &lt;0.0005 → &lt;0.04 秒）；updateCamera 触发时再把 tourT 吸附到 u 并重算机位，消除帧步进过冲。实测 u 值在 window.__tourStopUs。改路线只改 pts 与 wp 对应，勿再手写 u。<b>③ 移动端独立低端档（遗留 ④ 已清）</b>：CONFIG.perf.mobileLow = { pixelRatioCap:1.0, shadowTier:"eco"(512，light.shadowTiers 新增), lodDistance:110 } + particleFactor.eco=0.3；buildScene 一次判定（pointer:coarse 或视口 &lt;820）定版 window.__perfTier/__basePixelCap/__baseShadowTier/__baseLodDistance，桌面三档（high/mid/low）行为不变。自动降级以本档为锚：移动链 eco→关阴影→像素比 0.85，桌面链不变；restoreQuality 回设备档基准（不再另写设备判断）。<b>④ 真机仪表（遗留 ③ 的页面侧落地）</b>：数据抽屉顶部「真机性能」四格——近 60 帧均值帧率（loop 内 perfPushFrame 帧时环，只做数组操作）、设备档/阴影档/降级级数、当前像素比、上一帧 draw call（renderer.info.render.calls），由 renderKpis 按既有 8 帧节奏填写，渲染循环内零 DOM。调试入口 window.__perfSnapshot()（含 merge 与 tourStopUs）。无头/软件渲染帧率仍不代表真机（遗留 ③ 的环境部分无法由页面消除），但真机读数从此可在页面内直接读取反馈。<b>遗留清单更新</b>（R6 注：本节中「控制台整体隐藏」的旧口径已被 R6 独立隐藏取代，见下方 R6 节；本节其余内容不变）：<s>① 静态几何未合并</s>（本轮纯静态组已合并，混合组按上述理由保留）；<s>② 巡游 u 漂移约 1 秒</s>（已按弧长精确对齐）；<s>④ 移动端无独立低端档</s>（mobileLow 已落地）；③ 无头帧率不代表真机——保留为环境说明，页面侧已补真机仪表。本轮新发现：建场走查与合并实测见交付汇报。</div></div>
+      <div class="dcell wide"><div class="l">R7 深砍 Draw Call（设备静态子件深合并 + 动态组内合并 + hitbox 图层化）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>背景</b>：用户真机截图 R5 版 draw call 3,168（45 FPS 靠自动降级 2 级 + 像素比 0.85 换来），R5 合并只覆盖 5 个纯静态组，大头在设备组内的静态子件与动态组内的相对静止子件。<b>做法（参数 CONFIG.perf.mergeEquipmentStatic / mergeMinBucket）</b>：① 设备静态子件深合并 mergeEquipmentStatic（与 mergeStaticGroup 同在 mergeAllStaticGroups 内执行，统计并入 __mergeStats.equipment，抽屉「真机性能」下方两行同源显示）——判定不靠人肉清单，靠动态注册表 D 的可达集：深走 D（含 Object3D 的 userData 句柄，如仪表 needle）收集注册对象与注册材质；网格可合并 ⇔ 本身不是注册件、不使用注册材质、非 hitbox、材质不透明、几何可无损拼接。合并根 = 向上最近的注册「组」（转盘/星轮/封盖塔/手轮/车辆/工人/顶棚组：子件相对组静止，组内按材质分桶合并，组动画照常驱动整桶）或 scene（无注册祖先的整厂静止件跨组同材质合并，顶层组建场后从不移动/隐藏）；注册「网格」的子件放弃（父级可能非均匀缩放）。② 配套：hitbox 移到 1 号图层（相机只启 0 层永不绘制、pickAt 射线单独启 1 层，occRay 不受影响），省掉全部点选盒的空绘制，拾取口径不变。<b>排除清单（实测计数，共 493 件保留原样）</b>：dynamic 177（液位柱/转盘本体/表针/车辆载货/工人肢体/墙·货架·罐体等遮挡淡出逐件目标——逐帧改位姿/缩放/可见性或靠逐件材质表达状态）、hotMaterial 94（管道流光 sterFlow/blendFlow/feedPipeMat、状态灯 lampMat、液面与产品色材质——逐帧改色/脉冲）、transparent 76（玻璃护罩/报警塔灯段/视管——透明排序按网格粒度）、hitbox 21（点选盒，合并即丢 userData.sel）、single 125（同根同材质仅 1 件，如各线独立传送带贴图面，合并无收益）、exotic 0。<b>实测（同机位同状态：无头移动视口、待机、自动降级 2 级关阴影、像素比 1.00，renderer.info.render.calls）</b>：R6 基线 <b>2,867</b> → R7 第一阶段（设备组内静态合并）<b>1,219</b>（−57.5%）→ R7 全量（动态组内合并 + 跨组 + hitbox 图层）<b>592</b>（−79.3%，为基线的 20.7%，优于 ≤1/3 的目标线 956）。网格口径同向：合并范围全场网格 3,794 → 731（−80.7%），其中 R5 登记组 428 → 98、设备子件 3,366 → 633（140 个合并桶）。真机 3,168 是 R5 带 eco 阴影的读数、与无头关阴影口径不可直接相除，但网格 −80.7% 的结构降幅与设备无关，真机 draw call 预期同比例下降（阴影开时合并掉的投射件同步减少，降幅只多不少），以真机四格读数为准回填。<b>红线守恒</b>：hitbox 一件未动（仅加图层）、遮挡淡出目标（墙/货架/罐体/顶棚材质）全部在排除集、动态件与逐帧改色材质零合并、合并网格 castShadow/receiveShadow 取来源并集；回归已过：生产一轮 / 立即换型 / 排空预约→自动触发 / 面板独立隐藏 / 重置（详见当轮交付汇报）。<b>剩余大头（不可再合）</b>：592 中约 493 件为上述排除集 + 140 合并桶 + 实例化网格与粒子；再往下只能动动态件本身（转盘头改实例化）或降几何密度，收益小、回归风险高，停手。</div></div>
       <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
@@ -646,6 +649,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R4 收官：三档画质下粒子数随档增减（high 全量 / mid 0.6 / low 0.3，控制台看 D.steam.geometry.drawRange）；帧率持续低于 45 时自动降级必弹提示条 + 写日志（与帧率显示开关无关），点「恢复高画质」像素比/阴影/粒子全回初始档；暂停状态切产品即时生效（结单/报废/换型费照计），运行中切产品仍走确认 + 15 分钟倒计时；长时间加速运行无 NaN、无负库存、无菌库存不越界；重置后含画质外全部状态回初值</li>
       <li>R5 遗留清理：控制台读 window.__mergeStats——登记的 5 个纯静态组合并后网格数明显下降且各区外观/位置与 R4 一致（牌面文字双面正向、实验室玻璃/货架不动）；window.__tourStopUs 为弧长精算值（不再是 0.10/0.20 手估），巡游全程 9 站均在对应区域停留上字幕、停留时长与 dwell 一致；移动视口（或触屏）打开时 window.__perfTier="mobileLow"、像素比 ≤1.0、阴影档 eco，桌面为 desktop/high；数据抽屉「真机性能」四格有数（帧率 60 帧均值 / 档位 / 像素比 / draw call），开始生产后帧率格随之更新；自动降级与「恢复高画质」在移动档下回到 eco 基准而非 mid</li>
       <li>R6 独立隐藏 + 排空换型：只藏调度台时控制台纹丝不动（body 只有 dispatch-hidden、#dispatch computed visibility=hidden 而 #controlBar 可见、唤回只有 #dispatchShowBtn 可点），反之亦然；两块全藏后点 #dispatchShowBtn 只回调度台、控制台仍藏；排空换型——生产中点产品→弹窗选「排空后换型（预约）」→横幅转蓝显示预约目标与在制剩余且产量继续涨、无菌库存单调下降，totalWip≤1 时自动进 15 分钟换型、结算小结含「排空换型：在制报废 X 瓶」、换型完成新产品生效且新单从 0；预约后横幅「取消预约」可取消且供料恢复（window.__getReservation() 回 null）；预约后改走立即换型立即停线且预约清除；停机时点「排空后换型」直接即时切换不傻等；重置后 __getReservation() 为 null</li>
+      <li>R7 深砍 Draw Call：数据抽屉「真机性能」下两行合并摘要有数（全场网格 3,794 → 731、设备子件 3,366 → 633 / 140 桶、未合并分项 177/94/76/21/125），Draw Call 格在同机位待机下应从 R6 基线 2,867 量级降到 600 上下（无头口径；真机以四格为准）；全厂俯瞰与各预设机位下设备无缺件/错位（转盘 36 头、星轮齿、封盖塔、叉车/卡车车体完整且照常旋转/移动）、点任意设备出信息卡（hitbox 图层化后拾取不变）、顶棚/墙体/货架遮挡淡出正常、阴影照常投射；window.__mergeStats.equipment 与抽屉两行同源</li>
     </ul>
   </div>
 </aside>
@@ -799,6 +803,9 @@ var CONFIG = {
      * 桌面判定与三档（high/mid/low）行为不变。判定在 buildScene 一次完成（window.__perfTier），
      * 自动降级从本档起步（mobileLow → 关阴影 → 像素比 0.85），手动恢复回本档（见 sampleFps / restoreQuality）。 */
     mobileLow: { pixelRatioCap: 1.0, shadowTier: "eco", lodDistance: 110 },
+    /* R7 深砍 Draw Call：设备静态子件深合并开关与分桶阈值（mergeEquipmentStatic，见 buildScene 前 R7 一节）。
+     * mergeMinBucket = 同组同材质签名至少几个网格才值得合并（1 件合并无收益反增一次构建开销）。 */
+    mergeEquipmentStatic: true, mergeMinBucket: 2,
     lowFpsThreshold: 45, fpsSampleSeconds: 2        // 每 fpsSampleSeconds 采样一次帧率，低于阈值逐级降质（像素比→关阴影），只降不升
   },
   /* ---- R3 视觉真实感：光影体系 light + 材质分级 mats（改光影/材质只改这里，builder 禁止再散写魔法值） ----
@@ -1615,6 +1622,14 @@ function renderKpis(){
     if(pfPr) pfPr.textContent = renderer ? renderer.getPixelRatio().toFixed(2) + " / " + (window.devicePixelRatio || 1) : "—";
     var pfCalls = $("perfCalls");
     if(pfCalls) pfCalls.textContent = (renderer && renderer.info && renderer.info.render) ? fmt(renderer.info.render.calls) : "—";
+    /* R7 合并摘要：与 __mergeStats 同源（R5 登记组 + R7 设备组两阶段），让 draw call 的降幅在抽屉里可直接核对 */
+    var pfMerge = $("perfMerge");
+    if(pfMerge && window.__mergeStats){
+      var ms = window.__mergeStats, eq = ms.equipment;
+      pfMerge.textContent = "静态合并：全场网格 " + fmt(ms.before) + " → " + fmt(ms.after) + (eq ? "（其中设备静态子件 " + fmt(eq.before) + " → " + fmt(eq.after) + "，合并桶 " + eq.buckets + "）" : "");
+      var pfMergeEx = $("perfMergeEx");
+      if(pfMergeEx && eq && eq.excluded) pfMergeEx.textContent = "未合并（动态/灯管材质/透明/点选盒/单件）：" + fmt(eq.excluded.dynamic) + " / " + fmt(eq.excluded.hotMaterial) + " / " + fmt(eq.excluded.transparent) + " / " + fmt(eq.excluded.hitbox) + " / " + fmt(eq.excluded.single);
+    }
   }
 }
 function drawChart(){
@@ -1699,6 +1714,7 @@ function CY(parent,rt,rb,h,mat,x,y,z,seg){ /* y = bottom */
 function hitbox(parent,w,h,d,x,y,z,sel){
   var ms = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshBasicMaterial({ transparent:true, opacity:0, depthWrite:false, colorWrite:false }));
   ms.position.set(x, y+h/2, z); ms.userData.sel = sel;
+  ms.layers.set(1);   /* R7：点选盒移到 1 号图层——相机只启 0 层故永不绘制（省每帧 draw call），pickAt 的射线单独启 1 层照常命中；遮挡射线 occRay 用默认 0 层、不受影响 */
   parent.add(ms); clickables.push(ms); return ms;
 }
 function canvasTex(w,h,draw){
@@ -3342,10 +3358,139 @@ function mergeAllStaticGroups(){
       tot.groups.push({ label: sg.label, before: r.before, after: r.after });
     } catch(err){ if(window.console) console.warn("[factory] R5 静态合并跳过「" + sg.label + "」：", err); }
   });
+  if(window.console && console.info) console.info("[factory] R5 静态合并：登记组网格 " + tot.before + " → " + tot.after + "（减少 " + (tot.before - tot.after) + " 个网格/draw call）", tot.groups);
+  /* R7：设备静态子件深合并（见下方 R7 一节）。统计并入同一 __mergeStats：顶层 before/after
+   * 自此为 R5 登记组 + R7 设备组两阶段合计，R5 分项仍在 groups[]、R7 分项在 equipment。 */
+  try {
+    var eq = mergeEquipmentStatic();
+    tot.equipment = eq;
+    tot.before += eq.before; tot.after += eq.after;
+    if(window.console && console.info) console.info("[factory] R7 设备深合并：设备组网格 " + eq.before + " → " + eq.after + "（减少 " + (eq.before - eq.after) + "，合并桶 " + eq.buckets + "）", eq.excluded);
+  } catch(err){ if(window.console) console.warn("[factory] R7 设备深合并跳过：", err); }
   D.mergeStats = tot;
   window.__mergeStats = tot;
-  if(window.console && console.info) console.info("[factory] R5 静态合并：登记组网格 " + tot.before + " → " + tot.after + "（减少 " + (tot.before - tot.after) + " 个网格/draw call）", tot.groups);
   return tot;
+}
+
+/* ================= [M2] R7 · 设备静态子件深合并（深砍 Draw Call） =================
+ * 背景：R5 只合了 5 个纯静态根组，真机实测（用户截图）draw call 仍达 3,168——大头在各设备组内
+ * 成百上千的「静态子件」：机架 / 底座 / 外壳 / 固定管段 / 围栏 / 支架 / 爬梯 / 法兰 / 罐体附件，
+ * 它们与动态件同住一组，R5 的「整组纯静态」口径不敢碰。本轮改为子件级判定：一个网格可合并 ⇔
+ * 它不在动态注册表 D 的可达范围内、不使用任何被 D 注册的材质、不是 hitbox、材质不透明、
+ * 几何属性可无损拼接。判定依据是注册表而非人肉清单——架构红线本就要求一切动态件登记进 D，
+ * 未登记者按约定即静态；本 pass 因此能跨全部设备组（产线×3 / 上游罐区 / 杀菌无菌区 / 仓储月台 /
+ * 公用工程 / CIP / 厂房壳体）按「合并根 × 材质签名」分桶合并（合并根 = 动态组本身或 scene
+ * 跨组，见下方合并根判定），被驱动件逐个原样保留。另有配套一刀：点选 hitbox 移到相机不渲染
+ * 的 1 号图层（hitbox()/pickAt() 配对改 layers），拾取不变、每帧省掉全部点选盒的空绘制。
+ * 排除清单（逐类，对应下方 excluded 计数）：
+ *  ① dynamic —— 本身就是 D 注册被驱动件的网格：液位柱（sightLiquids/blendLiquids/
+ *     asepticLiquids，逐帧改 scale）、转盘/星轮本体、仪表表针（挂在表组 userData.needle 下、
+ *     注册表收集时连 userData 句柄一并收）、瓶流/箱流实例、车辆载货与工人肢体（逐帧切
+ *     visible/改位姿）、墙体/货架/原料罐体（D.wallMeshes/rackMeshes/tankMeshes，遮挡淡出
+ *     的逐件目标）、以及「被驱动网格的子件」（父网格可能非均匀缩放）。注意与之相对的另一半：
+ *     D 注册「组」的未注册子件（转盘上的 36 个灌装头、星轮齿、封盖塔头、叉车/卡车车体件、
+ *     手轮辐条）相对组静止——按组内分桶合并，组的旋转/位移照常驱动整桶，动画与位姿不变，
+ *     这是本轮降幅的主来源；顶棚组子件同理（整组 visible 切换不受影响，遮挡淡出走材质、
+ *     顶棚材质在 ② 里排除，梁柱合并不改变淡出判定）；
+ *  ② hotMaterial —— 使用 D 注册材质的网格：管道流光（sterFlow / blendFlow / feedPipeMat：
+ *     逐帧改色 + 脉冲）、状态灯（各 lampMat：逐帧改 emissive）、液面与产品色材质
+ *     （sightLiquidMat / blendLiquidMat / bottleMat / stripeMat：换产经 __setProductColor 改色）；
+ *  ③ hitbox —— clickables 点选盒（colorWrite=false）：拾取的唯一目标，合并即丢 userData.sel；
+ *  ④ transparent —— 玻璃护罩 / 报警塔灯段 / 视管玻璃：透明排序按网格粒度，合入会打乱排序，
+ *     且护罩类与状态表达相邻，宁可保留（R5 纯静态组内的透明件维持 R5 口径，本 pass 不碰）；
+ *  ⑤ exotic —— 多材质数组 / 带顶点色 / 缺 normal 的几何：拼接会丢属性，放弃；
+ *  ⑥ single —— 桶内仅 1 件（如每线独立的传送带贴图面）：合并无收益，保留原样。
+ * 烘焙口径：几何变换 = inv(组根.matrixWorld) × 网格.matrixWorld，合并网格回挂组根、局部恒等——
+ * 组根建场后从不移动（会动的根都在 ① 里），位姿可证不变；castShadow / receiveShadow 取来源
+ * 并集，与 R5 同口径。开关与阈值在 CONFIG.perf（mergeEquipmentStatic / mergeMinBucket）。
+ * 基线与实测对比（同机位同状态 renderer.info.render.calls）记在交接文档 R7 节。 */
+function collectDynamicRegistry(){
+  var objs = [], mats = [], seen = [];
+  (function walk(v, depth){
+    if(!v || typeof v !== "object" || depth > 8) return;
+    if(seen.indexOf(v) >= 0) return; seen.push(v);
+    if(v.isObject3D){ objs.push(v); if(v.userData) walk(v.userData, depth+1); return; }   /* userData 句柄也要收（如仪表 needle 挂在表组 userData.needle 下，它本身是被驱动件） */
+    if(v.isMaterial){ mats.push(v); return; }
+    if(v.isTexture || v.isColor || v.isVector2 || v.isVector3 || v.isMatrix4) return;
+    if(Array.isArray(v)){ for(var i=0;i<v.length;i++) walk(v[i], depth+1); return; }
+    for(var k in v){ if(Object.prototype.hasOwnProperty.call(v, k)) walk(v[k], depth+1); }
+  })(D, 0);
+  return { objs: objs, mats: mats };
+}
+function mergeEquipmentStatic(){
+  var st = { before:0, after:0, mergedMeshes:0, buckets:0, excluded:{ dynamic:0, hotMaterial:0, hitbox:0, transparent:0, exotic:0, single:0 } };
+  if(!scene || !CONFIG.perf.mergeEquipmentStatic){ st.after = st.before; return st; }
+  var reg = collectDynamicRegistry();
+  var regSet = new Set(reg.objs);
+  var hotMats = new Set(reg.mats);
+  [bottleMat, blendLiquidMat, sightLiquidMat].forEach(function(m){ if(m) hotMats.add(m); });   /* 全局产品色材质（不在 D 内但会被换产改色） */
+  var clickSet = new Set(clickables);
+  var staticRoots = new Set(D.staticGroups.map(function(sg){ return sg.root; }));
+  scene.updateMatrixWorld(true);
+  var allMeshes = [];
+  scene.traverse(function(o){ if(o.isMesh && !o.isInstancedMesh) allMeshes.push(o); });
+  var buckets = {}, order = [];
+  allMeshes.forEach(function(m){
+    var top = m; while(top.parent && top.parent !== scene) top = top.parent;
+    if(staticRoots.has(top)) return;                                    /* R5 已处理组，不重复 */
+    st.before++;
+    if(regSet.has(m)){ st.excluded.dynamic++; return; }                 /* 本身就是被驱动件（液位/转盘本体/表针/车辆载货…）：位姿/缩放逐帧变，绝不合 */
+    if(clickSet.has(m) || !m.material || m.material.colorWrite === false){ st.excluded.hitbox++; return; }
+    if(Array.isArray(m.material) || !m.geometry || !m.geometry.attributes || !m.geometry.attributes.position || !m.geometry.attributes.normal || m.geometry.attributes.color){ st.excluded.exotic++; return; }
+    if(hotMats.has(m.material)){ st.excluded.hotMaterial++; return; }
+    if(m.material.transparent){ st.excluded.transparent++; return; }
+    /* 合并根判定：向上找最近的 D 注册祖先——
+     *  · 命中组（转盘/星轮/车辆/手轮组…）：子件相对该组静止，组内合并后组的旋转/位移照常驱动整桶，动画不变；
+     *  · 命中网格（被驱动网格的子件）：父网格可能非均匀缩放（如液位），放弃；
+     *  · 无命中：整厂静止件，统一以 scene 为根跨组同材质合并（顶层设备组建场后从不移动/隐藏，已逐项核对）。 */
+    var root = scene, anc = m.parent, blocked = false;
+    while(anc && anc !== scene){
+      if(regSet.has(anc)){ if(anc.isMesh) blocked = true; else root = anc; break; }
+      anc = anc.parent;
+    }
+    if(blocked){ st.excluded.dynamic++; return; }
+    var key = root.uuid + "|" + mergeMaterialKey(m.material);
+    if(!buckets[key]){ buckets[key] = { root: root, mat: m.material, list: [] }; order.push(key); }
+    buckets[key].list.push(m);
+  });
+  var minBucket = CONFIG.perf.mergeMinBucket || 2, removedTotal = 0;
+  order.forEach(function(key){
+    var b = buckets[key];
+    if(b.list.length < minBucket){ st.excluded.single += b.list.length; return; }
+    var inv = new THREE.Matrix4().copy(b.root.matrixWorld).invert();
+    var parts = [], hasUv = true, ok = true, total = 0;
+    for(var i=0;i<b.list.length;i++){
+      var src = b.list[i].geometry, g2 = null;
+      try { g2 = src.index ? src.toNonIndexed() : src.clone(); } catch(e){ ok = false; break; }
+      g2.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, b.list[i].matrixWorld));
+      if(!g2.attributes.uv) hasUv = false;
+      parts.push(g2); total += g2.attributes.position.count;
+    }
+    if(!ok || total === 0){ parts.forEach(function(p){ p.dispose(); }); st.excluded.exotic += b.list.length; return; }
+    var pos = new Float32Array(total*3), nor = new Float32Array(total*3), uv = hasUv ? new Float32Array(total*2) : null;
+    var off = 0;
+    parts.forEach(function(g2){
+      pos.set(g2.attributes.position.array, off*3);
+      nor.set(g2.attributes.normal.array, off*3);
+      if(uv) uv.set(g2.attributes.uv.array, off*2);
+      off += g2.attributes.position.count;
+      g2.dispose();
+    });
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    if(uv) geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    geo.computeBoundingSphere();
+    var merged = new THREE.Mesh(geo, b.mat);
+    merged.castShadow = b.list.some(function(m){ return m.castShadow; });
+    merged.receiveShadow = b.list.some(function(m){ return m.receiveShadow; });
+    merged.userData.r7Merged = key;
+    b.list.forEach(function(m){ if(m.parent) m.parent.remove(m); });
+    b.root.add(merged);
+    st.mergedMeshes++; st.buckets++; removedTotal += b.list.length - 1;
+  });
+  st.after = st.before - removedTotal;
+  return st;
 }
 
 function buildScene(){
@@ -4244,7 +4389,7 @@ function initControls(){
    ================================================================ */
 var raycaster = null, infoHover = false;
 function pickAt(cx, cy){
-  if(!raycaster) raycaster = new THREE.Raycaster();
+  if(!raycaster){ raycaster = new THREE.Raycaster(); raycaster.layers.set(1); }   /* R7：只测 1 号图层的点选盒（与 hitbox 的 layers.set(1) 配对） */
   var mouse = new THREE.Vector2((cx/innerWidth)*2-1, -(cy/innerHeight)*2+1);
   raycaster.setFromCamera(mouse, camera);
   var hits = raycaster.intersectObjects(clickables, false);
