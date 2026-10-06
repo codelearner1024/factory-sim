@@ -233,6 +233,18 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 .supply-alert.warn{border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
 .supply-alert.critical,.supply-alert.stockout{border-color:var(--red);color:var(--red);background:var(--red-soft)}
 .qrow .qx{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;width:26px;height:26px;flex:0 0 auto;font-size:12px;line-height:1}
+/* R15：批次追溯输入与谱系时间线 */
+.trace-input{background:var(--surface2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 12px;font-size:13px;flex:1 1 130px;min-width:120px;font-family:inherit}
+.trace-chip{border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700}
+.trace-chip:active{border-color:var(--accent)}
+.gene{border:1px solid var(--line);border-radius:12px;background:var(--surface2);padding:11px 13px}
+.gene h4{margin:0 0 8px;font-size:13.5px;font-weight:900}
+.gene .gnode{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.gene .gnode:first-of-type{border-top:0}
+.gene .gt{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--faint);font-weight:700;white-space:nowrap;padding-top:2px;min-width:74px}
+.gene .gb{font-size:12.5px;line-height:1.55;min-width:0}
+.gene .gb b{font-weight:800}
+.gene .gb .sub{color:var(--muted);font-size:11.5px}
 .qempty{color:var(--muted);font-size:12.5px;font-weight:600;padding:8px 2px 2px}
 .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .lean li{margin-bottom:4px}
@@ -530,6 +542,13 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <button class="btn" id="spareBtn" style="width:100%;justify-content:center">🔩 补 1 件备件（¥350 · 计入成本）</button>
       <p class="hint" style="margin:6px 2px 0">有备件：故障走标准时长并领用 1 件。缺货：时长 ×2.2 + 紧急采购费 ¥1,200（均进成本台账），维修工在现场等备件。MTBF / MTTR 与备件消耗在数据抽屉「设备可靠性与备件」看。</p>
     </div>
+    <div class="sec-label">预测性维护（健康度预警）</div>
+    <div class="ctl">
+      <div class="lab"><label>设备健康度</label><output id="pmOut">—</output></div>
+      <div class="supply-alert ok" id="pmAlert" role="status">健康度监控中：关键设备暂无预警。</div>
+      <button class="btn" id="pmBtn" style="width:100%;justify-content:center">🛠 保养最低健康度设备（停机 4 分 · ¥450）</button>
+      <p class="hint" style="margin:6px 2px 0">健康度随运行负荷衰减：跌破 70 先黄字预警，跌到 28 会劣化成故障（走备件维修链、修后只回 72）；预警期点保养即可停机短修、恢复到 100 免于故障。保养不耗备件，费用计入当前产品成本。在 3D 里点中设备也能看健康度并单独保养。</p>
+    </div>
     <div class="sec-label">一键场景</div>
     <div class="scenarios">
       <button class="scen" data-scen="normal">☀ 平稳日常<span>回到均衡点</span></button>
@@ -596,7 +615,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     <p class="hint mono" id="perfMerge" style="margin-top:6px">静态合并：—</p>
     <p class="hint mono" id="perfMergeEx" style="margin-top:2px"></p>
     <p class="hint mono" id="perfNav" style="margin-top:2px">车辆最小净距：—</p>
-    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：R13 实测待填（口径：全厂俯瞰机位 · 待机 · window.__perfSnapshot() 读 renderer.info.render.calls，含阴影通道）。</p>
+    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：R15 实测（全厂俯瞰机位 · 桌面档 · window.__perfSnapshot() 读 renderer.info.render.calls，含阴影通道）——待机 767 · 运行（平稳日常生产中）804。如实注记：高于 R10 的 700 护栏，也高于以往 592~636 的合并估算（那些估算从未以 renderer 实测为准）——R15 未新增任何场景网格，此为存量真实值，已列入 PDCA 下一轮 Act（二探动态件）。</p>
     <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="uiResetBtn">↺ 恢复默认界面</button><span class="hint" style="margin:0">界面偏好（面板隐藏 / 画质档 / 相机条折叠 / 选中机位）仅本次打开期间保留：重置模拟不会清掉它们，刷新页面则恢复默认。</span></div>
 
     <h3>物流任务播报（与车辆动作同源）</h3>
@@ -606,6 +625,15 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">入库台 AGV · 包装下线 → 货架</div><div class="v" id="logiLineIn" style="font-size:13px">空闲</div></div>
       <div class="dcell wide"><div class="l">出库台 AGV · 货架 → 交接位</div><div class="v" id="logiLineOut" style="font-size:13px">空闲</div></div>
     </div>
+
+    <h3>批次追溯（全链谱系 · 点托盘或输批次号）</h3>
+    <p class="hint">每个调配批次一张谱系卡：配方与原料批次 → 灭菌参数实测 → 灌装线与时段 → 抽检结果 → 码垛成托编号 → 所在货位 → 出库波次与装车车次，全部由状态机事件同源记录（调配出料 / 产量归属 / 抽检 / 码垛满托 / AGV 入位 / 叉车装车）。在仓库点中任意一托货架托盘也会打开它的谱系摘要。归档保留最近 60 批（CONFIG.r15），换型后仍可查。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input class="trace-input" id="traceInput" type="text" inputmode="numeric" placeholder="输入调配批次号，如 3" aria-label="调配批次号">
+      <button class="btn" id="traceBtn">🔍 查询谱系</button>
+    </div>
+    <div id="traceChips" style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap"></div>
+    <div id="traceResult" style="margin-top:10px"><div class="qempty">尚无批次谱系 · 开工并完成一轮调配出料后，这里会出现可查的批次。</div></div>
 
     <h3>当前订单</h3>
     <div class="orderbar">
@@ -691,7 +719,11 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell"><div class="l">故障次数 / 已修复</div><div class="v mono" id="relFaults" style="font-size:13px">0 / 0</div></div>
       <div class="dcell"><div class="l">备件库存 / 累计领用</div><div class="v mono" id="relSpares" style="font-size:13px">—</div></div>
       <div class="dcell wide"><div class="l">备件费用（补货 + 紧急采购 · 已计入成本台账）</div><div class="v mono" id="relSpareCost" style="font-size:13px">¥0</div></div>
+      <div class="dcell"><div class="l">最低健康度（预测性维护）</div><div class="v mono" id="pmMinHealth" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">健康预警 / 已保养</div><div class="v mono" id="pmWarnMaint" style="font-size:13px">0 / 0</div></div>
+      <div class="dcell wide"><div class="l">保养费用（会话累计 · 已计入成本台账）</div><div class="v mono" id="pmCost" style="font-size:13px">¥0</div></div>
     </div>
+    <p class="hint">预测性维护（R15）：关键设备（供应 / 调配 / 杀菌 + 三条灌装线）带健康度，随运行时长与负荷衰减；跌破 70 黄色预警（调度台与精益看板同步），跌到 28 触发劣化故障，故障修复后健康度只回到 72——预警期保养（停机 4 分钟 · ¥450 · 不耗备件）可恢复到 100、免于故障。参数在 CONFIG.r15。</p>
 
     <h3>精益改善看板（工厂持续改进）</h3>
     <ul class="doclist lean">
@@ -710,6 +742,8 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li><span class="stchip">已落地</span><b>第五个产品 · 苏打气泡水</b> — 独立配方 / 灭菌参数 / 瓶盖标签配色 / 台账，全链接入（R13）</li>
       <li><span class="stchip">已落地</span><b>班次与夜班</b> — 白/夜两班自动轮换、夜班津贴入账 + 产能系数、夜间照明、日报分班小计（R13）</li>
       <li><span class="stchip">已落地</span><b>线末自动码垛机</b> — 龙门整层码垛 460 箱/分（≥ 三线包装下线峰值 400），12 瓶/箱 × 25 箱 = 300 瓶/托与仓库口径一致，满托滑暂存位再由 AGV 上架（R14）</li>
+      <li><span class="stchip">已落地</span><b>批次全链追溯</b> — 调配批次谱系：配方/原料批 → 灭菌实测 → 灌装时段 → 抽检 → 成托 → 货位 → 波次/车次，点托盘或输批次号可查（R15）</li>
+      <li id="pmLean"><span class="stchip doing">监控中</span><b>预测性维护</b> — <span id="pmLeanTxt">健康度 — · 预警 0 次 · 保养 0 次</span>（R15）</li>
       <li id="rawLean"><span class="stchip doing">监控中</span><b>原料供应链预警</b> — <span id="rawLeanTxt">液位 — · ETA —</span>（R13）</li>
       <li><span class="stchip todo">待排期</span><b>灌装转盘 36 头实例化</b> — Draw Call 再下探的剩余空间在动态件</li>
     </ul>
@@ -743,6 +777,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">R11 PDCA 打包轮（界面偏好会话内保持 + SMED 换型计时 + 人员任务化 + 性能二探/回归探针）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 11 轮打包交付，参数全在 <b>CONFIG.r11</b>。<b>① 界面偏好（A 项，R10 的 C 项降级落地）</b>：R10 已确认沙盒 localStorage 不可靠、不冒充跨刷新持久化；本轮落地<b>会话内保持</b>——偏好登记处 <b>UIPREFS</b>（window.__uiPrefs() 可读）：控制台/调度台隐藏、调度台折叠、相机条折叠（setMoveCollapsed 同步登记）、选中机位（goPreset 登记，巡游/拖动接管不清）、画质档（renderKpis 按既有节奏回读 __shadowTier/qualityLevel）。<b>重置模拟只重置生产状态，绝不碰 UIPREFS</b>（resetBtn 处理器内明示）；刷新页面回默认——抽屉真机性能区小字如实标注「仅本次打开期间保留」。<b>「恢复默认界面」</b>钮（#uiResetBtn → resetUIPrefs）一次清全部：两面板显示、折叠按屏宽默认、restoreQuality 回设备档、goPreset("overview")。<b>② SMED 换型计时（B 项）</b>：三段全部由既有状态机实测、无新编时长——排空期 = 预约 t0（reserveChangeover 记 S.simMin）→ 排空触发（经 opts.drainMinutes 传入，立即换型恒 0）；清洗期 = S.changeover 存续仿真分钟（即 CO_MINUTES 倒计时实测，停机即时换型为 0）；调机首件期 = completeChangeover → step 里新产品良品首次下线（ledger 超过完成时刻基线）时 smedFinalize 定版。定版动作：控制台 #smedNote 留一行小结（总 = 排空 + 清洗 + 首件，较同模式上次 ±差值，首次注明无对比）+ 写日志 + SMED.stats 按 immediate/drained 分开累计；精益看板 #smedAvgTxt 行与日报卡「平均换型时长（会话累计 · SMED）」格、日报下载文本同读 stats。读数口 window.__smed()。换型中途再换型覆盖 cur/awaiting 不计；重置清 SMED 与小结行。<b>③ 人员任务化（C 项）</b>：D.crew 三岗位（makeWorker 同机制，建场在 merge 前且经 D 注册保动态不合并）+ 状态机 idle→go→work→back→idle（updateCrew 在 updateScene 工人段后推进）。<b>维修工</b>（红背心白盔 + 工具箱，岗位北通道 (52,-42)）：crewFindFault 工位优先/先故障先修，派单路线全走既有通道——供应经罐间隙 x=-30 + 罐南通道到 (-79,-13)、调配 (-40,-24.5)、杀菌经罐间隙 x=-14 到 UHT 旁 (-14,-19)、1 号线走道北侧 (12,-46.5)（南侧是无菌罐排）、2/3 号线经东纵脊 x=76 + 线间横通道到 (12,6)/(12,34)；到点 crouch 蹲姿 + 工具臂，作业存续与 faultLeft 同源（自然修好/抢修清零才收工，回岗位任务才完）。<b>CIP 班组 ×2</b>（蓝背心 + 软管卷，岗位 CIP 站控制柜旁）：stations[2].cipLeft&gt;0 派单到泵阀作业位 (-33,-51.2)/(-25,-51.2) valve 姿势，cipLeft 清零离场。<b>质检员</b>（白背心 + 样品瓶，岗位实验室 (38,-50)）：只认 QC.samples 递增（stepQC 同一事件同源，不另掷随机），路线出门 → 东纵脊 x=76 → 罐南通道 → 无菌罐取样口 (-9,-24)，取样停留 CONFIG.r11.qcSampleSec 后携瓶返回（propOn=back），忙碌错过不补队。人员净距：PERSON_OBSTACLES（薄带/一体机/逐罐/杀菌链/CIP 泵组等设备占地）逐帧采样写 __navStats.personMinEquip（减人员半径 0.35），与车辆四值同行显示；实验室本体不入表（质检员岗位在其内，属作业区非穿越对象）。重置 crewReset 回岗位清任务。<b>④ 性能与回归（D 项）</b>：DrawCall 二探与四探针（AGV 会车解脱 / 日报↔KPI 交叉 / R10 三段补证回归 / 20,000 步长跑守恒无 NaN）由当轮审计探针在真实页面实跑，数字写交付汇报，不在本节预填；人员新增网格约 40（4 人 × makeWorker 9 件 + 道具 4），护栏仍为同机位 ≤700。<b>⑤ 手势安全区紧急修复（同轮真机反馈）</b>：用户实报底部按钮与安卓 Home 手势条重叠、点按钮先退出。修法：:root 新增令牌 <b>--sab</b>=env(safe-area-inset-bottom, 0px)、<b>--bottom-lift</b>=max(36px, calc(var(--sab) + 16px))，全部贴底可交互元素统一起抬且热区下沿不进屏幕底部 36px 手势带——.control-bar（原 bottom 12px）与 .show-stack 两颗唤回钮（原 14px）改 var(--bottom-lift)；.hint-chip / .info-card 改 calc(var(--bottom-lift) + 74px)、.tour-cap 改 +76px、≤900px .dispatch 与 .info-card 改 +138px（均为相对旧基线的等距抬升）；.drawer 本体全高不贴底锚定，其滚动内容 .drawer-body 底部内边距改 calc(var(--sab) + 36px) 保末行元素离底 ≥36px；body 加 padding-bottom:var(--sab) 作安全垫高。按钮尺寸/热区一律未缩（.panel-show min-height 44px、≤900px .btn min-height 40px 不变），只上移位置。此后禁止再写裸 px 贴底值，新增贴底元素必须引用 --bottom-lift。</div></div>
       <div class="dcell wide"><div class="l">R12 PDCA 打包轮（订单交期罚金 + ECO 节能 + 故障备件体系 + 性能/回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 12 轮打包交付，参数全在 <b>CONFIG.r12</b>，读数口 <b>window.__r12()</b>。<b>① 交期与延误罚金（A 项）</b>：取代 R10 的固定 +480 分钟交期——dueOffsetMin = max(dueMinMinutes=30, ceil((在前量+本单量) ÷ nominalCapPerMin × dueSlack=1.5))；nominalCapPerMin = 当前设定下 min(供应, 调配=罐数×blendPerTank×blendFactor, 杀菌=sterilize×flowFactor, 灌装=在线线数×filler×fillFactor)，下限 60。在前量：入队时 = 当前单剩余 + 已排队各单量。当前单交期 S.orderDueMin：首单/重置/手动换产落单时 setCurrentOrderDue（按剩余量核定），改订单目标滑杆即按剩余量重核，队列同产品续单沿用入队交期、异产品经 S.pendingDueMin 由 completeChangeover 落单时采用。<b>罚金口径（唯一）= 每逾期 1 仿真分钟 penaltyPerMinute=¥12（按分钟 flat，不按瓶）</b>，订单完成分支 settleOrderDue 一次性结算进 curL().fine；fine 与 spare 均并入 ledgerCost，总利润 totalProfit() 同源扣减（无第二套账）。预警：当前单订单卡与队列行同口径——剩余 &lt; dueWarnMinutes=60 变黄（.due-warn / .qdue.warn）、逾期变红并显示罚金累积中；日报格「当日延误罚金」（DAYREP 快照加 fine 字段做差）+ 下载文本同行。<b>② ECO 节能（B 项）</b>：控制台 #ecoBtn 开关（renderEcoBtn 同步文案/aria）。生效点只有两处：step 流量入账——电 ×(1−ecoPowerSave=0.18)、汽 ×(1−ecoSteamSave=0.12)（水不打折；CIP/换产事件整场消耗不打折）；fillRate ×(1−ecoCapCut=0.06)（灌装上限打折，按钮日志明示每线 瓶/分 前后值）。节省按反事实累计 ECO.savedKwh/savedSteamKg/savedYuan（毛耗=实耗÷(1−折扣) 还原），日报行「ECO 累计节省（会话）」与下载文本同源；单瓶电耗按 ECO.onPower/onFinished 与 offPower/offFinished 两组分开累计，抽屉公用工程区两格 + 日报一行同读。ECO 只改系数不改任何在制量，切换不破守恒；重置关 ECO 并清累计。<b>③ 故障与备件（C 项）</b>：库存 SPARES {stock 初值 spareInit=3, used, restocked, emergency}；故障统一入口 <b>applyFaultStart(obj, baseDur, label)</b>——随机故障（step）与场景「2 号线故障」都走它：有备件 stock−1、used+1、时长=baseDur；无备件时长 ×noSpareTimeFactor=2.2、curL().spare += emergencyFee=¥1200、faultMeta={spare:false, waitLeft: 加时部分}。faultMeta.waitLeft 在 step 与 faultLeft 同步递减；<b>维修工等待表现</b>：updateCrewMember 每帧判定 c.waiting（目标 faultMeta 为无备件单且 waitLeft&gt;0），crewWorkPose 的 waiting 分支 = 直立待命 + 双臂放下 + 朝向小幅张望，备件「送达」（waitLeft 清零）自动转蹲姿作业；__crew() 输出 waiting。修复完成统一经 <b>faultCleared</b>（step 自然递减到 0 与 repairStation/repairLine 抢修都调）记 FAULTLOG.repaired/repairSumMin；FAULTLOG.runMin 在 step 运行推进时累计，MTBF=runMin/events、MTTR=repairSumMin/repaired（mtbfMin/mttrMin）。补货 restockSpare（调度台 #spareBtn，上限 spareMax=9）：stock+1 且 curL().spare += sparePrice=¥350——收费进台账，绝不凭空恢复。抽屉「设备可靠性与备件」五格 + 日报「故障与备件」行 + 精益看板同读 FAULTLOG/SPARES。<b>④ 性能与回归（D 项）</b>：Draw Call 以同机位（全厂俯瞰·待机）renderer.info 实测为准，数字写当轮交付汇报；回归探针包五项（20,000 步守恒长跑 / 三段补证回归 / AGV 会车解脱 / CSS 安全区断言——全量扫描 position:fixed 交互元素 bottom 计算值 ≥36px 手势下限，防 R11 修复回退 / ECO 开关两段单瓶电耗差与 CONFIG 百分比误差 &lt;2%）由当轮审计探针在真实页面实跑，结论写交付汇报、不在本节预填。<b>重置口径</b>：ECO 关并清累计、备件回初值、FAULTLOG 清零、当前单交期重新核定、stations/lines 的 faultMeta/faultStartMin 清空，均在 resetBtn 处理器内与既有复位同级。</div></div>
       <div class="dcell wide"><div class="l">R13 PDCA 打包轮（第五产品苏打气泡水 + 班次夜班 + 原料供应链预警 + DrawCall 实测补证）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 13 轮打包交付，新参数全在 <b>CONFIG.r13</b>（灭菌参数在 CONFIG.sterilizeProcess.soda），读数口 <b>window.__r13()</b>，探针口 <b>window.__r13Probe</b>（step/frames 定速推进、setRawLevel 压罐存、setSimMin 跳班次时刻）。<b>① 苏打气泡水（A 项）</b>：PRODUCTS 新增 soda（售价 ¥2.80 / 成本 ¥1.45 / blendFactor 1.25 / fillFactor 0.86 / 良品率 0.990；瓶液色浅青 #a5f3fc、瓶盖深青 #0f766e、标签薄荷 #2dd4bf——__setProductColor(hex, labelHex) 第二参数驱动产线饰条与货架箱贴带走标签色，盖色进产品行）。配方 CONFIG.recipes.soda：5000 L 批、混合 8 分；物料行 处理水（water 源）/ 矿物质浓缩液 / 碳酸氢钠（minor 源）/ CO₂ 210 kg（minor 源，备注行明示「灌装前碳酸化机注入、不走调配罐」）；配方无 syrup/conc 源——activeStages 按源类型自动跳过糖浆/浓缩液泵送段，与矿泉水同路。灭菌参数 sterilizeProcess.soda = 95°C / 保持 10 s / 预热 70°C / 冷却出口 8°C / 均质 40·10 bar / flowFactor 1.15，<b>依据</b>：碳酸化在热处理之后注入（CO₂ 遇热逸出，故灭菌对象是处理水基底）、低甜度水基底热负荷低可低温短时、深冷出口利于 CO₂ 溶解——参数注释放 CONFIG 内。兼容面自检：账本/切产 UI/批次/日报/抽检/班组/精益看板/换算系数全部遍历 PRODUCTS 派生，全文件 grep 无 PRODUCTS[ 数字下标写死、无「4 产品」字面量假设（订单/换型含排空预约/日报/看板/QC 均自动兼容）。<b>② 班次与夜班（B 项）</b>：班次是 <b>S.simMin 的纯派生</b>（shiftInfoAt：以 dayStartMinute=480 为界、白班 720 分 + 夜班 720 分循环；shiftSegments 把跨界步切段）——派生意味着交接<b>不触发任何重置</b>，在制批次 BP、换型、AGV/叉车任务、订单与交期全都照常延续，step 只在跨界时写一条交接日志（SHIFT.changes 计数）。人工成本：每步按段 minutes ×（每班人工 ÷ 班时长）计入 curL().fixedCost 与 S.fixedCost（与既有 fixedCostPerHour 的固定成本<b>并存累加</b>、口径独立）；夜班 ¥6,760/班 = 白班 ¥5,200 × 1.30 津贴。产能系数 shiftCapacityFactor() 乘到供应/调配/杀菌三工位 rateFn、产线 fillRate 与交期 nominalCapPerMin 五处（白班 ×1.0 / 夜班 ×0.92）。分班小计 SHIFT.totals{day,night}：人工按段实计，产量/报废/利润由 step 首尾快照做差按段时长权重分摊（跨界步才分摊）；日报格两行 + 归档摘要 + 下载文本同源；「新的一天」翻页先取摘要行再清 totals，重置同步清零。夜班视觉：nightMixAt 交接前后 30 分钟线性过渡，updateScene 插值日光（→0.16)/半球（→0.30)/环境（→0.05）强度、日光色温→冷蓝、曝光（→0.78)、雾色（→#1d2a3a)，背景过半切夜空纹理；窗带与控制室玻璃 emissive 拉高成暖黄窗光（2.1)、三条天花灯带（共用一材质）发光 2.6；只改既有光源与已注册材质，不新建光源。注：R3 节「始终白天、无夜间模式」的口径自本轮起由本节取代。<b>③ 原料供应链预警（C 项）</b>：状态机扩为 idle → <b>ordered（提前期倒计时）</b> → unloading → departed → idle。下单触发 = 液位 ≤ 安全线 safetyFrac=0.42 <b>或</b> ETA ≤ 提前期 leadMinutes=18 + 缓冲 12 分；ETA = 罐存瓶当量 ÷ useRate（供应消耗指数平滑，α=0.25，单位与既有 rawTankBottlesPerFull 同源）。<b>R2 的 30% 阈值保留为红线 criticalFrac=0.30</b>（rawRefillThreshold 即此值、CONFIG 同步）——在途跌破红线时一次性告急日志点名「等见底再补必断料」。到场计数 arrivals 在 ordered→unloading 一刻 +1（与 R2「到场才计」同义）。<b>断料是真的</b>:step 的 supMove 按 RAW.level × rawTankBottlesPerFull 封顶（原 0.03 地板删除），罐存见底即进料归零；断料起止写日志（stockouts/stockoutMin 累计）、进日报「原料供应（当日）」行与归档摘要。预警面：调度台 #rawAlert 预警行（ok 绿 / warn 黄 / critical 红 / stockout 红闪）、精益看板原料行、抽屉公用工程 usRaw 格（ETA/下单/到场/断料同源）。<b>④ DrawCall 实测（D 项）</b>：本节不预填数字——实测由当轮以 window.__perfSnapshot() 在全厂俯瞰机位读 renderer.info.render.calls，写进当轮交付汇报与抽屉「真机性能」区来源说明（#perfSource）；drawCallBreakdown()/window.__drawCalls() 给按场景子树的可见可渲染对象分解（instanced 按 1 计），超 650 线时据此定位前三贡献者当轮压减。<b>⑤ 回归探针（E 项）</b>：守恒 20,000 步 / 三段补证 / AGV 会车 / CSS 安全区断言 / ECO 能耗差复验沿用既有口；新增两项——罚金三处对账（Σ ledger.fine = totalFine() = 日报 delta.fine，__r13().fineAudit 三读同源）与苏打水全链冒烟（下单→生产→入库→发货一波，perProd 与各统计面出现苏打行）。结论随当轮交付汇报，不在本节预填。</div></div>
+      <div class="dcell wide"><div class="l">R15 PDCA 打包轮（批次全链追溯 + 预测性维护 + 探针欠账总清算）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：PDCA 循环第 15 轮打包交付，新参数全在 <b>CONFIG.r15</b>，读数口 <b>window.__r15()</b>，探针口 <b>window.__r15Probe</b>（traceCheck 谱系一致性抽查 / setHealth 定点压健康度 / longRun 守恒长跑）。<b>① 批次追溯（A 项）</b>：内核 <b>TRACE</b>——一批一卡，全部节点由真实事件点写下：开批 traceEnsure（配方快照 recipeOf + 原料批号 = 开批时 RAW.arrivals+1 车次，期初罐存如实标注）；出料 traceOnDischarge 在 advanceBlendBatch 出料完成点快照灭菌实测（STER_DYN 的 UHT/预热/冷却/均质四值 + holdSec 目标保持）；产量归属 traceAttribute 在 step 良品结算点把每步 good 记给当刻 STER_FEED 在制批，同时写 rec.bottles 与 TRACE.yieldByKey 两处（谱系产量与逐批台账同源同值，traceCheck 抽 3 批 diff 恒 0），灌装线集合/时段同点累计；抽检 traceTickQC 在 stepQC 后比对 QC.samples 增量、记给当刻在调批次；成托 logiStagePush 以当刻 feed 批给托盘打 batchKey、traceOnPallet 记托号；入位 putXfer 完成点 slot.batchKey 承接 + traceOnSlot 记货位名；装车叉车 pick 暂存 carryPallet、truck 装车点 traceOnShip 记 WAVES 波次与 SHIP.trips+1 车次。批次号跨产品不撞车：TRACE.epoch 在 resetBlendBatch（换产品）时 +1，key = 产品@纪元#批号。归档 records 留最近 traceArchiveCap=60 批（换型不清、重置 traceReset 清），yieldByKey 不随归档淘汰而删（抽查口径不失效）。期初 26 托种子库存无 batchKey，谱系/点选如实显示「期初库存（建账前）」。查询面三处：抽屉「批次追溯」（输批次号取同号最近一批 + 最近 8 批 chips，谱系卡六节点时间线 renderGenealogy，打开着的卡随 renderKpis 实时刷新）、仓库点选任意托盘（pickAt 对 D.whCases 用独立 palRay 射线、实例序经渲染时登记的 D.whRenderSlots 反查货位 → kind:"slot" 信息卡 + 跳完整谱系钮）、仓库区域卡的「最早/最新批次谱系」两钮。<b>② 预测性维护（B 项）</b>：<b>HEALTH</b> 六条目（3 工位 + 3 产线，healthOf 按对象引用查）+ <b>PM</b> 计数。stepPM 在 step 内（故障计时后、流量前）：运行、有负荷（util = lastMove/(lastCap·lastDt) 钳 0~1.2，停用线/无负荷跳过）时衰减 decayPerMin×(0.35+util)；跌破 warnThreshold=70 置 warned 并写预警日志（每轮预警只报一次，保养/修复后按阈值复位）；跌破 faultThreshold=28 且空闲 → applyFaultStart 劣化故障（备件领用/缺货加时/MTTR/维修工全套 R12 口径不变，PM.degFaults 计数）。faultCleared 尾钩：健康度 = max（现值， repairHealth=72），故修好≠养好。保养 startMaintenance（调度台 #pmBtn 保养最低者 / 工位·产线·无菌区信息卡各一钮）：obj.maintLeft = maintMinutes=4（step 与 faultLeft 并行倒计时、完成 pmOnMaintDone 恢复 maintHealth=100），收费 maintCost=¥450 进当前产品 fixedCost、不耗备件；保养停机与流量同口径断流（feed 过滤/down 判定/blendDown/sterDown/supCap 五处 + stationStatus/lineStatus「保养中」文案）。预警面：调度台 #pmAlert（复用 supply-alert 色板）+ #pmOut、抽屉可靠性区三格、精益看板 #pmLean 行、日报格与下载文本各一行——全与 renderKpis 同节奏同源。重置：traceReset + pmReset（HEALTH 重建为满值）+ maintLeft 随工位/产线复位清零。<b>③ 探针欠账总清算（C 项）</b>：五项数字（码垛三数 / DrawCall 实测 / 罚金三方对账 / 苏打水冒烟 / 20,000 步守恒）由当轮在活页面实跑取齐，写交付汇报与 #perfSource 来源说明，不在本节预填。<b>④ 回归（D 项）</b>：三段补证 / AGV 会车 / CSS 安全区断言沿用既有口；新增 traceCheck（见上）。</div></div>
       <div class="dcell wide"><div class="l">R14 码垛机（包装线末端 · 龙门整层码垛 + 速率对齐 + 探针口）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户点名——托盘上的饮料处理速度不够、线末应该有码垛机。此前（R9）成品瓶在 stepR2 里按 floor(产量/300) 直接「折托」出现在下线暂存位：没有成箱、没有码垛，托盘凭空出现，处理速度也无从谈起。本轮补上真实码垛环节，参数全在 <b>CONFIG.r14</b>，内核 <b>PAL</b>（stepPalletizer，在 stepR2 内推进），读数/探针口 <b>window.__palletizer()</b>。<b>① 结构（buildPalletizer）</b>：工位在包装下线簇内（缠膜机东侧、暂存位西侧，单元框 x 63.4–69.8 × z −22.6–−10.0）——进料输送带（辊道 + 导轨 + 头端分流罩，箱从罩口出来）自中线出瓶端北上至成层台（66.6,−11.2）；龙门架 4 立柱 + 双纵梁（沿 z）+ 端梁跨成层台与托盘位（66.6,−16.5），桥架带整层夹持抓手（压板 + 四面指爪 + 吸盘垫）往返两工位；安全围栏三面半围合（进料口/出托口留缺口、各设一对光栅立柱）、状态灯塔（绿=码垛中脉冲 / 琥珀=满托闪烁或滑出 / 灰=待机）、空托盘垛、出托辊道（托盘位 → 暂存位向东）。点选工位出信息卡（kind:"palletizer"）。导航口径同步：NAV_OBSTACLES_AGV / PERSON_OBSTACLES 各加单元矩形（AGV 西道对其东缘净距 ≈2.95）、相机 COLLIDERS 加单元盒。<b>② 动作与同源（updatePalletizerVisual）</b>：箱子是单个 InstancedMesh（40 件 = 托盘 25 + 成层 5 + 输送带 10），每帧按 PAL 状态分槽排布——输送带队列（caseQueue）→ 成层台（forming）→ 抓手夹持整层（cycling 且 cycleT∈[0.3, 放层) 时实例跟随夹持板）→ 托盘逐层（curCases）→ 满托滑出（slideT 驱动托盘组移到目标暂存位、垛体在落位前不显形、AGV 不取滑行中的托盘）。抓手周期姿态是 cycleT 的分段函数（下降→夹持→抬升→桥架移位→下降放层→返回），内核在 cycleReleaseAt=0.8 落托，与画面放层同一刻。<b>③ 速率与规格（守恒不动）</b>：托盘规格 bottlesPerCase=12 瓶/箱 × casesPerLayer=5 箱/层 × layersPerPallet=5 层 = 25 箱/托 = <b>300 瓶/托 = CONFIG.whBottlesPerCase</b>，__palletizer().spec.specMatchesWh 应恒 true；WH.producedCases 语义不变（已到暂存位托数），库存恒等式仍由 AGV 物理事件维护（syncWhStock/__whCheck 不变）。额定速率 rateCasesPerMin=<b>460 箱/分</b> ≥ 三线包装下线峰值 3×1600÷12=400 箱/分（运力比 1.15；默认负荷 1600 瓶/分=133 箱/分时运力比 3.45）——成层与抓手周期并行（夹层后成层台续攒下一层）、机器推进按 0.01 分钟量子子步进（大步长探针不丢速）、满托滑出 0.008 分已计入持续运力（≈400 箱/分封顶不低于下线峰值），故正常负荷下码垛机不是瓶颈：进料缓冲 caseBufferCap=60 箱，满时未成箱的瓶留在 PAL.bottleBank（不丢瓶），腾空后按额定速率追赶清空。暂存全满时满托停在托盘位（state="full"，灯塔琥珀闪 + 一次性日志），AGV 取走一托后自动滑出续码。<b>④ 状态可见</b>：抽屉物流播报新增一行 #logiLinePal（码垛中：第 L 层 · 本托 x/25 箱 · 实际速率（近 2 分钟滑窗）/ 满托待取 / 待机），仓库信息卡加「码垛机」行，巡游包装区/智慧物流两站文案同步。<b>⑤ 探针证据（__palletizer）</b>：标准倍速（1×、平稳日常参数）跑固定时长读 offlineCases（下线总箱数=floor(良品瓶/12)）/ completedPallets（码垛完成托数）/ stagePeak（下线暂存位峰值积压，上限 6）/ queuePeak（进料缓冲峰值）/ capacityRatio（运力比）/ wh.ok（守恒）一组数；结论写当轮交付汇报，不在本节预填。<b>重置</b>：resetPalletizer 与 initRackSlots 同级复位（瓶账/队列/成层/当前托/滑出/峰值全清）。</div></div>
       <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
@@ -807,6 +842,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R12 打包轮：新入队订单交期 = 按（在前量+本单量）÷名义瓶颈产能×1.5 核定而非固定 480 分（window.__r12().orderDueMin 与订单卡倒计时一致）；把当前单目标调小跑完且已过交期——完成日志含逾期分钟与罚金、总利润相应减少、日报「当日延误罚金」&gt;0；剩余交期 &lt;60 分时当前单与队列行变黄、逾期变红；控制台开 ECO——按钮明示电 −18%/汽 −12%/灌装上限 −6%，跑一段后抽屉「单瓶电耗 · ECO 开」低于「ECO 关」约 18%、日报 ECO 累计节省 &gt;¥0，关 ECO 后 fillRate 恢复；备件耗尽后触发故障——时长为标准 ×2.2、紧急采购费进台账、维修工到场呈等待姿势（window.__crew().maint.waiting=true），waitLeft 过后转蹲姿作业；调度台补备件收费 ¥350 且库存 +1；故障修复后抽屉 MTBF/MTTR 有数、window.__r12().faults.repaired ≥1；重置后 ECO 关、备件回 3、罚金与故障统计清零</li>
       <li>R13 打包轮：产品切换行出现第 5 个「苏打气泡水」（window.__r13().products 长度 5、soda 配方与灭菌参数齐全）；切到苏打水跑一段——批次卡配方含 CO₂ 行、杀菌卡读数向 95°C/8°C 靠拢、台账 soda 行有数；把模拟时刻推进跨过 20:00——顶栏时钟出现「夜班」、厂区灯光转夜（窗光/灯带亮）、日报出现白/夜班小计两行且夜班人工单价更高（window.__r13().shift.totals）；班次交接瞬间在制批次与 AGV 任务不中断（步前步后 BP.state 与物流状态连续）；window.__r13Probe.setRawLevel(0.10) 压低罐存跑——调度台预警行变红、日志出现下单与（若见底）断料行、日报「原料供应」行下单/断料有数，罐车在提前期 18 分钟后才到场（ordered 态可见）；罚金三处对账 window.__r13().fineAudit 三值相等；Draw Call 以 __perfSnapshot 实测为准并写入抽屉来源说明</li>
       <li>R14 码垛机：开工后线末码垛机输送带出现整箱、成层台攒满 5 箱后抓手整层夹起放到托盘上逐层增高（箱子不凭空出现在托盘上）；抽屉物流播报第一行显示「码垛中：第 L 层 · 本托 x/25 箱 · 速率」；满托沿辊道滑到暂存位后入库 AGV 才来取（滑行中不可取）；window.__palletizer() 读数——spec.specMatchesWh=true、capacityRatio ≥ 1、completedPallets 随产出增长、stagePeak ≤ 6、wh.ok=true；点选码垛机出信息卡（额定速率/托盘规格/当前层）；重置后 __palletizer() 各计数归零</li>
+      <li>R15 追溯 + 预测维护：开工跑一段后抽屉「批次追溯」出现批次 chips，点任一或输批次号出谱系卡（开批/灭菌实测/灌装时段与本批产量/抽检/成托与货位/去向六节点齐全）；在仓库点中任意一托货架托盘出该托谱系摘要、可跳完整谱系；window.__r15Probe.traceCheck() 三批 diff 全 0；window.__r15Probe.setHealth("杀菌", 65) 后跑一段——调度台 pmAlert 变黄预警、日志有预警行，点「保养最低健康度设备」后该设备停机 4 分钟、健康度回 100 且不触发故障；setHealth 压到 20 放任不管应劣化成故障且走备件判定；重置后 __r15() 的 trace.records=0、健康度全 100</li>
     </ul>
   </div>
 </aside>
@@ -1042,6 +1078,24 @@ var CONFIG = {
     rateCasesPerMin: 460, caseBufferCap: 60,
     cycleClampAt: 0.3, cycleReleaseAt: 0.8, slideDurMin: 0.008,
     pos: { x: 66.6, palletZ: -16.5, formZ: -11.2 }
+  },
+  /* ---- R15 打包轮参数（批次追溯谱系 + 预测性维护，改节奏/阈值只改这里） ----
+   * 追溯：traceArchiveCap 谱系归档保留批数（超出后最老一批移出可查列表，但 yieldByKey
+   *   逐批产量账保留，谱系↔台账一致性抽查口径不因此失效）；原料批号取批次开批时
+   *   RAW.arrivals（罐车累计到场车次）+1，即该批投料时罐区正在用的来料车次。
+   * 健康度：healthStart 开局/保养后满值；decayPerMin 基础劣化速率（健康/仿真分钟，
+   *   实际衰减 = decayPerMin × (0.35 + 负荷率)，负荷率 = lastMove/(lastCap×lastDt) 钳 0~1.2）；
+   *   warnThreshold 跌破即黄色预警（调度台/看板/点选卡同源）；faultThreshold 跌破且
+   *   设备空闲时触发劣化故障（走 R12 备件判定与维修工链）；repairHealth 故障修复后
+   *   健康度只回到此值（不保养就会再次预警，形成「预警→保养→免故障」闭环）；
+   *   maintMinutes / maintCost 保养停机时长与费用（计入当前产品 fixedCost，不耗备件）；
+   *   maintHealth 保养完成恢复到的健康度；faultBaseMinutes 劣化故障基础时长（再叠 faultSpan 随机量）。 */
+  r15: {
+    traceArchiveCap: 60,
+    healthStart: 100, decayPerMin: 0.055,
+    warnThreshold: 70, faultThreshold: 28, repairHealth: 72,
+    maintMinutes: 4, maintCost: 450, maintHealth: 100,
+    faultBaseMinutes: 5
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -1295,7 +1349,9 @@ function prodNameOf(id){ for(var i=0;i<PRODUCTS.length;i++){ if(PRODUCTS[i].id==
 function logiStagePush(){
   var used = {}; LOGI.stage.forEach(function(p){ used[p.posIdx] = true; });
   var idx = 0; while(used[idx]) idx++;
-  LOGI.stage.push({ seq: LOGI.nextSeq++, productId: product.id, posIdx: idx, rsv: false });
+  var bk15 = (typeof STER_FEED !== "undefined") ? traceFeedKey() : null;   /* R15：成托一刻按当刻在制批打批次键 */
+  LOGI.stage.push({ seq: LOGI.nextSeq++, productId: product.id, posIdx: idx, rsv: false, batchKey: bk15 });
+  traceOnPallet(bk15, LOGI.stage[LOGI.stage.length - 1].seq);   /* R15：托号记入该批谱系 */
 }
 function dockStatusText(){
   if(SHIP.active) return "发货波次装车中 · "+Math.floor(SHIP.loadCases)+" / "+SHIP.targetCases+" 箱";
@@ -1581,9 +1637,9 @@ function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
  * Station 字段：queue 待处理量 / done 累计处理 / faultLeft 剩余故障分钟 /
  * lastMove·lastCap·lastDt 上一步实际流量与额定能力（供利用率与瓶颈计算，避免渲染层反推）。 */
 var stations = [
-  { id:"supply",    icon:"🚚", name:"原料供应", en:"Raw Supply", queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.supply * shiftCapacityFactor(); } },   /* R13：班次产能系数（夜班 ×0.92） */
-  { id:"blend",     icon:"🛢️", name:"调配",     en:"Blending",   queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.tanks*CONFIG.blendPerTank*product.blendFactor * shiftCapacityFactor(); } },   /* R13：同上 */
-  { id:"sterilize", icon:"🌡️", name:"杀菌 UHT", en:"Sterilize",  queue:0, done:0, faults:0, faultLeft:0, lastMove:0, lastCap:0, lastDt:1, cipLeft:0, sinceCip:0, rateFn:function(){ return S.sterilize * shiftCapacityFactor(); } }   /* R13：同上 */
+  { id:"supply",    icon:"🚚", name:"原料供应", en:"Raw Supply", queue:0, done:0, faults:0, faultLeft:0, maintLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.supply * shiftCapacityFactor(); } },   /* R13：班次产能系数（夜班 ×0.92）；R15：maintLeft 保养停机剩余 */
+  { id:"blend",     icon:"🛢️", name:"调配",     en:"Blending",   queue:0, done:0, faults:0, faultLeft:0, maintLeft:0, lastMove:0, lastCap:0, lastDt:1, rateFn:function(){ return S.tanks*CONFIG.blendPerTank*product.blendFactor * shiftCapacityFactor(); } },   /* R13：同上 */
+  { id:"sterilize", icon:"🌡️", name:"杀菌 UHT", en:"Sterilize",  queue:0, done:0, faults:0, faultLeft:0, maintLeft:0, lastMove:0, lastCap:0, lastDt:1, cipLeft:0, sinceCip:0, rateFn:function(){ return S.sterilize * shiftCapacityFactor(); } }   /* R13：同上 */
 ];
 /* ================= [M1] 仿真内核 · 灌装产线 Line =================
  * Line 字段：on 是否启用 / queue 待灌装队列 / capQ 已灌装待封盖队列 / fillRate() 本线灌装速度。
@@ -1591,7 +1647,7 @@ var stations = [
 var CAP_RATE = CONFIG.capRate, PACK_RATE = CONFIG.packRate;
 var lines = [];
 for(var _li=0; _li<CONFIG.lineCount; _li++){ (function(i){
-  lines.push({ idx:i, name:(i+1)+" 号灌装线", on: i<CONFIG.defaults.activeLines, queue:0, capQ:0, done:0, faults:0, faultLeft:0, lastMove:0,
+  lines.push({ idx:i, name:(i+1)+" 号灌装线", on: i<CONFIG.defaults.activeLines, queue:0, capQ:0, done:0, faults:0, faultLeft:0, maintLeft:0, lastMove:0,
     fillRate:function(){ return S.filler*product.fillFactor*(ECO.on ? 1-CONFIG.r12.ecoCapCut : 1) * shiftCapacityFactor(); } });   /* R12：ECO 开启时灌装上限打折（变频降速），关掉即恢复；R13：再乘班次产能系数（夜班 ×0.92） */
 })(_li); }
 var QUEUE_CAP = CONFIG.queueCap, LINE_Q_CAP = CONFIG.lineQueueCap;
@@ -1743,6 +1799,8 @@ function faultCleared(obj){
     obj.faultStartMin = null;
   }
   obj.faultMeta = null;
+  var he15 = healthOf(obj);   /* R15：故障修复只把健康度恢复到 repairHealth（不保养会再次预警，闭环在此收口） */
+  if(he15){ he15.health = Math.max(he15.health, CONFIG.r15.repairHealth); he15.warned = he15.health <= CONFIG.r15.warnThreshold; }
 }
 function restockSpare(){
   if(SPARES.stock >= CONFIG.r12.spareMax){ log("备件库存已达上限 " + CONFIG.r12.spareMax + " 件，不必再补。"); return; }
@@ -2005,6 +2063,210 @@ function renderOrderQueue(){
 }
 window.__orderQueue = function(){ return ORDERQ.slice(); };
 window.__qcState = function(){ return { samples:QC.samples, fails:QC.fails, marginals:QC.marginals, penalty:QC.penalty, penaltyLeft:QC.penaltyLeft, effQuality:effQuality() }; };
+/* ================= [M1] R15 · 批次追溯谱系 TRACE =================
+ * 一批一卡：记录在真实事件点由状态机亲手写下，不事后编造——
+ *  开批：traceEnsure（首次被任一事件引用时建卡：配方快照 + 原料批号 = 开批时罐区
+ *    正在用的来料车次 RAW.arrivals+1，期初罐存记「期初罐存」）；
+ *  出料：traceOnDischarge（advanceBlendBatch 出料完成点）记灭菌实测快照
+ *    （STER_DYN 当时的 UHT 温度/预热/冷却/均质压力 + 工艺保持时间）；
+ *  产量：traceAttribute（step 良品结算点）把每步 good 归属给当刻 STER_FEED 在制批，
+ *    同时写 rec.bottles 与 TRACE.yieldByKey 两处——谱系产量与逐批台账同源同值，
+ *    抽查差值恒 0（window.__r15().traceCheck）；灌装线集合与时段也在此累计；
+ *  抽检：traceTickQC（step 在 stepQC 后比对 QC.samples 增量）把结果记给当刻在调批次；
+ *  成托：logiStagePush 以当刻 STER_FEED 给托盘打 batchKey；入位 putXfer 完成点
+ *    traceOnSlot 记货位；装车：叉车 pick 暂存托盘、truck 装车点 traceOnShip 记波次/车次。
+ * 归档：records 留最近 CONFIG.r15.traceArchiveCap 批（换型不清、重置才清）；
+ * 期初种子库存 26 托无 batchKey，谱系如实显示「期初库存（建账前）」。 */
+var TRACE = { epoch: 0, records: [], byKey: {}, yieldByKey: {}, lastQcSamples: 0, viewKey: null };
+function traceKey(pid, num, epoch){ return pid + "@" + (epoch == null ? TRACE.epoch : epoch) + "#" + num; }
+function traceFeedKey(){ var e = (typeof STER_FEED !== "undefined" && STER_FEED.epoch != null) ? STER_FEED.epoch : TRACE.epoch; return traceKey(STER_FEED.productId, STER_FEED.num, e); }
+function traceCurrentKey(){ return traceKey(product.id, BP.batch, TRACE.epoch); }
+function traceEnsure(key, pid, num){
+  var rec = TRACE.byKey[key];
+  if(rec) return rec;
+  var p = null; PRODUCTS.forEach(function(x){ if(x.id === pid) p = x; });
+  var rc = p ? recipeOf(p) : null;
+  rec = { key: key, num: num, productId: pid, productName: p ? p.name : pid,
+    recipeName: rc ? rc.name : "—", batchL: rc ? rc.batchL : 0,
+    ingredients: rc ? rc.ingredients.map(function(ing){ return { name: ing.name, amount: ing.amount, unit: ing.unit, from: ing.from }; }) : [],
+    rawLot: (typeof RAW !== "undefined" && RAW.arrivals > 0) ? "罐区来料第 " + (RAW.arrivals + 1) + " 车次" : "期初罐存",
+    bornMin: S.simMin, dischargeMin: null,
+    ster: null,
+    fillStart: null, fillEnd: null, lines: [], bottles: 0,
+    qc: null, qcCount: 0,
+    pallets: []   /* {seq, slotLabel|null, wave|null, trip|null} */ };
+  TRACE.byKey[key] = rec; TRACE.records.push(rec);
+  while(TRACE.records.length > CONFIG.r15.traceArchiveCap){ var old = TRACE.records.shift(); if(TRACE.byKey[old.key] === old) delete TRACE.byKey[old.key]; if(TRACE.viewKey === old.key) TRACE.viewKey = null; }
+  return rec;
+}
+function traceOnDischarge(num, p){
+  var key = traceKey(p.id, num, TRACE.epoch);
+  var rec = traceEnsure(key, p.id, num);
+  rec.dischargeMin = S.simMin;
+  var sp = sterProcOf(p);
+  rec.ster = { tempC: Math.round(STER_DYN.tempC), preheatC: Math.round(STER_DYN.preheatC), coolOutC: Math.round(STER_DYN.coolOutC),
+               homogP1: Math.round(STER_DYN.homogP1), homogP2: Math.round(STER_DYN.homogP2), holdSec: sp.holdSec,
+               targetTempC: sp.uhtTempC };
+  if(typeof STER_FEED !== "undefined") STER_FEED.epoch = TRACE.epoch;
+}
+function traceAttribute(good){
+  if(!(good > 0) || typeof STER_FEED === "undefined") return;
+  var key = traceFeedKey();
+  var rec = traceEnsure(key, STER_FEED.productId, STER_FEED.num);
+  rec.bottles += good;
+  TRACE.yieldByKey[key] = (TRACE.yieldByKey[key] || 0) + good;
+  if(rec.fillStart === null) rec.fillStart = S.simMin;
+  rec.fillEnd = S.simMin;
+  lines.forEach(function(l){ if(l.on && l.faultLeft <= 0 && (l.lastMove || 0) > 0 && rec.lines.indexOf(l.name) < 0) rec.lines.push(l.name); });
+}
+function traceTickQC(){
+  if(QC.samples <= TRACE.lastQcSamples) return;
+  TRACE.lastQcSamples = QC.samples;
+  var rec = traceEnsure(traceCurrentKey(), product.id, BP.batch);
+  rec.qc = { result: QC.lastResult, atMin: QC.lastAt, sampleNo: QC.samples };
+  rec.qcCount++;
+}
+function tracePalletEntry(rec, seq){
+  for(var i = 0; i < rec.pallets.length; i++) if(rec.pallets[i].seq === seq) return rec.pallets[i];
+  var e = { seq: seq, slotLabel: null, wave: null, trip: null };
+  rec.pallets.push(e); return e;
+}
+function traceOnPallet(key, seq){ if(!key) return; var rec = TRACE.byKey[key]; if(rec) tracePalletEntry(rec, seq); }
+function traceOnSlot(pallet, label){
+  if(!pallet || !pallet.batchKey) return;
+  var rec = TRACE.byKey[pallet.batchKey]; if(!rec) return;
+  tracePalletEntry(rec, pallet.seq).slotLabel = label;
+}
+function traceOnShip(pallet, wave, trip){
+  if(!pallet || !pallet.batchKey) return;
+  var rec = TRACE.byKey[pallet.batchKey]; if(!rec) return;
+  var e = tracePalletEntry(rec, pallet.seq); e.wave = wave; e.trip = trip;
+}
+function traceReset(){
+  TRACE.records = []; TRACE.byKey = {}; TRACE.yieldByKey = {}; TRACE.lastQcSamples = 0; TRACE.viewKey = null; TRACE.epoch = 0;
+  var tr = $("traceResult"); if(tr) tr.innerHTML = '<div class="qempty">尚无批次谱系 · 开工并完成一轮调配出料后，这里会出现可查的批次。</div>';
+}
+window.__trace = function(){ return TRACE; };
+/* ================= [M1] R15 · 预测性维护 PM（健康度劣化模型） =================
+ * 关键设备 = 3 工位 + 3 灌装线，各带 health（0~100）：stepPM 在 step 内推进——
+ * 运行且有负荷时按 CONFIG.r15.decayPerMin × (0.35 + 负荷率) 衰减；跌破 warnThreshold
+ * 出黄色预警（日志 + 调度台/看板/点选卡同读 HEALTH）；跌破 faultThreshold 且设备
+ * 空闲 → 经既有 applyFaultStart 触发劣化故障（备件/MTTR/维修工全套口径不变），
+ * faultCleared 钩子把健康度只恢复到 repairHealth——不保养就会再次预警；
+ * 保养 startMaintenance：停机 maintMinutes + 收费 maintCost（当前产品 fixedCost，
+ * 不耗备件），完成 pmOnMaintDone 恢复 maintHealth。随机故障（既有概率）不因此关闭。 */
+var PM = { warnings: 0, maintenances: 0, maintCost: 0, degFaults: 0 };
+var HEALTH = [];
+function healthEntries(){
+  if(HEALTH.length) return HEALTH;
+  stations.forEach(function(st){ HEALTH.push({ obj: st, name: st.name, health: CONFIG.r15.healthStart, warned: false }); });
+  lines.forEach(function(l){ HEALTH.push({ obj: l, name: l.name, health: CONFIG.r15.healthStart, warned: false }); });
+  return HEALTH;
+}
+function healthOf(obj){ var es = healthEntries(); for(var i = 0; i < es.length; i++) if(es[i].obj === obj) return es[i]; return null; }
+function healthStateTxt(h){
+  if(h <= CONFIG.r15.faultThreshold) return "危急";
+  if(h <= CONFIG.r15.warnThreshold) return "预警";
+  return "良好";
+}
+function stepPM(dtMin){
+  if(!S.running || S.changeover) return;
+  var C = CONFIG.r15;
+  healthEntries().forEach(function(e){
+    var o = e.obj;
+    if(o.faultLeft > 0 || (o.maintLeft || 0) > 0) return;
+    if(o.on === false) return;   /* 停用产线不劣化 */
+    var util = (o.lastCap > 0) ? (o.lastMove || 0) / (o.lastCap * (o.lastDt || 1)) : 0;
+    util = Math.max(0, Math.min(1.2, util));
+    if(util <= 0.01 && o.queue <= 0) return;   /* 无负荷空转不劣化 */
+    e.health = Math.max(0, e.health - C.decayPerMin * (0.35 + util) * dtMin);
+    if(e.health <= C.warnThreshold && !e.warned){
+      e.warned = true; PM.warnings++;
+      log("⚠ 预测性维护预警：「" + e.name + "」健康度降至 " + Math.round(e.health) + "（预警线 " + C.warnThreshold + "）——继续运行将劣化成故障，建议在调度台或点选该设备执行保养（停机 " + C.maintMinutes + " 分钟 · ¥" + fmt(C.maintCost) + " · 恢复到 " + C.maintHealth + "）。", "bad");
+    }
+    if(e.health <= C.faultThreshold){
+      PM.degFaults++;
+      applyFaultStart(o, C.faultBaseMinutes + Math.random() * CONFIG.faultSpanMinutes, e.name + "（健康度耗尽）");
+      log("「" + e.name + "」健康度耗尽（" + Math.round(e.health) + "）劣化为故障停机——本可通过预警期保养避免。修复后健康度只回到 " + C.repairHealth + "，请尽快保养。", "bad");
+    }
+  });
+}
+function pmOnMaintDone(obj){
+  var e = healthOf(obj); if(!e) return;
+  e.health = CONFIG.r15.maintHealth; e.warned = false;
+  log("🛠 保养完成：「" + e.name + "」健康度恢复到 " + Math.round(e.health) + "，恢复运行。", "good");
+}
+function startMaintenance(obj){
+  var e = healthOf(obj); if(!e) return;
+  if(S.changeover){ log("换型中，暂不能保养「" + e.name + "」。"); return; }
+  if(obj.faultLeft > 0){ log("「" + e.name + "」正在故障停机，请先抢修（信息卡按钮），修好后再保养。"); return; }
+  if((obj.maintLeft || 0) > 0){ log("「" + e.name + "」已在保养中（剩 " + Math.ceil(obj.maintLeft) + " 分钟）。"); return; }
+  obj.maintLeft = CONFIG.r15.maintMinutes;
+  PM.maintenances++; PM.maintCost += CONFIG.r15.maintCost;
+  S.fixedCost += CONFIG.r15.maintCost; curL().fixedCost += CONFIG.r15.maintCost;
+  log("🛠 开始预防性保养：「" + e.name + "」停机 " + CONFIG.r15.maintMinutes + " 分钟（健康度 " + Math.round(e.health) + " → " + CONFIG.r15.maintHealth + "），保养费 ¥" + fmt(CONFIG.r15.maintCost) + " 已计入当前产品成本（不耗备件）。", "good");
+  renderAll();
+}
+function pmLowest(){
+  var es = healthEntries(), best = null;
+  es.forEach(function(e){ if(!best || e.health < best.health) best = e; });
+  return best;
+}
+function pmReset(){ HEALTH = []; PM.warnings = 0; PM.maintenances = 0; PM.maintCost = 0; PM.degFaults = 0; }
+window.__pm = function(){ return { pm: PM, health: healthEntries().map(function(e){ return { name: e.name, health: Math.round(e.health * 10) / 10, warned: e.warned, maintLeft: e.obj.maintLeft || 0, faultLeft: e.obj.faultLeft || 0 }; }) }; };
+/* ================= [M1] R15 · 验收探针口 __r15（与 __r12/__r13 同惯例） =================
+ * traceCheck：谱系一致性抽查——随机取最多 3 个已归档批次，逐个比对谱系卡产量
+ * （rec.bottles）与逐批台账（TRACE.yieldByKey，同在 traceAttribute 一个事件点写下）
+ * 的差值，并复核全厂 Σ逐批产量 vs Σ台账 finished 的差。longRun：守恒长跑复核
+ * （批量 step + 周期 renderKpis 泵结算，与 __r13Probe.pump 同口径），跑后查
+ * __whCheck 恒等式与关键量 NaN/负值。setHealth：把某设备健康度定点压到指定值，
+ * 供预警/劣化故障/保养闭环的探针定点验证（只改健康度本身，不旁路任何结算）。 */
+window.__r15 = function(){
+  return {
+    trace: { records: TRACE.records.length, epoch: TRACE.epoch,
+             recent: TRACE.records.slice(-5).map(function(r){ return { key: r.key, num: r.num, product: r.productName, bottles: Math.round(r.bottles), pallets: r.pallets.length, dest: traceDestTxt(r), qc: r.qc ? r.qc.result : null, ster: r.ster }; }) },
+    pm: window.__pm(),
+    palletizer: (typeof window.__palletizer === "function") ? window.__palletizer() : null,
+    fineAudit: { ledgerSum: PRODUCTS.reduce(function(a, p){ return a + (ledger[p.id].fine || 0); }, 0), totalFine: totalFine(), dayrepFine: dayrepDelta().fine },
+    wh: (typeof window.__whCheck === "function") ? window.__whCheck() : null
+  };
+};
+window.__r15Probe = {
+  traceCheck: function(){
+    var pool = TRACE.records.slice();
+    var picks = [];
+    while(pool.length && picks.length < 3){ picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]); }
+    var rows = picks.map(function(r){ var y = TRACE.yieldByKey[r.key] || 0; return { key: r.key, card: Math.round(r.bottles * 1000) / 1000, ledger: Math.round(y * 1000) / 1000, diff: Math.round((r.bottles - y) * 1000) / 1000 }; });
+    var sumCard = 0, sumY = 0;
+    Object.keys(TRACE.yieldByKey).forEach(function(k){ sumY += TRACE.yieldByKey[k]; });
+    TRACE.records.forEach(function(r){ sumCard += r.bottles; });
+    return { picks: rows, allDiffZero: rows.every(function(x){ return x.diff === 0; }), archivedBatches: TRACE.records.length };
+  },
+  setHealth: function(nameSub, v){
+    var es = healthEntries(), hit = null;
+    es.forEach(function(e){ if(e.name.indexOf(nameSub) >= 0) hit = e; });
+    if(hit){ hit.health = v; hit.warned = v <= CONFIG.r15.warnThreshold; }
+    return window.__pm();
+  },
+  maintainLowest: function(){ var low = pmLowest(); if(low) startMaintenance(low.obj); return window.__pm(); },
+  step: function(n, dt){ for(var i = 0; i < n; i++) step(dt || 0.55); return window.__r15(); },
+  pump: function(n, dt){
+    var d = dt || 0.55;
+    for(var i = 0; i < n; i++){ step(d); if(i % 200 === 199) renderKpis(); }
+    renderKpis();
+    return window.__r15();
+  },
+  longRun: function(n, dt){
+    var d = dt || 0.55, bad = [];
+    for(var i = 0; i < n; i++){ step(d); if(i % 500 === 499) renderKpis(); }
+    renderKpis();
+    var nums = { finished: S.finished, rejected: S.rejected, profit: totalProfit(), stock: ASEPTIC.stock, simMin: S.simMin };
+    Object.keys(nums).forEach(function(k){ if(!isFinite(nums[k]) || nums[k] < 0) bad.push(k + "=" + nums[k]); });
+    PRODUCTS.forEach(function(p){ var L = ledger[p.id]; if(!isFinite(L.finished) || L.finished < -1e-9) bad.push(p.id + ".finished=" + L.finished); });
+    return { steps: n, nums: nums, wh: window.__whCheck(), nanOrNeg: bad, trace: { records: TRACE.records.length }, pm: PM };
+  }
+};
+
 /* ================= [M1] 调配批次状态机 BP（视觉工艺时钟，与产量队列解耦） =================
  * BP 只推进「一批调配的阶段」：idx 指向 activeStages(product) 的当前阶段，left 为该阶段剩余仿真分钟。
  * 渲染层（管路流动/阀门/泵/液位/主罐液色）与调配批次卡全部只读 BP + curBlendStage()，禁止各自计时。
@@ -2015,7 +2277,7 @@ function curStageList(){ return activeStages(product); }
 function curBlendStage(){ var L = curStageList(); return L[Math.min(BP.idx, L.length-1)]; }
 function curStageDur(){ return stageDuration(curBlendStage(), product); }
 function blendStageProgress(){ var d = curStageDur(); return d>0 ? Math.min(1, Math.max(0, 1 - BP.left/d)) : 1; }
-function resetBlendBatch(){ BP.idx = 0; BP.batch = 1; BP.left = curStageDur(); }
+function resetBlendBatch(){ BP.idx = 0; BP.batch = 1; BP.left = curStageDur(); TRACE.epoch++;   /* R15：换产品 = 谱系新纪元，批次号从 1 重数但 key 不与旧产品同号批撞车 */ }
 BP.left = curStageDur();
 function advanceBlendBatch(dtMin){
   BP.left -= dtMin;
@@ -2027,6 +2289,7 @@ function advanceBlendBatch(dtMin){
     if(BP.idx >= L.length){
       BP.idx = 0; BP.batch++;
       STER_FEED = { num: BP.batch-1, productId: product.id, productName: product.name }; /* R1：该批出料完成，转由杀菌链处理（杀菌区信息卡据此显示） */
+      traceOnDischarge(BP.batch-1, product);   /* R15：出料事件点记谱系灭菌实测快照 */
       log("调配批次 #"+(BP.batch-1)+" 完成出料 → 待杀菌缓冲罐，新批次 #"+BP.batch+" 开始（"+product.name+" · "+recipeOf(product).batchL+" L/批）。","good");
     } else if(doneStage.id === "mix"){
       log("调配批次 #"+BP.batch+" 搅拌完成，进入取样静置（糖度/酸度检测，呼应质检实验室）。");
@@ -2181,6 +2444,8 @@ $("reportDlBtn").addEventListener("click", function(){
     "当日延误罚金：" + fmtMoney(dd.fine) + "（口径 ¥" + CONFIG.r12.penaltyPerMinute + "/逾期分钟 · 已从利润扣除）",
     "ECO 累计节省（会话）：" + fmtMoney(ECO.savedYuan) + " · 电 " + fmt(ECO.savedKwh) + " kWh · 汽 " + fmt(ECO.savedSteamKg) + " kg",
     "故障与备件（会话累计）：故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件库存 " + SPARES.stock + " 件（领用 " + SPARES.used + " · 补货 " + SPARES.restocked + " · 紧急采购 " + SPARES.emergency + " 次）",
+    "预测性维护（会话累计 · R15）：健康预警 " + PM.warnings + " 次 · 保养 " + PM.maintenances + " 次（费用 " + fmtMoney(PM.maintCost) + "）· 劣化故障 " + PM.degFaults + " 次 · 当前最低健康度 " + (pmLowest() ? Math.round(pmLowest().health) + "（" + pmLowest().name + "）" : "—"),
+    "批次追溯（R15）：已归档谱系 " + TRACE.records.length + " 批" + (TRACE.records.length ? " · 最近一批 " + TRACE.records[TRACE.records.length-1].productName + " #" + TRACE.records[TRACE.records.length-1].num + "（良品 " + fmt(TRACE.records[TRACE.records.length-1].bottles) + " 瓶 · " + traceDestTxt(TRACE.records[TRACE.records.length-1]) + "）" : ""),
     "当日发货波次：" + dd.waves + " 波 · 已发 " + dd.trips + " 车",
     "班次小计 · 白班：产量 " + fmt(SHIFT.totals.day.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.day.profit) + " · 人工成本 " + fmtMoney(SHIFT.totals.day.laborCost),
     "班次小计 · 夜班：产量 " + fmt(SHIFT.totals.night.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.night.profit) + " · 人工成本 " + fmtMoney(SHIFT.totals.night.laborCost) + "（夜班津贴 ×1.30 · 产能系数 ×" + CONFIG.r13.shifts.nightCapacityFactor + "）",
@@ -2358,8 +2623,10 @@ function step(dtMin){
   if(!draining) advanceBlendBatch(dtMin);   /* 调配批次时钟与生产同步推进（换型/排空预约时冻结：不开新批，当前批随队列顺流成瓶） */
   stations.forEach(function(st){
     if(st.faultLeft>0){ st.faultLeft = Math.max(0, st.faultLeft-dtMin); if(st.faultMeta && st.faultMeta.waitLeft>0) st.faultMeta.waitLeft = Math.max(0, st.faultMeta.waitLeft-dtMin); if(st.faultLeft===0) faultCleared(st); }   /* R12：等待备件期同步递减、修好记 MTTR */
+    if(st.maintLeft>0){ st.maintLeft = Math.max(0, st.maintLeft-dtMin); if(st.maintLeft===0) pmOnMaintDone(st); }   /* R15：保养停机倒计时，完成恢复健康度 */
   });
-  lines.forEach(function(l){ if(l.faultLeft>0){ l.faultLeft = Math.max(0, l.faultLeft-dtMin); if(l.faultMeta && l.faultMeta.waitLeft>0) l.faultMeta.waitLeft = Math.max(0, l.faultMeta.waitLeft-dtMin); if(l.faultLeft===0) faultCleared(l); } });
+  lines.forEach(function(l){ if(l.faultLeft>0){ l.faultLeft = Math.max(0, l.faultLeft-dtMin); if(l.faultMeta && l.faultMeta.waitLeft>0) l.faultMeta.waitLeft = Math.max(0, l.faultMeta.waitLeft-dtMin); if(l.faultLeft===0) faultCleared(l); } if(l.maintLeft>0){ l.maintLeft = Math.max(0, l.maintLeft-dtMin); if(l.maintLeft===0) pmOnMaintDone(l); } });   /* R15：产线保养倒计时 */
+  stepPM(dtMin);   /* R15：健康度劣化推进（预警/劣化故障）——在故障计时之后、流量之前判定 */
   if(ster.cipLeft>0){ ster.cipLeft = Math.max(0, ster.cipLeft-dtMin); if(ster.cipLeft===0) log("杀菌机 CIP 清洗完成，恢复生产。","good"); }
   else if(S.cipOn && S.running){
     ster.sinceCip += dtMin;
@@ -2367,6 +2634,7 @@ function step(dtMin){
   }
 
   stepQC(dtMin);   /* R10：质检抽检时钟（整改期扣减经 effQuality 影响下方良品结算） */
+  traceTickQC();   /* R15：抽检事件记入当刻在调批次的谱系卡（与 QC.samples 同源） */
 
   if(S.faultsOn){
     stations.forEach(function(st){
@@ -2389,7 +2657,7 @@ function step(dtMin){
   });
   /* cap stage pulls from filler queue via a virtual: filler output goes to capQ */
   lines.forEach(function(l){
-    var down = !l.on || l.faultLeft>0;
+    var down = !l.on || l.faultLeft>0 || (l.maintLeft||0)>0;   /* R15：保养停机与故障同口径断流 */
     var cap = down ? 0 : l.fillRate();
     var move = Math.min(l.queue, cap*dtMin, Math.max(0, LINE_Q_CAP - l.capQ + PACK_RATE*dtMin));
     l.queue -= move; l.capQ += move; l.lastMove = move; l.lastCap = cap; l.lastDt = dtMin;
@@ -2397,8 +2665,8 @@ function step(dtMin){
   /* R1 物料守恒链：杀菌处理 → 无菌罐库存（ASEPTIC.stock）→ 灌装拉料，三段分开结算，不再杀菌直灌产线。
    * 杀菌段产能 = 额定 × 当前产品 flowFactor（CONFIG.sterilizeProcess）；无菌罐满则杀菌背压停转（BLOCKED）。
    * 灌装段只能从 stock 拉料：stock=0 时产线队列见底 → lineStatus 饥饿待料，绝不无料无限灌装。 */
-  var feed = lines.filter(function(l){ return l.on && l.faultLeft<=0; });
-  var sterDown = ster.faultLeft>0 || ster.cipLeft>0;
+  var feed = lines.filter(function(l){ return l.on && l.faultLeft<=0 && (l.maintLeft||0)<=0; });   /* R15：保养中的线不拉料 */
+  var sterDown = ster.faultLeft>0 || ster.cipLeft>0 || (ster.maintLeft||0)>0;   /* R15：杀菌保养停机 */
   var sterCap = sterDown ? 0 : ster.rateFn() * sterProcOf(product).flowFactor;
   var sterRoom = Math.max(0, CONFIG.asepticStockCap - ASEPTIC.stock);
   var sterMove = Math.min(ster.queue, sterCap*dtMin, sterRoom);
@@ -2419,13 +2687,13 @@ function step(dtMin){
   ASEPTIC.lastFeed = feedMove; ASEPTIC.lastDt = dtMin;
   /* blend -> sterilize queue */
   var blend = stations[1], supply = stations[0];
-  var blendDown = blend.faultLeft>0;
+  var blendDown = blend.faultLeft>0 || (blend.maintLeft||0)>0;   /* R15：调配保养停机 */
   var blendCap = blendDown ? 0 : blend.rateFn();
   var blendMove = Math.min(blend.queue, blendCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - ster.queue));
   blend.queue -= blendMove; ster.queue += blendMove;
   blend.lastMove = blendMove; blend.lastCap = blendCap; blend.lastDt = dtMin;
   /* supply -> blend queue */
-  var supCap = supply.faultLeft>0 ? 0 : supply.rateFn();
+  var supCap = (supply.faultLeft>0 || (supply.maintLeft||0)>0) ? 0 : supply.rateFn();   /* R15：供应保养停机 */
   var supMove = draining ? 0 : Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue), RAW.level * CONFIG.r2.rawTankBottlesPerFull);   /* R6：排空期停注新料；R13：供应流量按原料罐实物库存封顶——罐存见底即 supMove=0 真断料，不再有无源之水 */
   blend.queue += supMove;
   supply.lastMove = supMove; supply.lastCap = supCap; supply.lastDt = dtMin;
@@ -2454,6 +2722,7 @@ function step(dtMin){
   chargeUtilities(L, totalFlow*uu.water.perFlow, pUse, sUse);
   if(ECO.on){ ECO.onPower += pUse; ECO.onFinished += good; } else { ECO.offPower += pUse; ECO.offFinished += good; }
   L.finished += good;
+  if(good > 0) traceAttribute(good);   /* R15：本步良品归属当刻 STER_FEED 在制批（谱系产量与逐批台账同源） */
   L.rejected += produced - good;
   L.revenue += good * product.price;
   L.varCost += produced * product.cost;
@@ -2504,6 +2773,7 @@ function oee(){
 function stationStatus(st){
   if(S.changeover) return { key:STATUS.CHANGEOVER, txt:"换型中 · 剩余 "+Math.ceil(S.changeover.left)+" 分" };
   if(st.faultLeft>0) return { key:STATUS.FAULT, txt:"故障停机 · 约 "+Math.ceil(st.faultLeft)+" 分" };
+  if((st.maintLeft||0)>0) return { key:STATUS.CHANGEOVER, txt:"预防性保养中 · 约 "+Math.ceil(st.maintLeft)+" 分（健康度恢复中）" };   /* R15 */
   if(st.id==="sterilize" && st.cipLeft>0) return { key:STATUS.FAULT, txt:"CIP 清洗 · 约 "+Math.ceil(st.cipLeft)+" 分" };
   if(!S.running) return { key:STATUS.IDLE, txt:"待机" };
   if(st.id==="sterilize" && ASEPTIC.stock >= CONFIG.asepticStockCap-1 && st.queue>1) return { key:STATUS.BLOCKED, txt:"无菌罐已满 · 等待灌装消耗" };
@@ -2515,6 +2785,7 @@ function lineStatus(l){
   if(S.changeover) return { key:STATUS.CHANGEOVER, txt:"换型中 · 剩余 "+Math.ceil(S.changeover.left)+" 分" };
   if(!l.on) return { key:STATUS.OFF, txt:"已停线" };
   if(l.faultLeft>0) return { key:STATUS.FAULT, txt:"灌装机故障 · 约 "+Math.ceil(l.faultLeft)+" 分" };
+  if((l.maintLeft||0)>0) return { key:STATUS.CHANGEOVER, txt:"预防性保养中 · 约 "+Math.ceil(l.maintLeft)+" 分（健康度恢复中）" };   /* R15 */
   if(!S.running) return { key:STATUS.IDLE, txt:"待机" };
   if(l.queue<=1 && (l.lastMove||0)<(l.lastCap||1)*CONFIG.starvedRatio) return { key:STATUS.STARVED, txt: ASEPTIC.stock<=1 ? "饥饿 · 无菌罐待料（库存已空）" : "饥饿 · 等待杀菌供料" };
   return { key:STATUS.RUNNING, txt:"运行中" };
@@ -2702,6 +2973,25 @@ function renderKpis(){
       $("relSpares").textContent = SPARES.stock + " 件 / " + SPARES.used + " 件" + (SPARES.stock === 0 ? "（缺货！下次故障将走紧急采购）" : "");
       $("relSpareCost").textContent = fmtMoney(totalSpareCost()) + "（补货 " + SPARES.restocked + " 次 · 紧急采购 " + SPARES.emergency + " 次）";
     }
+    /* R15：预测性维护读数（调度台/抽屉/看板同读 HEALTH 与 PM）+ 谱系 chips 与打开中谱系卡的实时刷新 */
+    var low15 = (typeof pmLowest === "function") ? pmLowest() : null;
+    if(low15){
+      var pmOutEl = $("pmOut"); if(pmOutEl) pmOutEl.textContent = "最低 " + Math.round(low15.health) + " · " + low15.name;
+      var pmAl = $("pmAlert");
+      if(pmAl){
+        var warned15 = healthEntries().filter(function(e){ return e.health <= CONFIG.r15.warnThreshold; });
+        if(warned15.length){
+          pmAl.className = "supply-alert warn";
+          pmAl.textContent = "⚠ 健康预警：" + warned15.map(function(e){ return e.name + " " + Math.round(e.health); }).join(" · ") + "——建议保养，跌到 " + CONFIG.r15.faultThreshold + " 将劣化成故障。";
+        } else { pmAl.className = "supply-alert ok"; pmAl.textContent = "健康度监控中：关键设备暂无预警（最低 " + low15.name + " " + Math.round(low15.health) + "）。"; }
+      }
+      var pmh = $("pmMinHealth"); if(pmh) pmh.textContent = Math.round(low15.health) + " · " + low15.name + "（" + healthStateTxt(low15.health) + "）";
+      var pmw = $("pmWarnMaint"); if(pmw) pmw.textContent = PM.warnings + " 次 / " + PM.maintenances + " 次";
+      var pmc = $("pmCost"); if(pmc) pmc.textContent = fmtMoney(PM.maintCost) + "（保养 " + PM.maintenances + " 次 · 劣化故障 " + PM.degFaults + " 次）";
+      var pml = $("pmLeanTxt"); if(pml) pml.textContent = "最低健康度 " + Math.round(low15.health) + "（" + low15.name + "）· 预警 " + PM.warnings + " 次 · 保养 " + PM.maintenances + " 次 · 劣化故障 " + PM.degFaults + " 次";
+    }
+    if(typeof renderTraceChips === "function") renderTraceChips();
+    if(TRACE.viewKey && TRACE.byKey[TRACE.viewKey]) renderGenealogy(TRACE.viewKey);
     var spOut = $("spareOut");
     if(spOut) spOut.textContent = SPARES.stock + " 件" + (SPARES.stock === 0 ? "（缺货）" : "") + " · 已领用 " + SPARES.used + " 件";
     /* R13：调度台原料预警行 + 精益看板原料行（与 rawAlertState 同源同节奏刷新） */
@@ -2738,6 +3028,8 @@ function renderKpis(){
         ["ECO 累计节省（会话）", fmtMoney(ECO.savedYuan) + " · 电 " + fmt(ECO.savedKwh) + " kWh · 汽 " + fmt(ECO.savedSteamKg) + " kg" + (ECO.on ? "（ECO 开启中）" : "")],
         ["单瓶电耗 ECO 开 / 关（每千瓶）", (ECO.onFinished > 0 ? (ECO.onPower / ECO.onFinished * 1000).toFixed(1) : "—") + " / " + (ECO.offFinished > 0 ? (ECO.offPower / ECO.offFinished * 1000).toFixed(1) : "—") + " kWh"],
         ["故障与备件（会话累计）", "故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件领用 " + SPARES.used + " 件 · 紧急采购 " + SPARES.emergency + " 次"],
+        ["预测性维护（会话累计 · R15）", "预警 " + PM.warnings + " 次 · 保养 " + PM.maintenances + " 次（" + fmtMoney(PM.maintCost) + "）· 劣化故障 " + PM.degFaults + " 次 · 最低健康度 " + (pmLowest() ? Math.round(pmLowest().health) + "（" + pmLowest().name + "）" : "—")],
+        ["批次追溯（R15）", "已归档谱系 " + TRACE.records.length + " 批（保留最近 " + CONFIG.r15.traceArchiveCap + " 批）· 抽屉「批次追溯」输批次号或点货架托盘查全链"],
         ["发货波次（当日）", dd.waves + " 波 · 已发 " + dd.trips + " 车"],
         ["当前库存", WH.stockCases + " 托（下线暂存 " + LOGI.stage.length + " 托 · 交接位 " + LOGI.handover.filter(function(h){ return !!h; }).length + " 托）"],
         ["班次小计 · 白班（当前生产日）", "产量 " + fmt(SHIFT.totals.day.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.day.profit) + " · 人工 " + fmtMoney(SHIFT.totals.day.laborCost) + "（¥" + fmt(CONFIG.r13.shifts.dayLaborCostPerShift) + "/班）"],   /* R13 */
@@ -3835,7 +4127,7 @@ function syncWhStock(){
 function initRackSlots(){
   var per = Math.max(1, Math.floor(D.whCasePos.length / 3));
   SLOTS = D.whCasePos.map(function(p, i){
-    return { idx: i, pos: p, rack: Math.min(2, Math.floor(i / per)), within: i % per, taken: false, reserved: false, seq: 0, productId: null };
+    return { idx: i, pos: p, rack: Math.min(2, Math.floor(i / per)), within: i % per, taken: false, reserved: false, seq: 0, productId: null, batchKey: null };   /* R15：batchKey 谱系键（种子库存为 null = 期初库存） */
   });
   for(var i = 0; i < CONFIG.whBaseCases && i < SLOTS.length; i++){ SLOTS[i].taken = true; SLOTS[i].seq = i + 1; SLOTS[i].productId = PRODUCTS[0].id; }
   LOGI.nextSeq = CONFIG.whBaseCases + 1;
@@ -5134,8 +5426,9 @@ function updatePalletAgvs(dt, t){
         a.phase = "toSlot";
         a.route = agvRoute(a.g.position.x, a.g.position.z, CONFIG.r9.serviceLaneX[tk2.slot.rack], tk2.slot.pos[2]);
       } else if(a.phase === "putXfer"){
-        tk2.slot.taken = true; tk2.slot.seq = tk2.pallet.seq; tk2.slot.productId = tk2.pallet.productId; tk2.slot.reserved = false;
+        tk2.slot.taken = true; tk2.slot.seq = tk2.pallet.seq; tk2.slot.productId = tk2.pallet.productId; tk2.slot.reserved = false; tk2.slot.batchKey = tk2.pallet.batchKey || null;   /* R15：货位承接托盘谱系键 */
         WH.inCases++; LOGI.rackDirty = true; syncWhStock();          /* 库存只在托盘真实落位这一刻 +1 */
+        traceOnSlot(tk2.pallet, slotLabel(tk2.slot));   /* R15：入位事件点记谱系货位 */
         agvFinishTask(a);
       } else if(a.phase === "pickXfer"){
         a.carry = tk2.pallet; a.load.visible = true;
@@ -5201,7 +5494,7 @@ function updateDockForklifts(dt, activeShip){
           D.handoverStacks.forEach(function(h){ if(h.slotX === wp.slot) hs = h; });
           var hi9 = CONFIG.r8.handoverSlots.indexOf(wp.slot);
           /* R9：只取交接位上真实存在的托盘（LOGI.handover 与垛体可见性同源），空位不停靠装车 */
-          if(hs && hs.g.visible && hi9 >= 0 && LOGI.handover[hi9]){ LOGI.handover[hi9] = null; hs.g.visible = false; v.carried.visible = true; v.forkTarget = 1.0; syncWhStock(); return 1.3; }
+          if(hs && hs.g.visible && hi9 >= 0 && LOGI.handover[hi9]){ v.carryPallet = LOGI.handover[hi9]; LOGI.handover[hi9] = null; hs.g.visible = false; v.carried.visible = true; v.forkTarget = 1.0; syncWhStock(); return 1.3; }   /* R15：叉车暂存所取托盘，装车点据此记谱系去向 */
         }
         return 0;
       }
@@ -5212,6 +5505,7 @@ function updateDockForklifts(dt, activeShip){
            * 装满本车即在事件点结波次（取代 R2 内核按速率凭空扣库存）。 */
           if(SHIP.active && SHIP.loadCases < SHIP.targetCases){
             SHIP.loadCases++; WH.outCases++; syncWhStock();
+            traceOnShip(v.carryPallet, WAVES, SHIP.trips + 1); v.carryPallet = null;   /* R15：装车事件点记谱系最终去向（波次/车次） */
             if(SHIP.loadCases >= SHIP.targetCases){
               SHIP.active = false; SHIP.trips++;
               SHIP.nextWaveAt += CONFIG.r2.shipWaveOrderStep;
@@ -5889,6 +6183,7 @@ function updateScene(dt, t){
       var wt2 = D.whTapePos[s.idx];
       if(wt2){ dummy3.position.set(wt2[0], wt2[1], wt2[2]); dummy3.updateMatrix(); D.whTape.setMatrixAt(wi, dummy3.matrix); }
     });
+    D.whRenderSlots = taken9;   /* R15：实例序 → 货位映射（与 taken9 排布同序），点选托盘据此反查谱系 */
     D.whCases.count = taken9.length; D.whCases.instanceMatrix.needsUpdate = true;
     if(D.whCases.instanceColor) D.whCases.instanceColor.needsUpdate = true;
     if(D.whTape){ D.whTape.count = taken9.length; D.whTape.instanceMatrix.needsUpdate = true; }
@@ -6413,9 +6708,67 @@ function initControls(){
    停用产线改 Line.on、抢修走 repairStation/repairLine 并计费到账本）
    ================================================================ */
 var raycaster = null, infoHover = false;
+/* ================= [M5] R15 · 谱系卡渲染（抽屉「批次追溯」+ 托盘点选共用） =================
+ * 节点全部读 TRACE 记录的事件字段，缺哪环如实写「尚未…」，不补造。 */
+function geneNode(t, title, body){ return '<div class="gnode"><div class="gt">' + t + '</div><div class="gb"><b>' + title + '</b><br>' + body + '</div></div>'; }
+function traceDestTxt(rec){
+  var shipped = rec.pallets.filter(function(p){ return p.trip != null; });
+  var inSlot = rec.pallets.filter(function(p){ return p.slotLabel && p.trip == null; });
+  if(shipped.length) return "已发货 " + shipped.length + " 托（第 " + shipped[0].wave + " 波次 · 第 " + shipped[0].trip + " 车次）" + (inSlot.length ? "；另有 " + inSlot.length + " 托在库" : "");
+  if(inSlot.length) return "在库 · " + inSlot.map(function(p){ return p.slotLabel; }).join("、");
+  if(rec.pallets.length) return "已成托 " + rec.pallets.length + " 托 · 在下线暂存/交接途中";
+  return rec.bottles > 0 ? "灌装中 · 尚未成托" : "调配/杀菌在制 · 尚未灌装";
+}
+function renderGenealogy(key){
+  var box = $("traceResult"); if(!box) return;
+  var rec = TRACE.byKey[key];
+  if(!rec){ box.innerHTML = '<div class="qempty">未找到该批次的谱系（可能已超出归档保留 ' + CONFIG.r15.traceArchiveCap + ' 批，或批次号不存在）。</div>'; return; }
+  TRACE.viewKey = key;
+  var clk = function(m){ return fmtSimClock(m); };
+  var ing = rec.ingredients.map(function(g){ return g.name + " " + fmt(g.amount) + " " + g.unit + "（" + g.from + "）"; }).join(" · ");
+  var ster = rec.ster ? ("UHT 实测 " + rec.ster.tempC + "℃ / 保持 " + rec.ster.holdSec + "s（目标 " + rec.ster.targetTempC + "℃） · 预热 " + rec.ster.preheatC + "℃ → 冷却出口 " + rec.ster.coolOutC + "℃ · 均质 " + rec.ster.homogP1 + "/" + rec.ster.homogP2 + " bar")
+                      : "尚未出料 · 灭菌参数待实测（目标 UHT " + sterProcOf({ id: rec.productId }).uhtTempC + "℃）";
+  var fill = rec.fillStart !== null ? ((rec.lines.length ? rec.lines.join("、") : "灌装线") + " · " + clk(rec.fillStart) + " → " + clk(rec.fillEnd) + " · 本批良品 " + fmt(rec.bottles) + " 瓶") : "尚未灌装";
+  var qc = rec.qc ? (rec.qc.result + " · " + clk(rec.qc.atMin) + "（本批累计被抽检 " + rec.qcCount + " 次）") : "尚未抽检到本批";
+  var pal = rec.pallets.length ? rec.pallets.map(function(p){
+      return "第 " + p.seq + " 托" + (p.trip != null ? " → 已随第 " + p.wave + " 波次 / 第 " + p.trip + " 车次发出" : p.slotLabel ? " → " + p.slotLabel : " → 暂存/在途");
+    }).join("<br>") : "尚未码垛成托";
+  box.innerHTML = '<div class="gene"><h4>' + rec.productName + ' · 调配批次 #' + rec.num + ' 谱系卡</h4>'
+    + geneNode(clk(rec.bornMin), "调配开批 · " + rec.recipeName, "批量 " + fmt(rec.batchL) + " L/批 · 原料批次：" + rec.rawLot + '<br><span class="sub">' + ing + '</span>')
+    + geneNode(rec.dischargeMin !== null ? clk(rec.dischargeMin) : "—", "灭菌（UHT）", ster)
+    + geneNode(rec.fillStart !== null ? clk(rec.fillStart) : "—", "灌装", fill)
+    + geneNode(rec.qc ? clk(rec.qc.atMin) : "—", "质检抽检", qc)
+    + geneNode("—", "码垛成托 → 货位 → 去向", pal + '<br><span class="sub">当前去向：' + traceDestTxt(rec) + '</span>')
+    + '</div>';
+}
+function openTrace(key){
+  if(!key) return;
+  openDrawer();
+  renderGenealogy(key);
+  var tr = $("traceResult"); if(tr && tr.scrollIntoView) tr.scrollIntoView({ block: "nearest" });
+}
+function renderTraceChips(){
+  var el = $("traceChips"); if(!el) return;
+  if(!TRACE.records.length){ el.innerHTML = ""; return; }
+  el.innerHTML = TRACE.records.slice(-8).reverse().map(function(r){
+    return '<button class="trace-chip" data-tkey="' + r.key + '">' + r.productName + ' #' + r.num + ' · ' + fmt(r.bottles) + ' 瓶</button>';
+  }).join("");
+}
+var palRay = null;
 function pickAt(cx, cy){
   if(!raycaster){ raycaster = new THREE.Raycaster(); raycaster.layers.set(1); }   /* R7：只测 1 号图层的点选盒（与 hitbox 的 layers.set(1) 配对） */
   var mouse = new THREE.Vector2((cx/innerWidth)*2-1, -(cy/innerHeight)*2+1);
+  /* R15：货架托盘（InstancedMesh）优先拾取——实例序经 D.whRenderSlots 反查货位，点中即出该托谱系摘要 */
+  if(typeof D !== "undefined" && D.whCases && D.whRenderSlots && D.whRenderSlots.length){
+    if(!palRay) palRay = new THREE.Raycaster();
+    palRay.setFromCamera(mouse, camera);
+    var ph15 = palRay.intersectObject(D.whCases, false);
+    if(ph15.length && ph15[0].instanceId != null && D.whRenderSlots[ph15[0].instanceId]){
+      S.selected = { kind: "slot", slot: D.whRenderSlots[ph15[0].instanceId] };
+      renderInfo();
+      return;
+    }
+  }
   raycaster.setFromCamera(mouse, camera);
   var hits = raycaster.intersectObjects(clickables, false);
   if(hits.length){
@@ -6480,7 +6833,8 @@ function renderInfo(){
       rowHtml("杀菌队列", fmt(ast.queue)+" 瓶") +
       rowHtml("杀菌产能", fmt(ast.rateFn() * aproc.flowFactor)+" 瓶/分（额定 × 流量系数 "+aproc.flowFactor+"）") +
       rowHtml("CIP 状态", ast.cipLeft>0 ? "清洗中 · 约 "+Math.ceil(ast.cipLeft)+" 分" : "待命") +
-      rowHtml("累计处理", fmt(ast.done)+" 瓶");
+      rowHtml("累计处理", fmt(ast.done)+" 瓶") +
+      rowHtml("健康度（预测维护）", (function(){ var he = healthOf(ast); return he ? Math.round(he.health) + " · " + healthStateTxt(he.health) + (he.health <= CONFIG.r15.warnThreshold ? "（已预警，建议保养）" : "") : "—"; })());   /* R15 */
     btns = (ast.faultLeft>0 || ast.cipLeft>0) ? '<button class="btn" id="infoRepairSt">⚡ 抢修 / 结束清洗（¥'+CONFIG.repairFee+'）</button>' : "";
     $("infoBtns").innerHTML = btns;
     var arb = $("infoRepairSt");
@@ -6502,14 +6856,18 @@ function renderInfo(){
       rowHtml("灌装队列", fmt(l.queue)+" 瓶") +
       rowHtml("封盖贴标队列", fmt(l.capQ)+" 瓶") +
       rowHtml("本线累计产出", fmt(l.done)+" 瓶") +
-      rowHtml("故障次数", l.faults+" 次");
+      rowHtml("故障次数", l.faults+" 次") +
+      rowHtml("健康度（预测维护）", (function(){ var he = healthOf(l); return he ? Math.round(he.health) + " · " + healthStateTxt(he.health) + (he.health <= CONFIG.r15.warnThreshold ? "（已预警，建议保养）" : "") : "—"; })());   /* R15 */
     btns = '<button class="btn" id="infoLineToggle">' + (l.on ? "⏸ 停用此线" : "▶ 启用此线") + '</button>';
     if(l.faultLeft>0) btns += '<button class="btn" id="infoRepair" style="border-color:var(--red);color:var(--red)">🔧 立即抢修 ¥'+fmt(CONFIG.repairFee)+'</button>';
+    else if((l.maintLeft||0)<=0) btns += '<button class="btn" id="infoMaintLine">🛠 预防保养（停机 '+CONFIG.r15.maintMinutes+' 分 · ¥'+fmt(CONFIG.r15.maintCost)+'）</button>';   /* R15 */
     $("infoBtns").innerHTML = btns;
     var tg = $("infoLineToggle");
     if(tg) tg.addEventListener("click", function(){ l.on = !l.on; log(l.on ? "「"+l.name+"」已启用。" : "「"+l.name+"」已停用，在线产线减少。"); refreshLineUI(); renderAll(); });
     var rp = $("infoRepair");
     if(rp) rp.addEventListener("click", function(){ repairLine(l); });
+    var ml15 = $("infoMaintLine");
+    if(ml15) ml15.addEventListener("click", function(){ startMaintenance(l); });   /* R15 */
   } else if(sel.kind === "st"){
     var s2 = stations.find(function(x){ return x.id===sel.id; });
     var stt = stationStatus(s2);
@@ -6519,7 +6877,8 @@ function renderInfo(){
     var rows = rowHtml("额定速度", fmt(s2.rateFn())+" 瓶/分") +
       rowHtml("队列等待", s2.id==="supply" ? "原料充足" : fmt(s2.queue)+" 瓶") +
       rowHtml("累计处理", fmt(s2.done)+" 瓶") +
-      rowHtml("停机次数", s2.faults+" 次");
+      rowHtml("停机次数", s2.faults+" 次") +
+      rowHtml("健康度（预测维护）", (function(){ var he = healthOf(s2); return he ? Math.round(he.health) + " · " + healthStateTxt(he.health) + (he.health <= CONFIG.r15.warnThreshold ? "（已预警，建议保养）" : "") : "—"; })());   /* R15 */
     if(s2.id==="sterilize"){
       var sproc = sterProcOf(product); var sbatch = sterBatchInfo();
       rows += rowHtml("正在处理批次", "#"+sbatch.num+" · "+sbatch.productName);
@@ -6538,6 +6897,9 @@ function renderInfo(){
     if(s2.faultLeft>0 || (s2.id==="sterilize" && s2.cipLeft>0)){
       $("infoBtns").innerHTML = '<button class="btn" id="infoRepair" style="border-color:var(--red);color:var(--red)">🔧 立即维修 / 疏通</button>';
       $("infoRepair").addEventListener("click", function(){ repairStation(s2); });
+    } else if((s2.maintLeft||0)<=0){
+      $("infoBtns").innerHTML = '<button class="btn" id="infoMaintSt">🛠 预防保养（停机 '+CONFIG.r15.maintMinutes+' 分 · ¥'+fmt(CONFIG.r15.maintCost)+'）</button>';   /* R15 */
+      $("infoMaintSt").addEventListener("click", function(){ startMaintenance(s2); });
     } else $("infoBtns").innerHTML = "";
   } else if(sel.kind === "palletizer"){
     var pst = palletizerState();
@@ -6552,6 +6914,26 @@ function renderInfo(){
       rowHtml("待码队列", PAL.caseQueue + " 箱（进料缓冲上限 " + CONFIG.r14.caseBufferCap + " 箱 · 实际速率 " + Math.round(PAL.rateNow) + " 箱/分）") +
       rowHtml("累计完成", PAL.completed + " 托（满托滑到下线暂存位 → 入库 AGV 叉走上架）");
     $("infoBtns").innerHTML = "";
+  } else if(sel.kind === "slot"){
+    /* R15：点中货架任意一托 → 该托谱系摘要（完整谱系在抽屉「批次追溯」） */
+    var sl15 = sel.slot;
+    var rec15 = sl15.batchKey ? TRACE.byKey[sl15.batchKey] : null;
+    $("infoTitle").textContent = slotLabel(sl15) + " · 第 " + sl15.seq + " 托";
+    $("infoStatus").textContent = "● " + prodNameOf(sl15.productId) + " · 已上架在库";
+    $("infoStatus").style.color = STATUS_COLORS.run;
+    var srows = rowHtml("产品", prodNameOf(sl15.productId)) + rowHtml("入库序号（FIFO）", "第 " + sl15.seq + " 托（越小越早，出库先取）");
+    if(rec15){
+      srows += rowHtml("所属批次", rec15.productName + " · 调配批次 #" + rec15.num)
+        + rowHtml("本批良品产量", fmt(rec15.bottles) + " 瓶")
+        + rowHtml("抽检", rec15.qc ? rec15.qc.result : "尚未抽检到本批")
+        + rowHtml("当前去向", traceDestTxt(rec15));
+    } else {
+      srows += rowHtml("所属批次", "期初库存（建账前入库，无谱系记录）");
+    }
+    $("infoRows").innerHTML = srows;
+    $("infoBtns").innerHTML = rec15 ? '<button class="btn" id="infoTraceSlot">🔍 查看本批完整谱系</button>' : "";
+    var its15 = $("infoTraceSlot");
+    if(its15) its15.addEventListener("click", function(){ openTrace(rec15.key); });
   } else if(sel.kind === "zone" && sel.id === "warehouse"){
     $("infoTitle").textContent = "成品立体仓库";
     $("infoStatus").textContent = "● 高位货架存储区";
@@ -6566,8 +6948,18 @@ function renderInfo(){
       rowHtml("下线暂存", LOGI.stage.length+" 托待 AGV 取走（暂存位 "+CONFIG.r9.stagePos.length+" 个，满了满托停在码垛位等待）") +
       rowHtml("已发车次", SHIP.trips+" 车"+(SHIP.active ? " · 正在装车 "+Math.floor(SHIP.loadCases)+"/"+SHIP.targetCases+" 箱" : "")) +
       rowHtml("全厂累计成品", fmt(S.finished)+" 瓶") +
-      rowHtml("搬运", "室内只走无人托盘车（"+CONFIG.r8.agvCount+" 台任务制：下线暂存位取托 → 逐货位上架；出库按 FIFO 取最早批次 → 交接位），叉车不进仓库");
-    $("infoBtns").innerHTML = "";
+      rowHtml("搬运", "室内只走无人托盘车（"+CONFIG.r8.agvCount+" 台任务制：下线暂存位取托 → 逐货位上架；出库按 FIFO 取最早批次 → 交接位），叉车不进仓库") +
+      rowHtml("批次追溯", "点任意一托看谱系，或用下方按钮查最早/最新一批");
+    (function(){
+      var taken15 = SLOTS.filter(function(s){ return s.taken && s.batchKey; }).sort(function(a, b){ return a.seq - b.seq; });
+      var stage15 = LOGI.stage.filter(function(p){ return p.batchKey; });
+      var b = "";
+      if(taken15.length) b += '<button class="btn" id="infoTraceOld">🔍 最早批次谱系（第 ' + taken15[0].seq + ' 托）</button>';
+      if(stage15.length) b += '<button class="btn" id="infoTraceNew">🔍 最新成托谱系（第 ' + stage15[stage15.length-1].seq + ' 托）</button>';
+      $("infoBtns").innerHTML = b;
+      var bo = $("infoTraceOld"); if(bo) bo.addEventListener("click", function(){ openTrace(taken15[0].batchKey); });
+      var bn2 = $("infoTraceNew"); if(bn2) bn2.addEventListener("click", function(){ openTrace(stage15[stage15.length-1].batchKey); });
+    })();
   } else if(sel.kind === "zone" && sel.id === "dock"){
     var tstat = dockStatusText();
     $("infoTitle").textContent = "装卸月台";
@@ -6906,6 +7298,22 @@ $("ecoBtn").addEventListener("click", function(){
   renderKpis();
 });
 $("spareBtn").addEventListener("click", function(){ restockSpare(); renderKpis(); });
+/* R15 绑定：调度台保养钮（保养当前最低健康度设备）+ 抽屉谱系查询 / chips */
+$("pmBtn").addEventListener("click", function(){ var low = pmLowest(); if(low) startMaintenance(low.obj); renderKpis(); });
+$("traceBtn").addEventListener("click", function(){
+  var v = ($("traceInput").value || "").trim();
+  var n = parseInt(v, 10);
+  var found = null;
+  if(!isNaN(n)){ for(var i = TRACE.records.length - 1; i >= 0; i--){ if(TRACE.records[i].num === n){ found = TRACE.records[i]; break; } } }
+  if(!found){ TRACE.records.forEach(function(r){ if(r.key === v) found = r; }); }
+  if(found) renderGenealogy(found.key);
+  else { $("traceResult").innerHTML = '<div class="qempty">未找到批次 ' + v + ' 的谱系（尚无此批次，或已超出归档保留 ' + CONFIG.r15.traceArchiveCap + ' 批）。</div>'; TRACE.viewKey = null; }
+});
+$("traceChips").addEventListener("click", function(e){
+  var b = e.target && e.target.closest ? e.target.closest("[data-tkey]") : null;
+  if(b) renderGenealogy(b.getAttribute("data-tkey"));
+});
+$("traceInput").addEventListener("keydown", function(e){ if(e.key === "Enter") $("traceBtn").click(); });
 $("resetBtn").addEventListener("click", function(){
   S.finished=0; S.rejected=0; S.waterM3=0; S.powerKwh=0; S.steamKg=0; S.fixedCost=0; S.simMin=8*60; S.orderDoneLogged=false;
   S.orderDone=0; S.everRan=false; S.changeover=null; S.lastSettle=""; pendingProduct=null; S.reservation=null; /* R6：重置须清排空预约（静默清，不走 cancelReservation 的日志口径，下面统一写重置日志） */
@@ -6925,8 +7333,10 @@ $("resetBtn").addEventListener("click", function(){
   $("coModal").classList.remove("show");
   PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0 }; });
   history=[]; sampleAcc=0; sampleCount=0;
-  stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.faultMeta=null; st.faultStartMin=null; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
-  lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.faultMeta=null; l.faultStartMin=null; l.lastMove=0; });
+  stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.maintLeft=0; st.faultMeta=null; st.faultStartMin=null; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
+  lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.maintLeft=0; l.faultMeta=null; l.faultStartMin=null; l.lastMove=0; });
+  /* R15：谱系归档与健康度全量复位（重置 = 新工厂，谱系从新纪元重新建卡） */
+  traceReset(); pmReset(); healthEntries();
   ASEPTIC.stock = CONFIG.asepticStockInit; ASEPTIC.lastFeed = 0; ASEPTIC.lastSterMove = 0;
   /* R2 联动状态全量复位（与 S/账本同口径回初值，货架 FIFO 窗口随 WH 复位自动重排） */
   UTIL.steamLoad = 0; UTIL.steamPressure = 0.95; UTIL.airRunning = 0; UTIL.airPressure = 0.72; UTIL.roRunning = false;
