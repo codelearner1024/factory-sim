@@ -521,6 +521,14 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
     </div>
     <p class="hint mono" id="perfMerge" style="margin-top:6px">静态合并：—</p>
     <p class="hint mono" id="perfMergeEx" style="margin-top:2px"></p>
+    <p class="hint mono" id="perfNav" style="margin-top:2px">车辆最小净距：—</p>
+
+    <h3>物流任务播报（与车辆动作同源）</h3>
+    <p class="hint">两台无人托盘车的当前任务，文字由车辆任务状态机直接生成：入库 = 包装下线暂存位取托 → 送进货架具体货位；出库 = 按先进先出取最早批次那一托 → 送到交接位，叉车再装车。货架上的托盘颜色越深批次越老，出库取货时目标货位会亮起橙色高亮框。</p>
+    <div class="econ">
+      <div class="dcell wide"><div class="l">入库台 AGV · 包装下线 → 货架</div><div class="v" id="logiLineIn" style="font-size:13px">空闲</div></div>
+      <div class="dcell wide"><div class="l">出库台 AGV · 货架 → 交接位</div><div class="v" id="logiLineOut" style="font-size:13px">空闲</div></div>
+    </div>
 
     <h3>当前订单</h3>
     <div class="orderbar">
@@ -596,6 +604,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <div class="dcell wide"><div class="l">R5 遗留清理 + 真机仪表（本轮）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>总览</b>：不动 R1–R4 功能与联动逻辑，专清 R4 遗留清单四项 + 给数据抽屉加真机仪表；全部新参数进 CONFIG（perf.mobileLow / light.shadowTiers.eco / perf.particleFactor.eco）。<b>① 静态几何合并（遗留 ① 已清）</b>：three r128 核心确无 BufferGeometryUtils，故自研 mergeStaticGroup（buildScene 前 R5 一节）：范围只限 D.staticGroups 登记的纯静态根组——远景剪影 / 标识牌面 / 安全标识 / 质检实验室 / 地面导向（组内无任何每帧位姿/可见性更新、组根恒等变换）；按材质签名分桶（贴图按 uuid、其余按类型+颜色+自发光+粗糙/金属+不透明），每桶几何转非索引、烘焙 matrixWorld 后拼接 position/normal/uv，一桶一 Mesh，cast/receive 取来源并集。hitbox（clickables/colorWrite=false）、InstancedMesh 自动跳过；属性集不一致整桶放弃。混合动态组（产线/公用工程/仓库等含转盘/液位/灯/车辆）不合并——高频重复件此前已全部实例化，强行合并会冻死动态件位姿，收益不抵风险（此判断即 R4 保留现状的理由，本轮以「纯静态组全合」方式落地）。合并前后网格数由 mergeAllStaticGroups 在建场时实测、写入 D.mergeStats / window.__mergeStats，控制台有同口径日志（[factory] R5 静态合并：登记组网格 X → Y）；draw call 总数以数据抽屉「真机性能」格的 renderer.info 读数为准，合并组每桶省下的网格即等量 draw call。<b>② 巡游漂移（遗留 ② 已清）</b>：旧 u 按路点序号手估、而 getPointAt 是弧长参数，各段路长悬殊导致约 1 秒早/晚触发。修法：TOUR_STOPS 每站加 wp（路点序号），buildTour 后 alignTourStops() 查曲线弧长表 getLengths(2000)，以 t=wp/N 处的累计弧长占比回填精确 u（误差 &lt;0.0005 → &lt;0.04 秒）；updateCamera 触发时再把 tourT 吸附到 u 并重算机位，消除帧步进过冲。实测 u 值在 window.__tourStopUs。改路线只改 pts 与 wp 对应，勿再手写 u。<b>③ 移动端独立低端档（遗留 ④ 已清）</b>：CONFIG.perf.mobileLow = { pixelRatioCap:1.0, shadowTier:"eco"(512，light.shadowTiers 新增), lodDistance:110 } + particleFactor.eco=0.3；buildScene 一次判定（pointer:coarse 或视口 &lt;820）定版 window.__perfTier/__basePixelCap/__baseShadowTier/__baseLodDistance，桌面三档（high/mid/low）行为不变。自动降级以本档为锚：移动链 eco→关阴影→像素比 0.85，桌面链不变；restoreQuality 回设备档基准（不再另写设备判断）。<b>④ 真机仪表（遗留 ③ 的页面侧落地）</b>：数据抽屉顶部「真机性能」四格——近 60 帧均值帧率（loop 内 perfPushFrame 帧时环，只做数组操作）、设备档/阴影档/降级级数、当前像素比、上一帧 draw call（renderer.info.render.calls），由 renderKpis 按既有 8 帧节奏填写，渲染循环内零 DOM。调试入口 window.__perfSnapshot()（含 merge 与 tourStopUs）。无头/软件渲染帧率仍不代表真机（遗留 ③ 的环境部分无法由页面消除），但真机读数从此可在页面内直接读取反馈。<b>遗留清单更新</b>（R6 注：本节中「控制台整体隐藏」的旧口径已被 R6 独立隐藏取代，见下方 R6 节；本节其余内容不变）：<s>① 静态几何未合并</s>（本轮纯静态组已合并，混合组按上述理由保留）；<s>② 巡游 u 漂移约 1 秒</s>（已按弧长精确对齐）；<s>④ 移动端无独立低端档</s>（mobileLow 已落地）；③ 无头帧率不代表真机——保留为环境说明，页面侧已补真机仪表。本轮新发现：建场走查与合并实测见交付汇报。</div></div>
       <div class="dcell wide"><div class="l">R7 深砍 Draw Call（设备静态子件深合并 + 动态组内合并 + hitbox 图层化）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>背景</b>：用户真机截图 R5 版 draw call 3,168（45 FPS 靠自动降级 2 级 + 像素比 0.85 换来），R5 合并只覆盖 5 个纯静态组，大头在设备组内的静态子件与动态组内的相对静止子件。<b>做法（参数 CONFIG.perf.mergeEquipmentStatic / mergeMinBucket）</b>：① 设备静态子件深合并 mergeEquipmentStatic（与 mergeStaticGroup 同在 mergeAllStaticGroups 内执行，统计并入 __mergeStats.equipment，抽屉「真机性能」下方两行同源显示）——判定不靠人肉清单，靠动态注册表 D 的可达集：深走 D（含 Object3D 的 userData 句柄，如仪表 needle）收集注册对象与注册材质；网格可合并 ⇔ 本身不是注册件、不使用注册材质、非 hitbox、材质不透明、几何可无损拼接。合并根 = 向上最近的注册「组」（转盘/星轮/封盖塔/手轮/车辆/工人/顶棚组：子件相对组静止，组内按材质分桶合并，组动画照常驱动整桶）或 scene（无注册祖先的整厂静止件跨组同材质合并，顶层组建场后从不移动/隐藏）；注册「网格」的子件放弃（父级可能非均匀缩放）。② 配套：hitbox 移到 1 号图层（相机只启 0 层永不绘制、pickAt 射线单独启 1 层，occRay 不受影响），省掉全部点选盒的空绘制，拾取口径不变。<b>排除清单（实测计数，共 493 件保留原样）</b>：dynamic 177（液位柱/转盘本体/表针/车辆载货/工人肢体/墙·货架·罐体等遮挡淡出逐件目标——逐帧改位姿/缩放/可见性或靠逐件材质表达状态）、hotMaterial 94（管道流光 sterFlow/blendFlow/feedPipeMat、状态灯 lampMat、液面与产品色材质——逐帧改色/脉冲）、transparent 76（玻璃护罩/报警塔灯段/视管——透明排序按网格粒度）、hitbox 21（点选盒，合并即丢 userData.sel）、single 125（同根同材质仅 1 件，如各线独立传送带贴图面，合并无收益）、exotic 0。<b>实测（同机位同状态：无头移动视口、待机、自动降级 2 级关阴影、像素比 1.00，renderer.info.render.calls）</b>：R6 基线 <b>2,867</b> → R7 第一阶段（设备组内静态合并）<b>1,219</b>（−57.5%）→ R7 全量（动态组内合并 + 跨组 + hitbox 图层）<b>592</b>（−79.3%，为基线的 20.7%，优于 ≤1/3 的目标线 956）。网格口径同向：合并范围全场网格 3,794 → 731（−80.7%），其中 R5 登记组 428 → 98、设备子件 3,366 → 633（140 个合并桶）。真机 3,168 是 R5 带 eco 阴影的读数、与无头关阴影口径不可直接相除，但网格 −80.7% 的结构降幅与设备无关，真机 draw call 预期同比例下降（阴影开时合并掉的投射件同步减少，降幅只多不少），以真机四格读数为准回填。<b>红线守恒</b>：hitbox 一件未动（仅加图层）、遮挡淡出目标（墙/货架/罐体/顶棚材质）全部在排除集、动态件与逐帧改色材质零合并、合并网格 castShadow/receiveShadow 取来源并集；回归已过：生产一轮 / 立即换型 / 排空预约→自动触发 / 面板独立隐藏 / 重置（详见当轮交付汇报）。<b>剩余大头（不可再合）</b>：592 中约 493 件为上述排除集 + 140 合并桶 + 实例化网格与粒子；再往下只能动动态件本身（转盘头改实例化）或降几何密度，收益小、回归风险高，停手。</div></div>
       <div class="dcell wide"><div class="l">R8 物流分工重构（叉车退出室内 + 无人托盘车 + 交接位 + 防撞净距）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：旧车辆路线有三段实打实的穿模/蹭撞——① 叉车 1 绕货架矩形路线的 z=±29 横腿离货架梁端（z=±28）仅 1.0，叉车身半深 1.35，必然蹭梁端；② 叉车 2 沿 z=33.5 的车道压在月台台体 footprint（z 33.05–38.55、高 1.1）里，等于在台体内部穿行；③ 旧 AGV 西道 x=68 横穿中线输送带东端（带面至 x=71）。本轮三段全部废除重划。<b>新分工（参数 CONFIG.r8）</b>：室内（生产区+仓库）只准无人托盘车——新车 D.agvs（低矮潜入式：双货叉板/托盘载荷/旋转激光雷达/状态灯塔/前扫描扇面），旧 AGV 小车并入车队（不再有第二套车同道对穿）；叉车只在月台台面（y=dockForkliftY=1.1，车道 dockLaneZ=35.8）与东侧外场活动：fl1 装车（交接位取货→卡车车厢）、fl2 外场待命/短驳，无波次时各自回待命位停齐（用户原话「叉车只要在外面等」）。<b>交接位</b>：月台内侧 z=handoverZ=31.4、x=handoverSlots [64,70,76] 三个垛位（地面黄框+托盘垛 D.handoverStacks+铭牌）：AGV 沿交接横道从北侧把出库托盘放下离开，叉车从台面侧北上取货——两车不进彼此区域、路线不交叉。<b>AGV 环线与分工</b>：矩形环线西道 x=73.5（南下）→交接横道 z=31.4（东行，含西延垛位段）→东道 x=79.5（北上）→北横道 z=-26（西行），两台同环同向；inbound 车在缠膜下线点 (73.5,-19) 取成品托盘、到货架巷道口 (79.5,12 / 79.5,-8) 放货；outbound 车在巷道口取货、到交接位轮换垛位（70→64→76）放货。缠膜机与分拣复核工位已西移至 x=66 让道（原 x=73/74 正压在新西道上）。地面标线同步重画：双车道黄虚线+北/交接横道+交接段黄黑警戒边线+台面叉车车道边线。<b>路线净距表（逐点核算，车体按中心距−半宽/半深，规划值）</b>：AGV 西道→中线输送带东端（x=71）2.5−0.7=<b>1.8</b>；AGV 交接横道→月台台体北缘（z=33.05）1.65−0.7=<b>0.95</b>；AGV 东道→货架西立柱面（x=82.6）3.1−0.7=<b>2.4</b>；AGV 西道→缠膜转盘东缘（x=67.7）5.8−0.7=<b>5.1</b>、→复核工位东缘（x=68.3）5.2−0.7=<b>4.5</b>；AGV 北横道→北线设备南缘（z=-36.3）10.3−0.7=<b>9.6</b>；叉车台面取货位（z=34.6，叉尖北伸至 z≈32.1）→交接垛南缘（z=32.1）<b>≈0（对接）</b>、车身→台体北缘 34.6−1.35−33.05=<b>0.2</b>（在台面内侧行驶，车身不出台面）；叉车装车位（z=36.9）车身南缘 38.25→卡车车尾 38.85 = <b>0.6</b>（叉尖伸入车厢为装车对接）；叉车台面车道→卡车车尾（横移时）35.8+1.35=37.15→38.85 = <b>1.7</b>；外场叉车→台体东缘（x=81）84−0.85−81 = <b>2.15</b>、→卡车东缘（x=69.5）≥<b>12</b>。全部 ≥ CONFIG.r8.clearanceMin=0.5（对接点除外，那是叉尖与托盘/车厢的作业接触面，车身净距仍 ≥0.2 且在台面内）。<b>避让状态机</b>：moveVehicle 通用循线（run/wait/yield/home）；AGV 跟驰——agvBlockedAhead 按车头方向投影，前方 agvFollowDist=5.5 内有同向 AGV 或行人即 yield 停车（灯塔转黄闪）、占用消失自动恢复；两台 AGV 同环同向+相位错开，正常永不触发，触发只会是行人横穿车道。无任务门控沿用 R2：AGV 随出入库/波次活动（WH.sinceProduce&lt;2.5 或 SHIP.active），叉车只随 SHIP.active；无任务时沿环线回 homeIdx 待命位停齐（moveVehicle 到待命位不推进 seg）。<b>联动链</b>：发货波次（内核 SHIP 不变）→ outbound AGV 室内出库到交接位（垛亮）→ fl1 台面取货装车（垛灭、车厢箱数随 SHIP 涨）→ 卡车离场/新车进场；仓库 FIFO/守恒、产量折箱口径未动。重置全量复位：两 AGV 回待命角、两叉车回室外待命位、交接垛清空、__navStats 清零。<b>__navStats 读法</b>：window.__navStats = { agvMinEquip, forkMinEquip, minVehicle, minPerson, samples }，updateScene 每帧按 NAV_OBSTACLES_AGV/FORK（设备占地矩形表，与净距表同源）累计各车全程最小表面净距（已减车体半径 agv 0.75 / fork 0.9；台面叉车剔除台体矩形——台面是其路面）；window.__resetNavStats() 清零。自检口径：开一轮生产等波次走完一轮后读四值，全 &gt;0 即全程无穿模（数值与上方规划表同量级，差异来自循线转弯内切）。</div></div>
+      <div class="dcell wide"><div class="l">R9 仓储可视物流（逐货位模型 + 任务制 AGV + 物流播报 + 净距读数）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户反馈两点——① 包装线下线的货没被无人车取走（R8 的 AGV 只在巷道口翻转一个载荷位，货架箱数由内核按产量凭空涨落）；② 货架取货逻辑看不懂（R2 的 FIFO 窗口渲染：箱子按 [head, head+stock) 环形窗口出现/消失，与任何车辆行程无关）。本轮从机制上重做，参数全在 <b>CONFIG.r9</b>。<b>逐货位模型（唯一真相）</b>：SLOTS 按 D.whCasePos 生成（A/B/C 三巷 × 3 层 × 巷内序，slotLabel = 「货架 X 巷 k 号位」），字段 taken/reserved/seq/productId；占用只被两个物理事件改写——入库 putXfer 完成（taken=true、WH.inCases+1）与出库 pickXfer 开始（taken=false、货位即变空）。货架渲染按 taken 集逐位排实例（LOGI.rackDirty 事件驱动），R2 窗口渲染废除；颜色按 seq 年龄渐变（深 = 老），出库永远取 seq 最小且未预订的货位，取货时该货位亮橙色线框高亮（D.slotHi）。<b>入库链</b>：内核折箱只到 LOGI.stage（下线暂存位，stagePos 6 个：前 3 黄框暂存位 + 后 3 橙框地面暂存区，垛体 D.stageStacks 与 stage 同源显隐）；暂存满则 producedCases 停推（下线被堵，积压可见即瓶颈）。入库 AGV 状态机 home→toStage→loadXfer→toSlot→putXfer→toHome，托盘在每段转移中由全场共用转移托盘（D.xferPallet，xferSeconds=1.3s）可见地在车↔暂存位/货位间移动，两车争用时后到者排队。<b>出库链</b>：波次激活只定 targetCases（内核不再按速率扣库存）；出库需求 = 未装数 − 交接位已有 − 在途出库任务，派单即预订货位+交接位；AGV 取最老货位 → 交接位落托（LOGI.handover）→ 装车叉车 pick 只取真实存在的托盘 → truck 装车事件点才 loadCases/outCases+1 并结波次。两台 AGV 角色互援：出库车先出后入、入库车先入后出。<b>路线</b>：agvRoute 在车道网上拼纵→横→纵三段（西道 73.5 / A 巷道 79.5 / B、C 巷道内侧 95.5、111.5 × 北横道 −31 / 南横道 31.4），B/C 巷取货车道贴货架西面、取货距 4.5 与 A 巷一致；NAV_OBSTACLES_AGV 货架矩形已拆三排单体（巷道不再算障碍），AGV 贴巷行驶对货架净距 ≈2.45。跟驰让行、灯色口径沿用 R8。<b>守恒</b>：syncWhStock 在每个物理事件点重算 stockCases = 货位实存 + 交接位实存 + 出库在途，恒等式 stock = whBaseCases + inCases − outCases 由 window.__whCheck() 复核（ok 应恒 true）；window.__logiState() 看任务全貌。<b>播报</b>：抽屉「物流任务播报」两行 = 两台 AGV 的 taskText（派单/阶段切换时由 agvText 按当前任务生成，如「入库中：第 12 托 冰红茶 → 货架 B 巷 3 号位」「出库中：取最早批次 第 3 托（货架 A 巷 3 号位）→ 交接位 2」），无任务显示空闲；入库行附暂存积压数。<b>净距读数</b>：真机性能区新增一行读 __navStats（AGV↔设备 / 叉车↔设备 / 车↔车 / 车↔人），即 R8 答应的仪表落地。<b>重置</b>：initRackSlots 全量复位（26 托种子 seq 1..26、nextSeq=27、暂存/交接清空）+ AGV 任务字段清零 + 转移托盘/高亮隐藏。<b>已知取舍</b>：AGV 运力（1 托/趟、约 15~25 秒/趟）远低于折箱速率，旺季爆单时暂存积压与库存见底是真实瓶颈而非 bug；观察入库链建议用平稳日常场景。</div></div>
       <div class="dcell wide"><div class="l">R6 两项点名修正（面板独立隐藏 + 排空换型）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>① 面板独立隐藏（解耦）</b>：全站可隐藏面板共三处，状态互不隶属——右侧调度台 #dispatch（body.dispatch-hidden / setDispatchHidden / 入口 #dispatchHideBtn / 唤回 #dispatchShowBtn）、底部控制台 #controlBar（body.control-hidden / setControlHidden / 入口 #controlHideBtn / 唤回 #consoleShowBtn，带状态点）、控制台内的相机移动组（.move-collapsed / setMoveCollapsed，只折前进后退钮+提示行）。另有调度台 .closed（只折 body）与数据抽屉（独立开关）本来就独立，未动。规则：隐藏/唤回任一块不得改动其他任何一块的可见状态；两颗唤回钮同住右下角 .show-stack 各自显隐，全隐藏时都在、各唤各的、无“一唤全回”。状态各自存会话变量 dispatchHidden/controlHidden，不持久化；隐藏控制台瞬间清 moveDir 的副作用只属控制台。小屏默认折叠（调度台 .closed、移动组收起）仍按各自面板独立生效。旧 body.console-hidden / setConsoleHidden 的关联实现已废除（window.__setConsoleHidden 仅保留为调试兼容别名，UI 无任何共用开关）；上方「控制台整体隐藏」旧节已标注取代。<b>② 排空换型（预约换型，新增，与立即换型并列）</b>：参数 CONFIG.drainChangeover.epsilonBottles=1（排空判定阈值）；状态 S.reservation={to,fromName,startWip,startFinished}，入口 = 换产确认弹窗第三钮 #coDrain「排空后换型（预约）」，reserveChangeover() 建立。行为：预约后生产不停——原料供应停注新料（step 内 supMove=0）、调配批次时钟冻结不开新批；已进入系统的旧料（调配队列→杀菌队列→无菌罐库存→产线队列→封盖队列）全部顺流灌装成成品计入旧单——<b>调配侧口径（唯一）</b>：未出调配罐的料不单独整批报废，随队列顺流成瓶，与已入无菌罐的料同一排空口径。触发：step 每步结算后 totalWip()≤epsilon → 自动 startChangeover(to,{drained:true})，随后照常走 CONFIG 的 15 分钟停线清洗 + 换型费（排空省料不省清洗），completeChangeover 后新单从 0、分产品账与立即换型同口径。结算：S.lastSettle 追加「排空换型：在制报废 X 瓶（排空后余量；预约期间已灌装完成 Y 瓶）」，X 为触发瞬间 totalWip 实测（通常 ≤1，理论 0 余量时日志明写报废 0）；日志三条留痕（预约 / 排空完成自动换型 / 完成）。<b>边界（唯一口径）</b>：预约后点其他产品走立即换型 → startChangeover 非 drained 入口先清预约并写日志，以立即为准；预约后点同一目标产品只提示不重建；预约期间故障/CIP/暂停/无在线产线 → 预约保留，流量停则排空暂停、恢复继续（step 不推进即天然冻结，无额外状态）；停机或在制≈0 时选排空 → 退化即时换型（coDrain 处理器内直接 startChangeover+completeChangeover，不设预约不傻等；停机点产品本身仍走 R4 即时路径）；重置 #resetBtn 静默清 S.reservation（与 changeover 同级）。横幅 #coBanner 预约态转蓝（.reserved）显示目标/在制剩余/无菌库存与排空进度，带 #resCancelBtn 取消预约（cancelReservation，恢复供料注入）；瓶颈卡与订单 ETA 在预约态显示预约文案；调试入口 window.__getReservation/__cancelReservation。</div></div>
       <div class="dcell wide"><div class="l">术语表</div><div class="v" style="font-size:12.5px;line-height:1.55;font-weight:500">Line = 灌装产线对象（lines[i]）；Station = 上游共享工位（stations[i]：supply / blend / sterilize）；queue = 该工位待处理瓶数；capQ = 产线内已灌装待封盖队列；faultLeft = 剩余故障分钟；simMin = 仿真时钟（分钟）；dtMin = 每步仿真分钟增量；STATUS = 状态枚举（RUNNING / STARVED / BLOCKED / FAULT / CHANGEOVER / IDLE / OFF，值为灯色表键名）。</div></div>
     </div>
@@ -621,7 +630,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>单文件约 3100 行，ES5 风格（var / 函数）为兼容现有代码，接手重构时再统一到模块化构建，不要混写。</li>
       <li>巡游解说点 u：<s>R5 前按路点序号手估、个别点可早/晚约 1 秒</s>——R5 起由 alignTourStops() 按弧长表精确回填（误差 &lt;0.2 秒），改路线后自动重算；自适应降级只降不升，但 R4 起已可手动恢复：降级时画面上方弹出提示条，点「恢复高画质」即回设备档基准（或控制台 window.__restoreQuality()），不必刷新页面。</li>
       <li>相机遮挡淡出基于材质级透明度，同一材质多处共用时会一起淡（罐体 / 货架 / 顶棚已按此设计）；北侧公用工程区建筑未纳入淡出清单，从北侧高位看厂内时需手动切顶棚。</li>
-      <li>瓶子为实例化视觉流量，不与 queue 数值逐瓶对应；仓库箱数由 WH 入/出库守恒驱动（FIFO 窗口渲染）；工人为固定路线巡演，叉车/AGV/吊车由仓储活动门控待机，均不参与产能计算。</li>
+      <li>瓶子为实例化视觉流量，不与 queue 数值逐瓶对应；仓库托盘由逐货位模型驱动（R9：AGV 真实行程兑现入/出库，渲染与账本同一真相）；工人为固定路线巡演，叉车/AGV/吊车由仓储活动门控待机，均不参与产能计算。</li>
       <li>移动端为可用级适配（面板折叠 / 点按拾取），未做专门的手势教程；<s>低端机降级档</s>已由 R5 补齐（CONFIG.perf.mobileLow：像素比 1.0 / 阴影 eco 512 / 粒子 0.3 / LOD 110，判定与恢复逻辑见交接文档 R5 节）。</li>
     </ul>
     <h3 style="margin-top:14px">后续可扩展方向（V6 之后）</h3>
@@ -652,6 +661,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
       <li>R6 独立隐藏 + 排空换型：只藏调度台时控制台纹丝不动（body 只有 dispatch-hidden、#dispatch computed visibility=hidden 而 #controlBar 可见、唤回只有 #dispatchShowBtn 可点），反之亦然；两块全藏后点 #dispatchShowBtn 只回调度台、控制台仍藏；排空换型——生产中点产品→弹窗选「排空后换型（预约）」→横幅转蓝显示预约目标与在制剩余且产量继续涨、无菌库存单调下降，totalWip≤1 时自动进 15 分钟换型、结算小结含「排空换型：在制报废 X 瓶」、换型完成新产品生效且新单从 0；预约后横幅「取消预约」可取消且供料恢复（window.__getReservation() 回 null）；预约后改走立即换型立即停线且预约清除；停机时点「排空后换型」直接即时切换不傻等；重置后 __getReservation() 为 null</li>
       <li>R7 深砍 Draw Call：数据抽屉「真机性能」下两行合并摘要有数（全场网格 3,794 → 731、设备子件 3,366 → 633 / 140 桶、未合并分项 177/94/76/21/125），Draw Call 格在同机位待机下应从 R6 基线 2,867 量级降到 600 上下（无头口径；真机以四格为准）；全厂俯瞰与各预设机位下设备无缺件/错位（转盘 36 头、星轮齿、封盖塔、叉车/卡车车体完整且照常旋转/移动）、点任意设备出信息卡（hitbox 图层化后拾取不变）、顶棚/墙体/货架遮挡淡出正常、阴影照常投射；window.__mergeStats.equipment 与抽屉两行同源</li>
       <li>R8 物流分工 + 防撞：待机时室内无任何车辆（2 台托盘车停在环线待命角、灯塔灰），2 台叉车都在室外（台面东端待命位 y=1.1 / 外场待命位）；开生产后托盘车沿黄色专用车道环线运行（缠膜取货→货架巷道口放货 / 巷道口取货→交接位放货，垛位托盘垛随之亮/灭），全程不进月台台体、不穿输送带东端；发货波次触发后装车叉车在台面上交接位取货→卡车车厢装货、车厢箱数渐增、装满离场新车进场，外场叉车同步短驳；波次结束两叉车回室外待命、托盘车回待命角；控制台读 window.__navStats：agvMinEquip / forkMinEquip / minVehicle / minPerson 四值全 &gt;0（AGV 对设备最小净距应在 0.9 上下、叉车对设备在 1.0 上下）；把一台 AGV 用调试手段停在车道上，另一台应在 agvFollowDist 外停车让行（灯塔黄闪）、移开后自动恢复；重置后车辆回待命位、交接垛清空、__navStats 回 Infinity/0</li>
+      <li>R9 仓储可视物流：开生产后包装下线折箱先在下线暂存位（黄框）一托托码出（满 3 托溢到橙框地面暂存区、再满下线停推）；入库 AGV 开到暂存位叉起托盘（暂存垛消失、托盘随车）、沿车道送到播报所写的具体货位放下（货架对应货位此刻才出现该托、库存 +1）；抽屉「物流任务播报」两行与两车动作逐步对得上；货架托盘颜色深 = 批次老；订单推进过 6,000 瓶波次后，出库 AGV 进目标巷道停在最老那托前（货位亮橙色高亮框）、叉起后货位变空、送到交接位放下，装车叉车随后取走装车、装满离场；全程 window.__whCheck().ok 恒为 true（stock = 26 + 入 − 出）；真机性能区「车辆最小净距」行在跑完一轮发货后四值齐全且全 &gt;0；重置后货架回 26 托种子、暂存/交接清空、播报回空闲</li>
     </ul>
   </div>
 </aside>
@@ -769,6 +779,21 @@ var CONFIG = {
     agvCount: 2, agvSpeed: 4.2, agvFollowDist: 5.5,
     forkliftSpeed: 5.2, dockLaneZ: 35.8, dockForkliftY: 1.1,
     handoverSlots: [64, 70, 76], handoverZ: 31.4
+  },
+  /* ---- R9 仓储可视物流参数（逐货位模型 + 任务制 AGV + 物流播报，改节奏/车道只改这里） ----
+   * stagePos 下线暂存位坐标（包装下线簇东侧、西车道西沿 x=70.2）：前 stageMarked 个是带框「下线暂存位」，
+   * 其余是「地面暂存区」（橙框）——成品折箱先在这里码成托盘，暂存位满 = 码托积压（可见瓶颈），
+   * 内核 producedCases 不再越过暂存空位推进（下线被托盘堵住，与真实工厂一致）。
+   * serviceLaneX 三排货架各自的取货车道（贴货架西面 4.5 取货距）：A 排沿用东道 79.5，B/C 排走巷道内侧车道；
+   * northZ/southZ 东西向横道（北 -31 在货架北端外、南 31.4 即交接横道），AGV 动态路线只由这组车道拼成。
+   * agvSpeed 任务制车速（原环线 4.2 跟不上码托节奏，提至 6.0）；xferSeconds 叉取/放货转移时长
+   * （托盘在车 ↔ 货位/暂存位/交接位之间可见移动的时长，两台车共用一台转移托盘动画，另一台排队等）。 */
+  r9: {
+    stagePos: [[70.2,-19],[70.2,-23.5],[70.2,-14.5],[70.2,-27.5],[70.2,-10],[70.2,-5.5]],
+    stageMarked: 3,
+    serviceLaneX: [79.5, 95.5, 111.5],
+    northZ: -31, southZ: 31.4,
+    agvSpeed: 6.0, xferSeconds: 1.3
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -966,7 +991,7 @@ function sterBatchInfo(){
  * 渲染层（锅炉火焰/烟气、空压灯、水位视管、冷库门、叉车/AGV 门控、卡车/罐车动线）与抽屉「公用工程状态」只读它们。
  * UTIL = 公用工程显示/联动值（蒸汽负荷与总管压力、空压运行台数与储气压力、RO 运行与水处理两罐液位、冷库启停/库温/库门）；
  * RAW  = 原料罐区聚合液位（6 罐同源）+ 罐车状态机（idle 待命在外 / unloading 在卸料泵台卸料 / departed 离场冷却）；
- * WH   = 成品仓守恒（stockCases = inCases − outCases + 初始库存；head = FIFO 队头槽位，货架渲染按 [head, head+stock) 窗口取位）；
+ * WH   = 成品仓守恒（stockCases = inCases − outCases + 初始库存；R9 起 stockCases 由逐货位物理事件 syncWhStock 维护、货架按 SLOTS.taken 逐位渲染，head 字段仅留作兼容不再参与渲染）；
  * SHIP = 发货波次（订单进度每过 shipWaveOrderStep 瓶形成一个可发运节点，空车在月台待命，波次激活后按速率装车，
  *        装满 truckCases 即计一车次离场——卡车进出动画由渲染层按 SHIP.active / loadCases 驱动，本层只管箱数守恒）。 */
 var UTIL = { steamLoad: 0, steamPressure: 0.95, airRunning: 0, airPressure: 0.72, roRunning: false,
@@ -975,6 +1000,22 @@ var UTIL = { steamLoad: 0, steamPressure: 0.95, airRunning: 0, airPressure: 0.72
 var RAW = { level: CONFIG.r2.rawTankInit, tanker: "idle", tankerLeft: 0, arrivals: 0 };
 var WH = { inCases: 0, outCases: 0, stockCases: CONFIG.whBaseCases, producedCases: 0, head: 0, sinceProduce: 999 };
 var SHIP = { active: false, loadCases: 0, targetCases: 0, loadAcc: 0, trips: 0, nextWaveAt: CONFIG.r2.shipWaveOrderStep };
+/* ================= R9 · 逐货位物流状态（LOGI / SLOTS） =================
+ * LOGI = 渲染侧物流任务状态（与内核 WH 同源守恒，事件点见 syncWhStock）：
+ * stage[] 下线暂存位上的托盘队列 {seq 全局入库序号, productId, posIdx 暂存位号}——内核 stepR2 只把
+ * 折好的箱推进到这里（暂存位满则停推），库存不因此增加；只有入库 AGV 把托盘真实放进货位，
+ * WH.inCases 才 +1。handover[i] 交接位上的托盘（null = 空），handoverRsv[i] 出库任务已预订标记。
+ * SLOTS = 逐货位模型（initRackSlots 按 D.whCasePos 生成）：{pos, rack 0/1/2=A/B/C 巷, within 巷内序号,
+ * taken 是否实存托盘, reserved 已被任务预订, seq 入库序号（FIFO 按此取最小）, productId}。
+ * 货架渲染只读 taken 集——账本与画面自此同一真相，R2 的 FIFO 窗口渲染已废除。 */
+var LOGI = { stage: [], nextSeq: 1, handover: [null, null, null], handoverRsv: [false, false, false], rackDirty: true };
+var SLOTS = [];
+function prodNameOf(id){ for(var i=0;i<PRODUCTS.length;i++){ if(PRODUCTS[i].id===id) return PRODUCTS[i].name; } return "成品"; }
+function logiStagePush(){
+  var used = {}; LOGI.stage.forEach(function(p){ used[p.posIdx] = true; });
+  var idx = 0; while(used[idx]) idx++;
+  LOGI.stage.push({ seq: LOGI.nextSeq++, productId: product.id, posIdx: idx, rsv: false });
+}
 function dockStatusText(){
   if(SHIP.active) return "发货波次装车中 · "+Math.floor(SHIP.loadCases)+" / "+SHIP.targetCases+" 箱";
   if(typeof D !== "undefined" && D.truck){
@@ -1033,35 +1074,25 @@ function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
     RAW.tankerLeft -= dtMin;
     if(RAW.tankerLeft <= 0) RAW.tanker = "idle";
   }
-  /* --- 成品仓：入库由实际产出驱动（每 whBottlesPerCase 瓶折 1 箱）；满仓时超出部分直接出库计出库数，库存不越过箱位上限 --- */
+  /* --- 成品仓（R9 改：物理兑现制）：产量折箱只到「下线暂存位」码成托盘（LOGI.stage），暂存位满
+   * 则不再推进 producedCases（下线被托盘堵住，积压在暂存位可见）；库存 WH.stockCases 不在这里动——
+   * 只有入库 AGV 把托盘真实放进货位才 inCases+1/库存+1（事件在物流控制器 putXfer 完成点）。 --- */
   if(produced > 0) WH.sinceProduce = 0; else WH.sinceProduce += dtMin;
   var pc = Math.floor(S.finished / CONFIG.whBottlesPerCase);
   if(pc > WH.producedCases){
-    var add = pc - WH.producedCases; WH.producedCases = pc;
-    var roomC = Math.max(0, R.whCapacityCases - WH.stockCases);
-    var addC = Math.min(add, roomC);
-    WH.inCases += addC; WH.stockCases += addC;
-    if(add > addC){ WH.outCases += (add - addC); WH.head = (WH.head + (add - addC)) % R.whCapacityCases; }
+    var addC = Math.min(pc - WH.producedCases, Math.max(0, CONFIG.r9.stagePos.length - LOGI.stage.length));
+    for(var si9 = 0; si9 < addC; si9++) logiStagePush();
+    WH.producedCases += addC;
   }
-  /* --- 发货波次：订单进度到可发运节点 + 库存够装车 → 激活装车；装车按速率从 FIFO 队头出库，装满即一车次 --- */
+  /* --- 发货波次：订单进度到可发运节点 + 实存够装车 → 激活。装车不再按速率凭空扣库存（R2 旧口径已废）：
+   * 出库 AGV 按 FIFO 把托盘从货位实取到交接位、装车叉车实取装车，每装上一托才 loadCases/outCases+1，
+   * 波次完成判定在叉车装车事件点（updateDockForklifts），本层只负责激活与目标量。 --- */
   if(!SHIP.active){
     var waveReady = S.orderDone >= SHIP.nextWaveAt || (S.orderDone >= S.orderTarget && WH.stockCases >= 8);
     if(waveReady && WH.stockCases >= 8 && !S.changeover){
       SHIP.active = true; SHIP.loadAcc = 0; SHIP.loadCases = 0;
       SHIP.targetCases = Math.min(R.shipTruckCases, WH.stockCases);
-      log("发货波次形成：订单进度 "+fmt(S.orderDone)+" 瓶达可发运节点，月台开始装车（本车 "+SHIP.targetCases+" 箱，库存按先进先出出库）。");
-    }
-  }
-  if(SHIP.active && !S.changeover){
-    SHIP.loadAcc += R.shipRateCasesPerMin * dtMin;
-    while(SHIP.loadAcc >= 1 && SHIP.loadCases < SHIP.targetCases && WH.stockCases > 0){
-      SHIP.loadAcc -= 1; SHIP.loadCases += 1;
-      WH.stockCases -= 1; WH.outCases += 1; WH.head = (WH.head + 1) % R.whCapacityCases;   /* FIFO：从最早入库侧（队头）先出 */
-    }
-    if(SHIP.loadCases >= SHIP.targetCases){
-      SHIP.active = false; SHIP.trips++;
-      SHIP.nextWaveAt += R.shipWaveOrderStep;
-      log("发货完成：第 "+SHIP.trips+" 车次发运 "+SHIP.targetCases+" 箱（累计出库 "+WH.outCases+" 箱），卡车离场、新车随后进场待命。","good");
+      log("发货波次形成：订单进度 "+fmt(S.orderDone)+" 瓶达可发运节点，出库 AGV 开始按先进先出从货架取货到交接位、月台叉车装车（本车 "+SHIP.targetCases+" 箱）。");
     }
   }
   /* --- 冷库：制冷按启停循环运行，入库活跃/库存高时停机段缩短（近似恒温控制）；库温在运行/停机间小幅摆动 --- */
@@ -1566,7 +1597,7 @@ function renderKpis(){
     $("usWater").textContent = (UTIL.roRunning ? "RO 产水中" : "RO 待机")+" · 原水 "+Math.round(UTIL.rawWaterLevel*100)+"% → 软水 "+Math.round(UTIL.softWaterLevel*100)+"%"+(curBlendStage() && curBlendStage().source==="water" && S.running ? " · 调配进水中" : "");
     $("usCold").textContent = (UTIL.coldRunning ? "制冷运行 "+UTIL.coldUnitsRunning+" 台" : "停机保温 1 台")+" · 库温 "+UTIL.coldTemp.toFixed(1)+"℃ · 库存 "+WH.stockCases+" 箱";
     $("usRaw").textContent = "液位 "+Math.round(RAW.level*100)+"% · "+(RAW.tanker==="unloading" ? "罐车卸料中（余 "+Math.ceil(RAW.tankerLeft)+" 分）" : RAW.tanker==="departed" ? "罐车离场中" : RAW.level < CONFIG.r2.rawRefillThreshold+0.05 ? "接近阈值 · 罐车待命" : "罐车待命")+" · 到场 "+RAW.arrivals+" 次";
-    $("usWh").textContent = "入库 "+WH.inCases+" · 出库 "+WH.outCases+" · 库存 "+WH.stockCases+" 箱 · 已发 "+SHIP.trips+" 车";
+    $("usWh").textContent = "入库 "+WH.inCases+" · 出库 "+WH.outCases+" · 库存 "+WH.stockCases+" 托 · 已发 "+SHIP.trips+" 车 · 下线暂存待取 "+LOGI.stage.length+" 托";
   }
   $("eQuality").textContent = (product.quality*100).toFixed(1)+"%";
   var lbHtml = "";
@@ -1643,6 +1674,19 @@ function renderKpis(){
       pfMerge.textContent = "静态合并：全场网格 " + fmt(ms.before) + " → " + fmt(ms.after) + (eq ? "（其中设备静态子件 " + fmt(eq.before) + " → " + fmt(eq.after) + "，合并桶 " + eq.buckets + "）" : "");
       var pfMergeEx = $("perfMergeEx");
       if(pfMergeEx && eq && eq.excluded) pfMergeEx.textContent = "未合并（动态/灯管材质/透明/点选盒/单件）：" + fmt(eq.excluded.dynamic) + " / " + fmt(eq.excluded.hotMaterial) + " / " + fmt(eq.excluded.transparent) + " / " + fmt(eq.excluded.hitbox) + " / " + fmt(eq.excluded.single);
+    }
+    /* R9 车辆最小净距行：读 __navStats 全程累计最小值（Infinity = 尚无样本，跑过一轮发货后有值） */
+    var pfNav = $("perfNav");
+    if(pfNav){
+      var ns9 = window.__navStats;
+      function navFmt(v){ return (ns9 && isFinite(v)) ? v.toFixed(2) + " m" : "—"; }
+      pfNav.textContent = "车辆最小净距（全程累计）：AGV ↔ 设备 " + navFmt(ns9 && ns9.agvMinEquip) + " · 叉车 ↔ 设备 " + navFmt(ns9 && ns9.forkMinEquip) + " · 车 ↔ 车 " + navFmt(ns9 && ns9.minVehicle) + " · 车 ↔ 人 " + navFmt(ns9 && ns9.minPerson) + "（跑完一轮发货后读数才有意义）";
+    }
+    /* R9 物流任务播报：两行与两台 AGV 的 taskText 同源（入库行附带下线暂存积压数） */
+    var lgIn = $("logiLineIn"), lgOut = $("logiLineOut");
+    if(lgIn && typeof D !== "undefined" && D.agvs && D.agvs.length >= 2){
+      lgIn.textContent = D.agvs[0].taskText + (LOGI.stage.length ? "（下线暂存积压 " + LOGI.stage.length + " 托待取）" : "");
+      lgOut.textContent = D.agvs[1].taskText;
     }
   }
 }
@@ -2687,6 +2731,41 @@ function makeForklift(){
   scene.add(g);
   return { g:g, fork:fork, carried:carried, seg:1, wait:0, forkY:0.1, forkTarget:0.1, speed:7.5, wps:[], pauseAt:{} };
 }
+/* ================= R9 · 逐货位模型（SLOTS） =================
+ * 货位 = D.whCasePos 的每个箱位（生成序：A/B/C 三排 × 3 层 × 巷内 z 序）。占用唯一真相 = taken，
+ * 只由 AGV 的放入（putXfer 完成）/取出（pickXfer 开始）事件改写；渲染按 taken 集逐位排实例。
+ * syncWhStock 在每个物理事件点后重算 WH.stockCases = 货位实存 + 交接位实存 + 出库在途（出库车载），
+ * 与 inCases（放入事件计数）/ outCases（叉车装车事件计数）保持 stock = 初始 + 入 − 出 恒等，
+ * 自检读 window.__whCheck()。 */
+function slotLabel(s){ return "货架 " + "ABC"[s.rack] + " 巷 " + (s.within + 1) + " 号位"; }
+function syncWhStock(){
+  var n = 0;
+  SLOTS.forEach(function(s){ if(s.taken) n++; });
+  LOGI.handover.forEach(function(h){ if(h) n++; });
+  if(typeof D !== "undefined" && D.agvs) D.agvs.forEach(function(a){ if(a.carry && a.task && a.task.type === "out") n++; });
+  if(typeof D !== "undefined" && D.forklifts) D.forklifts.forEach(function(f){ if(f.role === "dock" && f.carried && f.carried.visible) n++; });   /* 叉车在途（交接位→卡车）的一托仍属未出库库存 */
+  WH.stockCases = n;
+}
+function initRackSlots(){
+  var per = Math.max(1, Math.floor(D.whCasePos.length / 3));
+  SLOTS = D.whCasePos.map(function(p, i){
+    return { idx: i, pos: p, rack: Math.min(2, Math.floor(i / per)), within: i % per, taken: false, reserved: false, seq: 0, productId: null };
+  });
+  for(var i = 0; i < CONFIG.whBaseCases && i < SLOTS.length; i++){ SLOTS[i].taken = true; SLOTS[i].seq = i + 1; SLOTS[i].productId = PRODUCTS[0].id; }
+  LOGI.nextSeq = CONFIG.whBaseCases + 1;
+  LOGI.stage = []; LOGI.handover = [null, null, null]; LOGI.handoverRsv = [false, false, false]; LOGI.rackDirty = true;
+  syncWhStock();
+}
+window.__whCheck = function(){
+  var taken = 0; SLOTS.forEach(function(s){ if(s.taken) taken++; });
+  var ho = 0; LOGI.handover.forEach(function(h){ if(h) ho++; });
+  var expected = CONFIG.whBaseCases + WH.inCases - WH.outCases;
+  return { stock: WH.stockCases, expected: expected, ok: WH.stockCases === expected, slotsTaken: taken, handover: ho, stage: LOGI.stage.length, inCases: WH.inCases, outCases: WH.outCases };
+};
+window.__logiState = function(){
+  return { stage: LOGI.stage, slots: SLOTS, handover: LOGI.handover,
+           agvs: (typeof D !== "undefined" && D.agvs ? D.agvs.map(function(a){ return { role: a.role, phase: a.phase, task: a.task, text: a.taskText }; }) : []) };
+};
 function buildWarehouseDock(){
   var g = new THREE.Group(); scene.add(g);
   /* racks: 3 rows running along z */
@@ -2728,6 +2807,7 @@ function buildWarehouseDock(){
     D.whTapePos.push([rx, by + 0.98, cz2]);
   } }); });
   D.whTape.count = D.whTarget; g.add(D.whTape);
+  initRackSlots();   /* R9：箱位表已生成，逐货位模型在此定版（种子库存 26 托，渲染首帧按 taken 集重排） */
   hitbox(g, 48, 11, 62, 100, 0, 0, { kind:"zone", id:"warehouse" });
   /* --- 扩容细化 · 分拣复核工位（R8 西移至 x=66：原 x=74 正压在 AGV 西车道上，现让道给托盘车）：复核台 + 扫码拱门 + 待分拣托盘 --- */
   B(g, 4.6, 0.95, 1.6, DARKSTEEL, 66, 0, 18);
@@ -2742,6 +2822,25 @@ function buildWarehouseDock(){
   CY(g, 0.3, 0.3, 1.1, M(0xdfeef5,0.3,0), 64.2, 1.2, -20.3, 12);
   B(g, 2.0, 0.14, 1.5, WOOD, 66, 0.22, -19).castShadow = false;
   B(g, 1.05, 0.68, 0.8, CARDB, 65.5, 0.36, -19); B(g, 1.05, 0.68, 0.8, CARDB, 66.6, 0.36, -19); B(g, 1.05, 0.68, 0.8, CARDB, 66, 1.04, -19);
+  /* ================= R9 下线暂存位（包装下线簇东侧、西车道西沿）：成品折箱在此码成托盘，
+   * 入库 AGV 从车道侧叉走送货架。地面框：前 stageMarked 个黄框 = 下线暂存位、其余橙框 = 地面暂存区
+   * （暂存位满后继续码到这里，再满则下线停推）；垛体登记 D.stageStacks，可见性与 LOGI.stage 同源。 */
+  D.stageStacks = [];
+  CONFIG.r9.stagePos.forEach(function(sp2, spi){
+    var marked = spi < CONFIG.r9.stageMarked;
+    var frameMat = new THREE.MeshBasicMaterial({ color: marked ? 0xf2b01e : 0xff8c1a, transparent: true, opacity: 0.85 });
+    [[sp2[0]-1.05, sp2[1]-0.95, 2.3, 0.16],[sp2[0]-1.05, sp2[1]+0.79, 2.3, 0.16],[sp2[0]-1.05, sp2[1]-0.95, 0.16, 1.9],[sp2[0]+0.99, sp2[1]-0.95, 0.16, 1.9]].forEach(function(fr){
+      var fm = new THREE.Mesh(new THREE.PlaneGeometry(fr[2], fr[3]), frameMat);
+      fm.rotation.x = -Math.PI/2; fm.position.set(fr[0]+fr[2]/2, 0.04, fr[1]+fr[3]/2); g.add(fm);
+    });
+    var stack = new THREE.Group(); stack.position.set(sp2[0], 0, sp2[1]); scene.add(stack);
+    B(stack, 1.7, 0.14, 1.7, WOOD, 0, 0, 0).castShadow = false;
+    B(stack, 1.05, 0.68, 0.8, CARDB, -0.3, 0.14, -0.3); B(stack, 1.05, 0.68, 0.8, CARDB, 0.35, 0.14, 0.35); B(stack, 1.05, 0.68, 0.8, CARDB, 0, 0.82, 0);
+    stack.visible = false;
+    D.stageStacks.push({ g: stack, x: sp2[0], z: sp2[1] });
+  });
+  var stPlate = nameplateMesh("下线暂存位", "包装下线码托 · 无人车取货上架", 5.2);
+  stPlate.position.set(70.2, 0, -33.2); stPlate.rotation.y = Math.PI; g.add(stPlate);
   /* dock platform + parked truck at bay 32 */
   B(g, 86, 1.1, 5.5, CONC, 38, 0, 35.8).castShadow = false;
   function makeTruck(color){
@@ -3195,6 +3294,10 @@ function buildPeopleLogistics(){
   for(var ax=74; ax<=79; ax+=3.2){ agvDash(ax, -26, false); }                                  /* 北横道 */
   for(var ax2=65; ax2<=79; ax2+=3.2){ agvDash(ax2, CONFIG.r8.handoverZ, false); }              /* 交接横道（西延至 64 垛位） */
   for(var sx2=68; sx2<=72; sx2+=2){ agvDash(sx2, -19, false); }                                /* 缠膜取货支线虚线 */
+  /* R9 取货车道标线：北横道 z=-31 东延至 C 巷 + 交接横道东延 + B/C 巷道内侧车道（x=95.5 / 111.5） */
+  for(var ax3=70; ax3<=111; ax3+=3.2){ agvDash(ax3, CONFIG.r9.northZ, false); }
+  for(var ax4=80; ax4<=111; ax4+=3.2){ agvDash(ax4, CONFIG.r8.handoverZ, false); }
+  for(var az2=-24; az2<=24; az2+=3.2){ agvDash(95.5, az2, true); agvDash(111.5, az2, true); }
   [29.9, 32.9].forEach(function(ez){ /* 交接段双侧黄黑警戒边线（分段交替色） */
     for(var bx=62; bx<81; bx+=1.9){
       var segm = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.3), new THREE.MeshBasicMaterial({ color: ((bx/1.9)|0) % 2 ? 0x23272b : 0xf2b01e, transparent:true, opacity:0.85 }));
@@ -3247,20 +3350,25 @@ function buildPeopleLogistics(){
     B(load, 1.7, 0.14, 1.7, WOOD, 0, 0, 0).castShadow = false;
     B(load, 1.05, 0.68, 0.8, CARDB, -0.3, 0.14, -0.3); B(load, 1.05, 0.68, 0.8, CARDB, 0.35, 0.14, 0.35); B(load, 1.05, 0.68, 0.8, CARDB, 0, 0.82, 0);
     load.visible = false;
-    var v = { g:ag, lidar:lidar, lampMat:lampMat, load:load, role:role, seg:1, wait:0, speed:CONFIG.r8.agvSpeed,
-              state:"idle", dropIdx:0, homeIdx:0, baseY:0,
-              wps:[
-                {x:73.5,z:-26}, {x:73.5,z:-19,act:"wrap"}, {x:73.5,z:31.4},
-                {x:70,z:31.4,act:"slot"}, {x:64,z:31.4,act:"slot"}, {x:73.5,z:31.4},
-                {x:76,z:31.4,act:"slot"}, {x:79.5,z:31.4},
-                {x:79.5,z:12,act:"rack"}, {x:79.5,z:-8,act:"rack"}, {x:79.5,z:-26}
-              ] };
+    var v = { g:ag, lidar:lidar, lampMat:lampMat, load:load, role:role, seg:0, wait:0, speed:CONFIG.r9.agvSpeed,
+              state:"home", homeIdx:0, baseY:0, wps:[{x:73.5,z:-26}],
+              /* R9 任务制字段：phase 任务状态机 / route 动态路点列 / task 当前任务 / carry 在车托盘 /
+               * xferT 转移计时与起讫点（托盘在车↔货位间可见移动）/ taskText 物流播报文案（与动作同源） */
+              phase:"home", route:[], task:null, carry:null, xferT:0, xferFrom:null, xferTo:null, taskText:"空闲 · 待命位待机" };
     D.agvs.push(v);
     return v;
   }
-  var agvA = makePalletAgv("inbound");  agvA.homeIdx = 0; agvA.g.position.set(73.5, 0, -26); agvA.seg = 1;
-  var agvB = makePalletAgv("outbound"); agvB.homeIdx = 10; agvB.g.position.set(79.5, 0, -26); agvB.seg = 0;
+  var agvA = makePalletAgv("inbound");  agvA.g.position.set(73.5, 0, -26); agvA.wps = [{x:73.5, z:-26}]; agvA.homeIdx = 0;
+  var agvB = makePalletAgv("outbound"); agvB.g.position.set(79.5, 0, -26); agvB.wps = [{x:79.5, z:-26}]; agvB.homeIdx = 0;
   D.agv = agvA;   /* 兼容旧引用（合并排除/调试）：指向车队首车，车队本体以 D.agvs 为准 */
+  /* R9 转移托盘（叉取/放货时在车与货位/暂存位/交接位之间可见移动的那一托，全场共用一个，
+   * 两台车同时到转移点时后到者排队等它空出来——见 agvStartXfer）+ 出库目标货位高亮框 */
+  var xf = new THREE.Group(); scene.add(xf);
+  B(xf, 1.7, 0.14, 1.7, WOOD, 0, 0, 0).castShadow = false;
+  B(xf, 1.05, 0.68, 0.8, CARDB, -0.3, 0.14, -0.3); B(xf, 1.05, 0.68, 0.8, CARDB, 0.35, 0.14, 0.35); B(xf, 1.05, 0.68, 0.8, CARDB, 0, 0.82, 0);
+  xf.visible = false; D.xferPallet = xf; D.xferOwner = null;
+  var hi9 = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.3, 4.0), new THREE.MeshBasicMaterial({ color:0xff8c1a, wireframe:true, transparent:true, opacity:0.9 }));
+  hi9.visible = false; scene.add(hi9); D.slotHi = hi9;
 }
 function updateWorker(w, dt){
   if(w.wait > 0){
@@ -3307,7 +3415,7 @@ function updateWorker(w, dt){
    ================================================================ */
 var NAV_OBSTACLES_AGV = [
   [-13,-43.7,71,-36.3], [-13,-3.7,71,3.7], [-13,36.3,71,43.7],   /* 三条产线设备带（输送带东端 x=71） */
-  [82.6,-28,117.4,28],                                          /* 货架阵列（西立柱面 x=82.6） */
+  [82.7,-28,85.3,28], [98.7,-28,101.3,28], [114.7,-28,117.3,28], /* R9：货架阵列拆三排单体（排间巷道是 AGV 取货车道，不算障碍） */
   [64.3,-20.7,67.7,-17.3],                                      /* 缠绕膜机转盘（R8 西移后占地） */
   [63.7,17.2,68.3,18.8],                                        /* 分拣复核工位（R8 西移后占地） */
   [-5,33.05,81,38.55]                                           /* 月台台体（AGV 在其北侧交接横道放货） */
@@ -3392,43 +3500,179 @@ function agvBlockedAhead(a){
   }
   return false;
 }
-function updatePalletAgvs(dt, t, active){
+/* ================= [M2] R9 物流任务控制器（任务制 AGV 状态机） =================
+ * 取代 R8 的环线盲跑：两台 AGV 各带任务状态机 phase——
+ *   入库：home → toStage（到下线暂存位）→ loadXfer（托盘从暂存位移到车上）→ toSlot（沿车道到目标
+ *         货架巷的取货车道、停在货位正西）→ putXfer（托盘移入货位：此刻 taken=true、inCases+1）→ toHome；
+ *   出库：home → toPick（到 FIFO 最老货位）→ pickXfer（货位变空、托盘上车）→ toHand（到预订交接位）
+ *         → dropXfer（托盘落交接位）→ toHome。无任务回待命位（入库车 NW / 出库车 NE）。
+ * 路线由 agvRoute 在车道网（西道 73.5 / A 巷道 79.5 / B 巷道 95.5 / C 巷道 111.5 × 北横道 -31 /
+ * 南横道 31.4）上拼三段（纵→横→纵），不穿货架、不进月台。跟驰让行沿用 agvBlockedAhead。
+ * 派单 assignAgv：出库车先出后入、入库车先入后出（互相支援）；出库需求 = 波次未装数 − 交接位
+ * 已有 − 在途出库任务，永远只取 seq 最小的实存货位（FIFO），派单即预订货位与交接位防抢。
+ * 播报文案 agvText 只读当前任务与 phase，与车辆实际动作同源；抽屉两行与此对应。 */
+function agvRoute(fx, fz, tx, tz){
+  var R9 = CONFIG.r9, pts = [];
+  function push(x, z){ var l = pts[pts.length-1]; if(!l || Math.abs(l.x-x) > 0.01 || Math.abs(l.z-z) > 0.01) pts.push({ x:x, z:z }); }
+  if(Math.abs(fx-tx) < 0.01){ push(tx, tz); return pts; }
+  if(Math.abs(fz-tz) < 0.01 && (Math.abs(tz-R9.northZ) < 0.01 || Math.abs(tz-R9.southZ) < 0.01)){ push(tx, tz); return pts; }
+  var zc = R9.northZ, best = Infinity;
+  [R9.northZ, R9.southZ].forEach(function(c){ var d = Math.abs(fz-c) + Math.abs(tz-c); if(d < best){ best = d; zc = c; } });
+  push(fx, zc); push(tx, zc); push(tx, tz);
+  return pts;
+}
+function agvDrive(a, dt){
+  if(!a.route.length) return true;
+  if(agvBlockedAhead(a)){ a.state = "yield"; return false; }
+  a.state = "run";
+  var tp = a.route[0];
+  var dx = tp.x - a.g.position.x, dz = tp.z - a.g.position.z;
+  var dist = Math.hypot(dx, dz);
+  if(dist < 0.45){ a.route.shift(); return a.route.length === 0; }
+  var targetRot = Math.atan2(dx, dz);
+  var d = ((targetRot - a.g.rotation.y + Math.PI*3) % (Math.PI*2)) - Math.PI;
+  a.g.rotation.y += d * Math.min(1, dt*4.5);
+  var sp = a.speed * Math.min(1, Math.abs(d) < 0.6 ? 1 : 0.35);
+  a.g.position.x += Math.sin(a.g.rotation.y) * sp * dt;
+  a.g.position.z += Math.cos(a.g.rotation.y) * sp * dt;
+  return false;
+}
+function agvHomePos(a){ return a.role === "inbound" ? { x:73.5, z:-26 } : { x:79.5, z:-26 }; }
+function freeSlotForPut(){ for(var i=0; i<SLOTS.length; i++){ if(!SLOTS[i].taken && !SLOTS[i].reserved) return SLOTS[i]; } return null; }
+function oldestTakenSlot(){ var best = null; SLOTS.forEach(function(s){ if(s.taken && !s.reserved && (!best || s.seq < best.seq)) best = s; }); return best; }
+function outDemandLeft(){
+  if(!SHIP.active) return 0;
+  var n = SHIP.targetCases - SHIP.loadCases;
+  LOGI.handover.forEach(function(h){ if(h) n--; });
+  if(D.agvs) D.agvs.forEach(function(a){ if(a.task && a.task.type === "out") n--; });
+  return n;
+}
+function agvText(a){
+  var tk = a.task;
+  if(!tk){ a.taskText = a.phase === "home" ? "空闲 · 待命位待机" : "空闲 · 返程待命位"; return; }
+  if(tk.type === "in"){
+    var pn = prodNameOf(tk.pallet.productId);
+    if(a.phase === "toStage" || a.phase === "loadXfer") a.taskText = "入库中：到下线暂存位取第 " + tk.pallet.seq + " 托 " + pn;
+    else a.taskText = "入库中：第 " + tk.pallet.seq + " 托 " + pn + " → " + slotLabel(tk.slot);
+  } else {
+    if(a.phase === "toPick" || a.phase === "pickXfer") a.taskText = "出库中：取最早批次 第 " + tk.slot.seq + " 托（" + slotLabel(tk.slot) + "）→ 交接位 " + (tk.handIdx + 1);
+    else a.taskText = "出库中：第 " + tk.slot.seq + " 托 " + prodNameOf(tk.slot.productId) + " → 交接位 " + (tk.handIdx + 1) + " · 待叉车装车";
+  }
+}
+function assignAgv(a){
+  if(a.task) return false;
+  function tryOut(){
+    if(outDemandLeft() <= 0) return false;
+    var s = oldestTakenSlot(); if(!s) return false;
+    var hi = -1; for(var i=0; i<3; i++){ if(!LOGI.handover[i] && !LOGI.handoverRsv[i]){ hi = i; break; } }
+    if(hi < 0) return false;
+    s.reserved = true; LOGI.handoverRsv[hi] = true;
+    a.task = { type:"out", slot:s, handIdx:hi, pallet:{ seq:s.seq, productId:s.productId } };
+    a.phase = "toPick";
+    a.route = agvRoute(a.g.position.x, a.g.position.z, CONFIG.r9.serviceLaneX[s.rack], s.pos[2]);
+    if(D.slotHi){ D.slotHi.position.set(s.pos[0], s.pos[1], s.pos[2]); D.slotHi.visible = true; }
+    agvText(a); return true;
+  }
+  function tryIn(){
+    if(!LOGI.stage.length) return false;
+    var s = freeSlotForPut(); if(!s) return false;
+    var p = null;
+    for(var i=0; i<LOGI.stage.length; i++){ if(!LOGI.stage[i].rsv){ p = LOGI.stage[i]; break; } }
+    if(!p) return false;   /* 暂存托盘已被另一台车预订（仍在暂存位上等它来取），不能重复派单 */
+    p.rsv = true;
+    s.reserved = true;
+    a.task = { type:"in", pallet:p, slot:s };
+    a.phase = "toStage";
+    a.route = agvRoute(a.g.position.x, a.g.position.z, 73.5, CONFIG.r9.stagePos[p.posIdx][1]);
+    agvText(a); return true;
+  }
+  return a.role === "outbound" ? (tryOut() || tryIn()) : (tryIn() || tryOut());
+}
+function agvStartXfer(a, fromV, toV, nextPhase){
+  if(D.xferPallet && D.xferPallet.visible && D.xferOwner !== a) return false;   /* 转移托盘被另一台车占用：原地排队 */
+  a.xferFrom = fromV; a.xferTo = toV; a.xferT = CONFIG.r9.xferSeconds; a.phase = nextPhase;
+  if(D.xferPallet){ D.xferPallet.visible = true; D.xferPallet.position.copy(fromV); D.xferOwner = a; }
+  a.load.visible = false;
+  agvText(a);
+  return true;
+}
+function agvFinishTask(a){
+  a.task = null; a.carry = null;
+  var h = agvHomePos(a);
+  a.phase = "toHome";
+  a.route = agvRoute(a.g.position.x, a.g.position.z, h.x, h.z);
+  agvText(a);
+}
+function updatePalletAgvs(dt, t){
   if(!D.agvs) return;
+  /* 下线暂存位垛可见性与 LOGI.stage 同源：哪号暂存位有托盘，画面上就是哪号 */
+  if(D.stageStacks) D.stageStacks.forEach(function(st, i){
+    st.g.visible = LOGI.stage.some(function(p){ return p.posIdx === i; });
+  });
+  if(D.slotHi && D.slotHi.visible) D.slotHi.material.opacity = 0.6 + Math.sin(t*6)*0.3;
   D.agvs.forEach(function(a){
     a.lidar.rotation.y += dt * 7;
-    if(a.state === "yield"){
-      a.lampMat.emissive.set(0xf5a623); a.lampMat.emissiveIntensity = 1.6 + Math.sin(t*8)*0.7;
-      if(!agvBlockedAhead(a)) a.state = "run"; else return;         /* 占用未清：原地等待（moveVehicle 本帧跳过） */
-    } else if(a.wait > 0 || a.state === "home" || a.state === "wait"){
-      a.lampMat.emissive.set(a.state === "home" ? 0x8b9a92 : 0xf5a623); a.lampMat.emissiveIntensity = a.state === "home" ? 0.35 : 1.2;
-    } else {
-      a.lampMat.emissive.set(0x2fbf8f); a.lampMat.emissiveIntensity = 1.5;
-      if(active && agvBlockedAhead(a)){ a.state = "yield"; return; }
+    if(a.state === "yield"){ a.lampMat.emissive.set(0xf5a623); a.lampMat.emissiveIntensity = 1.6 + Math.sin(t*8)*0.7; }
+    else if(a.phase === "home"){ a.lampMat.emissive.set(0x8b9a92); a.lampMat.emissiveIntensity = 0.35; }
+    else if(a.phase.indexOf("Xfer") >= 0){ a.lampMat.emissive.set(0xf5a623); a.lampMat.emissiveIntensity = 1.2; }
+    else { a.lampMat.emissive.set(0x2fbf8f); a.lampMat.emissiveIntensity = 1.5; }
+
+    if(a.phase === "home" || a.phase === "toHome"){
+      if(assignAgv(a)) return;
+      if(a.phase === "toHome" && agvDrive(a, dt)){ a.phase = "home"; a.state = "home"; agvText(a); }
+      return;
     }
-    moveVehicle(a, dt, active, function(v, wp, act){
-      if(!act || !wp.act) return 0;
-      if(wp.act === "wrap"){           /* 缠膜下线点：只有入库车取成品托盘 */
-        if(v.role === "inbound" && !v.load.visible){ v.load.visible = true; return 1.4; }
-        return 0;
+    if(a.phase === "loadXfer" || a.phase === "putXfer" || a.phase === "pickXfer" || a.phase === "dropXfer"){
+      a.state = "wait";
+      a.xferT -= dt;
+      var pr = 1 - Math.max(0, a.xferT) / CONFIG.r9.xferSeconds;
+      var ez = pr*pr*(3 - 2*pr);
+      if(D.xferPallet && a.xferFrom && a.xferTo){
+        D.xferPallet.position.lerpVectors(a.xferFrom, a.xferTo, ez);
+        D.xferPallet.position.y += Math.sin(ez*Math.PI) * 0.35;
       }
-      if(wp.act === "rack"){           /* 货架巷道口：入库车放货 / 出库车取货 */
-        if(v.role === "inbound" && v.load.visible){ v.load.visible = false; return 1.4; }
-        if(v.role === "outbound" && !v.load.visible){ v.load.visible = true; return 1.4; }
-        return 0;
+      if(a.xferT > 0) return;
+      if(D.xferPallet){ D.xferPallet.visible = false; D.xferOwner = null; }
+      var tk2 = a.task;
+      if(a.phase === "loadXfer"){
+        a.carry = tk2.pallet; a.load.visible = true;
+        a.phase = "toSlot";
+        a.route = agvRoute(a.g.position.x, a.g.position.z, CONFIG.r9.serviceLaneX[tk2.slot.rack], tk2.slot.pos[2]);
+      } else if(a.phase === "putXfer"){
+        tk2.slot.taken = true; tk2.slot.seq = tk2.pallet.seq; tk2.slot.productId = tk2.pallet.productId; tk2.slot.reserved = false;
+        WH.inCases++; LOGI.rackDirty = true; syncWhStock();          /* 库存只在托盘真实落位这一刻 +1 */
+        agvFinishTask(a);
+      } else if(a.phase === "pickXfer"){
+        a.carry = tk2.pallet; a.load.visible = true;
+        if(D.slotHi) D.slotHi.visible = false;
+        a.phase = "toHand";
+        a.route = agvRoute(a.g.position.x, a.g.position.z, CONFIG.r8.handoverSlots[tk2.handIdx], CONFIG.r9.southZ);
+      } else if(a.phase === "dropXfer"){
+        LOGI.handover[tk2.handIdx] = tk2.pallet; LOGI.handoverRsv[tk2.handIdx] = false;
+        D.handoverStacks.forEach(function(hs){ if(hs.slotX === CONFIG.r8.handoverSlots[tk2.handIdx]) hs.g.visible = true; });
+        a.carry = null;   /* 先卸车再同步：同一托不能既算「交接位实存」又算「出库在途」 */
+        syncWhStock();
+        agvFinishTask(a);
       }
-      if(wp.act === "slot"){           /* 交接位：只有出库车把托盘放到当前轮换垛位 */
-        var slots = CONFIG.r8.handoverSlots;
-        if(v.role === "outbound" && v.load.visible && wp.x === slots[v.dropIdx % slots.length]){
-          v.load.visible = false;
-          D.handoverStacks.forEach(function(hs){ if(hs.slotX === wp.x) hs.g.visible = true; });
-          v.dropIdx++;
-          return 1.4;
-        }
-        return 0;
-      }
-      return 0;
-    });
-    if(a.state !== "yield") a.state = a.wait > 0 ? (active ? "wait" : (a.seg === a.homeIdx ? "home" : "wait")) : a.state;
+      agvText(a);
+      return;
+    }
+    /* 行驶段（toStage / toSlot / toPick / toHand）：agvDrive 返回 true = 已抵达终点路点 */
+    if(!agvDrive(a, dt)) return;
+    var tk = a.task; if(!tk){ a.phase = "toHome"; return; }
+    if(a.phase === "toStage"){
+      var sp = CONFIG.r9.stagePos[tk.pallet.posIdx];
+      if(!agvStartXfer(a, new THREE.Vector3(sp[0], 0, sp[1]), a.load.getWorldPosition(new THREE.Vector3()), "loadXfer")) return;
+      LOGI.stage.splice(LOGI.stage.indexOf(tk.pallet), 1);            /* 托盘离开暂存位（垛同步消失） */
+    } else if(a.phase === "toSlot"){
+      if(!agvStartXfer(a, a.load.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(tk.slot.pos[0], tk.slot.pos[1] - 0.55, tk.slot.pos[2]), "putXfer")) return;
+    } else if(a.phase === "toPick"){
+      if(!agvStartXfer(a, new THREE.Vector3(tk.slot.pos[0], tk.slot.pos[1] - 0.55, tk.slot.pos[2]), a.load.getWorldPosition(new THREE.Vector3()), "pickXfer")) return;
+      tk.slot.taken = false; tk.slot.reserved = false; LOGI.rackDirty = true;   /* 货位在叉起开始即变空 */
+      a.carry = tk.pallet; syncWhStock();
+    } else if(a.phase === "toHand"){
+      if(!agvStartXfer(a, a.load.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(CONFIG.r8.handoverSlots[tk.handIdx], 0, CONFIG.r9.southZ), "dropXfer")) return;
+    }
   });
 }
 function updateDockForklifts(dt, activeShip){
@@ -3443,12 +3687,27 @@ function updateDockForklifts(dt, activeShip){
         if(!v.carried.visible){
           var hs = null;
           D.handoverStacks.forEach(function(h){ if(h.slotX === wp.slot) hs = h; });
-          if(hs && hs.g.visible){ hs.g.visible = false; v.carried.visible = true; v.forkTarget = 1.0; return 1.3; }
+          var hi9 = CONFIG.r8.handoverSlots.indexOf(wp.slot);
+          /* R9：只取交接位上真实存在的托盘（LOGI.handover 与垛体可见性同源），空位不停靠装车 */
+          if(hs && hs.g.visible && hi9 >= 0 && LOGI.handover[hi9]){ LOGI.handover[hi9] = null; hs.g.visible = false; v.carried.visible = true; v.forkTarget = 1.0; syncWhStock(); return 1.3; }
         }
         return 0;
       }
       if(v.role === "dock" && wp.act === "truck"){
-        if(v.carried.visible){ v.carried.visible = false; v.forkTarget = 0.1; return 1.3; }
+        if(v.carried.visible){
+          v.carried.visible = false; v.forkTarget = 0.1;
+          /* R9：装车事件 = 出库兑现点——每真实装上一托，loadCases/outCases 才 +1，库存随之 −1；
+           * 装满本车即在事件点结波次（取代 R2 内核按速率凭空扣库存）。 */
+          if(SHIP.active && SHIP.loadCases < SHIP.targetCases){
+            SHIP.loadCases++; WH.outCases++; syncWhStock();
+            if(SHIP.loadCases >= SHIP.targetCases){
+              SHIP.active = false; SHIP.trips++;
+              SHIP.nextWaveAt += CONFIG.r2.shipWaveOrderStep;
+              log("发货完成：第 "+SHIP.trips+" 车次发运 "+SHIP.targetCases+" 箱（累计出库 "+WH.outCases+" 箱），卡车离场、新车随后进场待命。","good");
+            }
+          }
+          return 1.3;
+        }
         return 0;
       }
       if(v.role === "yard" && wp.act === "pick"){
@@ -4065,23 +4324,26 @@ function updateScene(dt, t){
     }
     pos.needsUpdate = true;
   }
-  /* --- R2 仓库 FIFO 窗口渲染：库存箱占据箱位环上的 [WH.head, WH.head+stock) 窗口——
-   * 入库在队尾追加、出库从队头（最早批次侧）清空，先进先出肉眼可辨；stock/head 变化时才重排实例矩阵 --- */
-  D.whTarget = WH.stockCases;
-  if(D.whCases && D.whCasePos.length){
-    var whKey = WH.stockCases + "|" + WH.head;
-    if(D.whSyncKey !== whKey){
-      D.whSyncKey = whKey;
-      for(var wi=0; wi<WH.stockCases; wi++){
-        var wp2 = D.whCasePos[(WH.head + wi) % D.whCasePos.length];
-        dummy3.position.set(wp2[0], wp2[1], wp2[2]); dummy3.rotation.set(0,0,0); dummy3.scale.set(1,1,1); dummy3.updateMatrix();
-        D.whCases.setMatrixAt(wi, dummy3.matrix);
-        var wt2 = D.whTapePos[(WH.head + wi) % D.whTapePos.length];
-        if(wt2){ dummy3.position.set(wt2[0], wt2[1], wt2[2]); dummy3.updateMatrix(); D.whTape.setMatrixAt(wi, dummy3.matrix); }
-      }
-      D.whCases.count = WH.stockCases; D.whCases.instanceMatrix.needsUpdate = true;
-      if(D.whTape){ D.whTape.count = WH.stockCases; D.whTape.instanceMatrix.needsUpdate = true; }
-    }
+  /* --- R9 逐货位渲染（取代 R2 FIFO 窗口）：货架上出现的每一托都对应 SLOTS 里真实被 AGV 放进的
+   * 货位（taken 集），无一凭空出现/消失；颜色按批次龄渐变——seq 越小（越老）颜色越深，出库永远
+   * 先取最深的那托。仅在物理事件置 LOGI.rackDirty 时重排实例（事件驱动，非每帧）。 --- */
+  if(D.whCases && SLOTS.length && LOGI.rackDirty){
+    LOGI.rackDirty = false;
+    var taken9 = SLOTS.filter(function(s){ return s.taken; });
+    var rank9 = {};
+    taken9.slice().sort(function(a, b){ return a.seq - b.seq; }).forEach(function(s, i){ rank9[s.idx] = taken9.length > 1 ? i/(taken9.length - 1) : 0; });
+    var cOld9 = new THREE.Color(0x7d4f22), cNew9 = new THREE.Color(0xdec493), cTmp9 = new THREE.Color();
+    taken9.forEach(function(s, wi){
+      dummy3.position.set(s.pos[0], s.pos[1], s.pos[2]); dummy3.rotation.set(0,0,0); dummy3.scale.set(1,1,1); dummy3.updateMatrix();
+      D.whCases.setMatrixAt(wi, dummy3.matrix);
+      cTmp9.copy(cOld9).lerp(cNew9, rank9[s.idx]); D.whCases.setColorAt(wi, cTmp9);
+      var wt2 = D.whTapePos[s.idx];
+      if(wt2){ dummy3.position.set(wt2[0], wt2[1], wt2[2]); dummy3.updateMatrix(); D.whTape.setMatrixAt(wi, dummy3.matrix); }
+    });
+    D.whCases.count = taken9.length; D.whCases.instanceMatrix.needsUpdate = true;
+    if(D.whCases.instanceColor) D.whCases.instanceColor.needsUpdate = true;
+    if(D.whTape){ D.whTape.count = taken9.length; D.whTape.instanceMatrix.needsUpdate = true; }
+    D.whTarget = taken9.length;
   }
   /* --- crane（R2 门控：仓库有出入库活动时才作业，无活动时停在原地待机） --- */
   if(D.crane && (WH.sinceProduce < 3 || SHIP.active)){
@@ -4097,8 +4359,7 @@ function updateScene(dt, t){
   /* roof / wall / rack fading is handled by the camera occlusion system (updateCamera) */
   /* --- R8 车辆（门控保持 R2 口径）：托盘车队随出入库/波次活动运行，无活动回待命位；
    * 叉车只随发货波次在月台台面/外场装车，无波次室外待命。净距统计每帧累计（自检证据） --- */
-  var whActive = WH.sinceProduce < 2.5 || SHIP.active;
-  updatePalletAgvs(dt, t, whActive);
+  updatePalletAgvs(dt, t);   /* R9：任务制调度自带门控（无任务回待命位），不再需要 whActive 门控参数 */
   updateDockForklifts(dt, SHIP.active);
   updateNavStats();
   /* --- delivery truck --- */
@@ -4731,11 +4992,12 @@ function renderInfo(){
       rowHtml("货架", "3 排 × 3 层") +
       rowHtml("分拣复核", "复核工位 + 扫码拱门（货架西侧）") +
       rowHtml("缠绕", "托盘缠绕膜机（出库前缠膜）") +
-      rowHtml("已存箱数", fmt(WH.stockCases)+" 箱（FIFO 先进先出）") +
-      rowHtml("累计入库 / 出库", fmt(WH.inCases)+" 箱 / "+fmt(WH.outCases)+" 箱") +
+      rowHtml("已存托盘", fmt(WH.stockCases)+" 托（逐货位实存 · 色深 = 批次老）") +
+      rowHtml("累计入库 / 出库", fmt(WH.inCases)+" 托 / "+fmt(WH.outCases)+" 托") +
+      rowHtml("下线暂存", LOGI.stage.length+" 托待 AGV 取走（暂存位 "+CONFIG.r9.stagePos.length+" 个，满了下线停推）") +
       rowHtml("已发车次", SHIP.trips+" 车"+(SHIP.active ? " · 正在装车 "+Math.floor(SHIP.loadCases)+"/"+SHIP.targetCases+" 箱" : "")) +
       rowHtml("全厂累计成品", fmt(S.finished)+" 瓶") +
-      rowHtml("搬运", "室内只走无人托盘车（"+CONFIG.r8.agvCount+" 台环线：缠膜下线 → 货架巷道口 ⇄ 交接位），叉车不进仓库");
+      rowHtml("搬运", "室内只走无人托盘车（"+CONFIG.r8.agvCount+" 台任务制：下线暂存位取托 → 逐货位上架；出库按 FIFO 取最早批次 → 交接位），叉车不进仓库");
     $("infoBtns").innerHTML = "";
   } else if(sel.kind === "zone" && sel.id === "dock"){
     var tstat = dockStatusText();
@@ -5045,11 +5307,17 @@ $("resetBtn").addEventListener("click", function(){
   SHIP.active = false; SHIP.loadCases = 0; SHIP.targetCases = 0; SHIP.loadAcc = 0; SHIP.trips = 0; SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;
   if(D.truck){ D.truck.rstate = "waiting"; D.truck.rt = 0; }
   /* R8 车辆全量复位：托盘车回各自待命位（入库车 NW 角 / 出库车 NE 角）、叉车回室外待命位、交接垛清空、净距统计清零 */
-  if(D.agvs) D.agvs.forEach(function(a, ai){
+  if(D.agvs) D.agvs.forEach(function(a){
     var home = a.wps[a.homeIdx];
-    a.g.position.set(home.x, 0, home.z); a.g.rotation.y = 0; a.seg = (a.homeIdx+1) % a.wps.length;
-    a.wait = 0; a.state = "home"; a.load.visible = false; a.dropIdx = 0;
+    a.g.position.set(home.x, 0, home.z); a.g.rotation.y = 0; a.seg = 0;
+    a.wait = 0; a.state = "home"; a.load.visible = false;
+    /* R9 任务制字段全量复位（任务/路线/在车托盘/转移计时/播报文案） */
+    a.phase = "home"; a.route = []; a.task = null; a.carry = null; a.xferT = 0; a.xferFrom = null; a.xferTo = null; a.taskText = "空闲 · 待命位待机";
   });
+  if(D.xferPallet) D.xferPallet.visible = false;
+  if(D.xferOwner) D.xferOwner = null;
+  if(D.slotHi) D.slotHi.visible = false;
+  initRackSlots();   /* R9：逐货位模型复位——种子库存 26 托（seq 1..26）、暂存/交接清空、LOGI.nextSeq 回 27、库存守恒回初值 */
   if(D.forklifts) D.forklifts.forEach(function(fl){
     var home = fl.wps[fl.homeIdx];
     fl.g.position.set(home.x, fl.baseY || 0, home.z); fl.g.rotation.y = 0; fl.seg = (fl.homeIdx+1) % fl.wps.length;
