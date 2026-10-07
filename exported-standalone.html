@@ -295,6 +295,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 .modal-btns .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 
 .tour-cap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bottom-lift) + 76px);z-index:17;width:min(600px,calc(100vw - 24px));padding:12px 14px;display:none;gap:12px;align-items:center}
+.tour-cap.demo .tc-btns{display:none}
 .tour-cap.show{display:flex}
 .tc-main{flex:1;min-width:0}
 .tc-title{font-size:14px;font-weight:900;color:var(--accent)}
@@ -679,6 +680,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
   </div>
   <button class="btn" id="tourBtn">🎬 自动巡游</button>
   <button class="btn" id="bigBtn" title="大屏总览模式：隐藏全部操作面板，只留全屏 3D + 顶部大字 KPI 带，镜头沿巡游轨迹低速环视；点任意处或按 Esc 退出，生产不暂停" aria-pressed="false">🖥 大屏模式</button>
+  <button class="btn" id="demoBtn" title="一键演示日：脚本化跑完一个浓缩生产日——自动接单→开工→质检抽检→健康度预警与保养→排空换型到第二产品→发货波次→收尾出日报，全程真实状态机与台账、带解说字幕；演示中点任意处立即接管（状态如实保留不回滚）">▶ 演示日</button>
   <div class="ops-hint">拖动旋转 · 滚轮缩放 · 右键平移 · ⬆⬇ 按钮（长按）或 W/S 键前后移动</div>
   <div class="smed-note" id="smedNote" role="status"></div>
   <button class="btn" id="roofBtn">🏠 顶棚：自动</button>
@@ -716,6 +718,17 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">停机归因（本次运行累计）</div><div class="v" id="downtime23" style="font-size:13px">—</div></div>
     </div>
 
+    <h3>存档（导出 / 导入 · 跨设备手动迁移）</h3>
+    <p class="hint">本页没有跨设备自动保存——正道是文件存档：把当前运行状态（生产状态 / 各产品台账 / 仓库逐货位 / 批次谱系 / 订单队列 / 投资与施工进度 / 日报归档 / 满意度）导出为一个 JSON 文件，带格式版本与校验和；在另一台设备导入即可完整恢复（导入后自动跑一遍仓库守恒自检并在这里出结果）。存档不合法（版本不符 / 校验和不符 / 结构缺失）会拒绝导入并说明原因。</p>
+    <div class="econ">
+      <div class="dcell wide"><div class="l">运行存档（R25）</div><div class="v" id="saveStatus" style="font-size:13px">尚未导出 / 导入</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 4px">
+      <button class="btn" id="saveExportBtn">⬇ 导出存档 JSON</button>
+      <button class="btn" id="saveImportBtn">⬆ 导入存档 JSON</button>
+      <input type="file" id="saveFile" accept=".json,application/json" style="display:none">
+    </div>
+
     <h3>真机性能（本机实测 · 反馈时照此读数）</h3>
     <p class="hint">近 60 帧平均帧率、当前画质档、像素比与上一帧 draw call 数，全部读自本机渲染器（renderer.info），随数据抽屉既有节奏刷新。在手机上卡不卡、降到哪一档，看这四格即可，不用猜。</p>
     <div class="econ">
@@ -727,7 +740,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
     <p class="hint mono" id="perfMerge" style="margin-top:6px">静态合并：—</p>
     <p class="hint mono" id="perfMergeEx" style="margin-top:2px"></p>
     <p class="hint mono" id="perfNav" style="margin-top:2px">车辆最小净距：—</p>
-    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：口径 = 全厂俯瞰机位 · 桌面档 · window.__perfSnapshot() 读 renderer.info.render.calls（含阴影通道）。R15 基线实测：待机 767 · 生产中 804。R16 攻坚（同口径）：灌装头实例化结构性减 231 次绘制（每线 72 个逐头网格 → 2 个 InstancedMesh、封盖塔 8 → 1，三线合计，算术可核）+ 阴影投射体审计（最大边 &lt;5.2 的网格不再进阴影通道）。R17 活页面复测（构建环境同栈 Chromium 自跑，非平台审计服务）：待机 549–592（两轮多读数区间，含 R17 新增第 3 台 AGV 的约 15 个网格）· 生产中 603——待机已达 ≤650 目标且低于 600 冲刺线附近。分区贡献前五（待机，window.__drawProfile()）：灌装大厅 216 · 仓储与月台 140 · 公用工程（西北）84 · 罐区（西）46 · 包装与码垛 36。R18 更正与复测（同口径，2026-10-06）：R17 的 549–592 在真实运行循环中不可复现——同口径基线为 767（R15）→ 775（R17 代码 + 第 3 台 AGV）；R18 加远景剔除 farCull（俯瞰隐藏 231 件最大边 &lt;2.4 的静态小件、近景自动恢复）后，车队扩至 4 台口径下待机实测 <b>614</b> · 生产中 <b>617</b>，≤620 达标（window.__farCull() 可读剔除数与开关状态）。R19 复测（同口径）：交接位扩容 +2 垛约 +8 次绘制，farCull 阈值 2.4→2.7（候选 231→261 件）抵消后待机实测 <b>592</b>，仍 ≤620。R20 复测（同口径）：未扩容待机仍 <b>592</b>；扩容完工后生产中实测 <b>634</b>——扩容排是运行期动态生成、进不了建场静态合并，首版逐件建网格曾达 675，已把立柱（14 根）与车道标线（28 段）改 InstancedMesh，整排新增收敛到约 9 次绘制（立柱 1 + 梁 4 + 层板 3 + 标线 1），余量为生产态动态件波动。R21 复测（同口径）：本轮无新增 3D 几何（促销仅 DOM 弹窗/按钮、分段补偿仅系数），待机 DrawCall 口径与护栏（≤620）不变，以 __r21Check().draw 与 __perfSnapshot 复核、数字写交付汇报。R23 复测（同口径 · 活页面自跑）：三线待机实测 <b>637</b>——较 R19/R20 的 592 上浮 45，定性为新基线：R18 车队扩至 4 台 AGV + R19 交接位 5 垛 + R20 仓库 D 排（未扩容时不存在，不计）等动态件在待机场景的常驻增量与跨环境读数波动（R17 两轮读数本身即有 549–592 的区间）；第 4 条线建成后的结构增量以 __drawProfile 分区计：灌装产线区 renderables 300 → 345（+45/线，与三线均值一致），施工期围挡约 +70 件为临时件、完工即撤。作业态（满线生产 + 卡车装载箱逐件网格）读数 ~990 不属待机口径、不作护栏判定。</p>
+    <p class="hint mono" id="perfSource" style="margin-top:2px">Draw Call 来源说明：口径 = 全厂俯瞰机位 · 桌面档 · window.__perfSnapshot() 读 renderer.info.render.calls（含阴影通道）。R15 基线实测：待机 767 · 生产中 804。R16 攻坚（同口径）：灌装头实例化结构性减 231 次绘制（每线 72 个逐头网格 → 2 个 InstancedMesh、封盖塔 8 → 1，三线合计，算术可核）+ 阴影投射体审计（最大边 &lt;5.2 的网格不再进阴影通道）。R17 活页面复测（构建环境同栈 Chromium 自跑，非平台审计服务）：待机 549–592（两轮多读数区间，含 R17 新增第 3 台 AGV 的约 15 个网格）· 生产中 603——待机已达 ≤650 目标且低于 600 冲刺线附近。分区贡献前五（待机，window.__drawProfile()）：灌装大厅 216 · 仓储与月台 140 · 公用工程（西北）84 · 罐区（西）46 · 包装与码垛 36。R18 更正与复测（同口径，2026-10-06）：R17 的 549–592 在真实运行循环中不可复现——同口径基线为 767（R15）→ 775（R17 代码 + 第 3 台 AGV）；R18 加远景剔除 farCull（俯瞰隐藏 231 件最大边 &lt;2.4 的静态小件、近景自动恢复）后，车队扩至 4 台口径下待机实测 <b>614</b> · 生产中 <b>617</b>，≤620 达标（window.__farCull() 可读剔除数与开关状态）。R19 复测（同口径）：交接位扩容 +2 垛约 +8 次绘制，farCull 阈值 2.4→2.7（候选 231→261 件）抵消后待机实测 <b>592</b>，仍 ≤620。R20 复测（同口径）：未扩容待机仍 <b>592</b>；扩容完工后生产中实测 <b>634</b>——扩容排是运行期动态生成、进不了建场静态合并，首版逐件建网格曾达 675，已把立柱（14 根）与车道标线（28 段）改 InstancedMesh，整排新增收敛到约 9 次绘制（立柱 1 + 梁 4 + 层板 3 + 标线 1），余量为生产态动态件波动。R21 复测（同口径）：本轮无新增 3D 几何（促销仅 DOM 弹窗/按钮、分段补偿仅系数），待机 DrawCall 口径与护栏（≤620）不变，以 __r21Check().draw 与 __perfSnapshot 复核、数字写交付汇报。R23 复测（同口径 · 活页面自跑）：三线待机实测 <b>637</b>——较 R19/R20 的 592 上浮 45，定性为新基线：R18 车队扩至 4 台 AGV + R19 交接位 5 垛 + R20 仓库 D 排（未扩容时不存在，不计）等动态件在待机场景的常驻增量与跨环境读数波动（R17 两轮读数本身即有 549–592 的区间）；第 4 条线建成后的结构增量以 __drawProfile 分区计：灌装产线区 renderables 300 → 345（+45/线，与三线均值一致），施工期围挡约 +70 件为临时件、完工即撤。作业态（满线生产 + 卡车装载箱逐件网格）读数 ~990 不属待机口径、不作护栏判定。R25 复检（同栈无头 Chromium 自跑，帧率为 SwiftShader 软件渲染口径、非真机口径）：待机（初始三线 · 俯瞰 · 桌面档）实测 <b>637</b>，≤650 达标、与 R23 基线持平（R24/R25 无新增常驻几何）；四线满配作业态 995–1020（同 R23 作业态口径）；无头低帧率触发自适应降级后收敛 649（shadowTier mid、renderables 1021→675）——护栏由既有自适应系统守住。待机/满配前三贡献（__drawProfile 分区）：月台/车辆/外场 · 灌装产线区 · 包装/码垛/交接。移动低端档复调结论：参数维持（pixelRatioCap 1.0 / shadowTier eco / lodDistance 110）。farCull 开启、剔除 309 件（window.__farCull()）。</p>
     <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="uiResetBtn">↺ 恢复默认界面</button><span class="hint" style="margin:0">界面偏好（面板隐藏 / 画质档 / 相机条折叠 / 选中机位）仅本次打开期间保留：重置模拟不会清掉它们，刷新页面则恢复默认。</span></div>
 
     <h3>物流任务播报（与车辆动作同源）</h3>
@@ -940,7 +953,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R22 PDCA 打包轮（压力测试场景包 + 排班与人力成本深化 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：前 21 轮把生产/物流/市场/质量系统逐个建齐，本轮专练「出事时扛不扛得住」与「人怎么排」。新参数全在 <b>CONFIG.r22</b>，读数口 <b>window.__r22()</b>，探针口 <b>window.__r22Probe</b>（stressRun / staffingRun），回归包 <b>window.__r22Check()</b>。<b>① 压力测试场景包（A 项）</b>：调度台「压力测试」区四场景，点按钮只弹确认弹窗（影响逐项明示）、确认才触发，同一时刻只许一个。统一生命周期 STRESS.active → stressTick22 每步判恢复 → 落 STRESS.records{场景名/触发时刻/恢复耗时/损失} 写日志，日报三处（抽屉格/下载 txt/归档摘要）按 DAYREP.base 过滤当日记录同源呈现。<b>损失口径（不新设账本）</b>= 恢复时刻与触发快照的既有台账量做差：Δ报废瓶数 × 当前产品全成本 + Δ延误罚金 totalFine + Δ备件费 totalSpareCost。分场景机制：<b>断供</b>——rawCutUntil 期间 stepR2 罐车状态机整段冻结（不下单/在途不倒计时/卸料暂停）+ orderRawNow 同口径拒绝，罐存只出不进、断料与断料分钟走 R13 既有入账；恢复判据 = 停运结束且液位回安全线以上、无断料中。<b>停电</b>——触发瞬间产线在制（queue+capQ）按 powerScrapFrac=0.5 报废：走第三类例外报废口径（rejected/varCost 全成本 + AUDIT17.stressScrap* 留痕，marketAudit 期望式同步扩项、残差口径不变）；杀菌队列/无菌库存/调配在制保压保留；停电期 step 走专用分支（流量全停、维修保养照常、stepR2 清线口径、班次照结），复电记 finAtOutageEnd 并进 powerRampMin=10 分钟爬坡（供应/调配/杀菌/灌装四处 ×powerRampFactor=0.5，rampF22 同乘）；恢复判据 = 爬坡结束且产量已越过复电点。<b>爆单</b>——surgeUntil 内到达间隔 ×surgeIntervalFactor=0.5、客户单规模 ×surgeSizeFactor=2（satArrivalInterval 与 satTickArrivals 两点，与满意度/促销因子并存相乘、entry.surge 标记）；恢复判据 = 效果结束且 ORDERQ 回落到触发前长度。<b>连环故障</b>——杀菌即时 applyFaultStart（26 分），chainGapMin=10 分后 1 号线灌装机相继（34 分），两台全走 R12 备件判定（领件/缺货 ×2.2+紧急费/维修工/ MTTR 全套）；恢复判据 = 两台 faultLeft 皆清零。<b>② 排班与人力深化（B 项）</b>：STAFF.sel 白/夜班各三档（CONFIG.r22.staffing.tiers：精简 labor 0.7/repair 0.6/qc 0.6、标准全 1、加强 1.45/1.5/1.4；默认标准与旧口径逐值一致）。三路同源生效：accrueShiftLabor 按段乘 labor（日报按班人工行 = SHIFT.totals 分班 laborCost 直读）；step 与停电分支的 faultLeft/maintLeft/waitLeft 倒计时按当前班 repair 系数推进（故障恢复耗时实测可差，MTTR 口径随之）；stepQC 的 elapsed 按 qc 系数累计（精简班抽检变稀）。调度台「排班与人力」区双班段选 + #staffSummary 当前生效档位三系数摘要，切换写日志；重置不清排班（用户偏好）。<b>③ 例行回归（C 项）</b>：__r22Check() = R21 全量 + r22 读数；压力/排班探针与守恒长跑等动态项由当轮在活页面实跑，数字写交付汇报、不在本节预填。本轮无新增 3D 几何，DrawCall 口径与护栏（待机 ≤620）不变。</div></div>
       <div class="dcell wide"><div class="l">R23 PDCA 打包轮（产能扩容第 4 条线 + 多日经营趋势 + 长跑浸泡回归 + 告警中心/班次目标/停机归因）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：前 22 轮把告警散在各面板（大屏预警行、调度台各区、精益看板行），没有一个统一入口；班次只有小计没有目标；OEE 只给扣分结果、答不出「时间丢在哪」；仓库能扩容（R20）、产能却不能；日报归档只留 7 天、看不出多日趋势。新参数全在 <b>CONFIG.r23</b>，读数口 <b>window.__r23()</b>，探针口 <b>window.__r23Probe</b>（alertsRun / downRun / targetRun / lineRun / trendRun / soakRun），回归包 <b>window.__r23Check()</b>。<b>【A 项 · 产能扩容投资：第 4 条灌装线（EXP4）】</b>：调度台「产能扩容投资」——点钮只弹确认（费用 ¥120,000 / 工期 360 仿真分钟 / 码垛瓶颈提示明示），确认才扣款（进当前产品台账 fixedCost、日报当日做差）。开工先<b>重排让位</b>：line4Respace 把 LINE_Z 由 [-40,0,40] 改为 spacingAfter=27 的四线位 [-40.5,-13.5,13.5,40.5]——既有三线整组 z 偏移（dyn.group）、无菌下引管逐线同步（D.asepticLinePipes）、PERSON_OBSTACLES 逐线 6 条目重建为 8 条目（原 6 条存 EXP4.savedObstacles 供回滚）；维修工路线末线判定由写死 LINE_Z===40 改按末线索引（三线布局逐值一致）。施工期南侧新线位围挡 + 2 名施工人员（buildLine4Site），且<b>无第 4 条 line 对象</b>——结构上不可用。完工 completeLine4：CONFIG.lineCount=4 → lines.push 同构新线（fillRate 闭合同式）→ buildLine(3) 原位建 3D（36 头/封盖实例化同路）→ HEALTH 补条目 → 下引管补一根 → buildLineSeg 重建开线控件（原 IIFE 抽成命名函数）→ 标题文案刷新 → 新线默认开启。名义产能 nominalCapPerMin / 交期 dueOffsetMin / OEE stageList /公用工程（activeLines 派生）/ 包装下线峰值（CONFIG.lineCount 派生）全部自动含新线。<b>码垛如实预警</b>：palUtilization23() = 四线包装峰值 533 箱/分 ÷ 码垛额定 460 = 1.16 &gt; 1——建成后告警中心常驻提示码垛成峰值瓶颈（默认灌装负荷下实际箱流约 267 箱/分仍有富余，口径差异在弹窗与告警文案中明示）。只许建一次（建成按钮置灰注明）；重置 line4Reset 整组回滚（移除线组/实例/点选盒/HEALTH 条目、恢复线位与障碍、lineCount 回 3、控件文案复原）。探针 lineRun：上游拉满使灌装成名义瓶颈后对账——名义产能与 300k 单交期扩容前后、扣款三方（EXP4.spent 与台账 fixedCost 增量 = ¥120,000）、隔离只开第 4 线泵 600 秒验首瓶下线→成品/入库增量→守恒。<b>【B 项 · 多日经营趋势（TREND）】</b>：归档上限 7 → <b>30</b>（CONFIG.r23.trend.historyCap，newDay 抽成 archiveDay() 命名函数、钮与探针共用）。归档条目新增 <b>data</b> 结构化字段（archiveDayData：当日 finished/profit/fine/buySpent 做差 + 归档刻 oee + 满意度当日采样均值 satAvg + 单瓶电耗 perPower），与摘要行同刻同源；旧格式归档（无 data）保留在历史列表、趋势统计跳过并在峰值行注明条数（存储兼容）。抽屉「经营趋势」节：四指标小折线（日产量/日利润/满意度/单瓶电耗，按钮切换 TREND.metric，SVG 与产能曲线同画法）+ 月度汇总行（trendSummary 对带 data 归档求和/均值：总量/总利/均 OEE/罚金合计/采购合计）；归档不足时显示实际天数、不补数。探针 trendRun 连归两天验条数/data/汇总手算一致。<b>【C 项 · 长跑浸泡 + 例行回归】</b>：探针 soakRun(100000)——step(0.55) 直推 100,000 步（与 longRun 同口径），每 20,000 步真实换型一产品、@30,000 爆单演练、@55,000 杀菌故障，事件混跑；跑后报守恒 __whCheck / NaN 与负值扫描 / 期末对象池（暂存托 ≤ stagePos 上限、谱系 records ≤ 60 上限回收、货位 taken ≤ 总位、ORDERQ/buysLog/满意度到达/归档条数）。例行回归沿 __r23Check() 全家桶 + 当轮活页面实跑逐项给数字（见交付汇报）。<b>① 告警中心（A 项）</b>：抽屉顶部新节 alerts23()——以大屏 bigAlerts() 六路为底（故障/原料/健康度/质检整改/备件耗尽/交期，判定零改动、不另算第二套），补六路：库龄滞销（bad）/临期（warn）（ageSummary 同源）、备件仅剩 1 件、满意度 &lt; satWarnBelow=60、下线暂存 ≥ stageFullPallets=6 托钉满、货架已满（bad）、压力测试进行中。严重告警经 alertLogTick23 写生产日志：键 = 文本数字归一（剩余分钟变化不算新警），同键 alertLogDedupeMin=240 仿真分钟内只记一次。<b>② 班次产量目标（B 项）</b>：目标 = nominalCapPerMin(当前产品) × 班长 720 × targetUtilization=0.62——与交期核定同源的名义产能（含班次系数），随产品/开线数/夜班自动变，不写死瓶数；进度 TGT23 按班次实例起点（simMin − pos）对 S.finished 做差，交接换班自动重计。抽屉格 + 日报三处（抽屉格/下载 txt/归档行走当日口径附带当前班目标进度）同源呈现。<b>③ 停机原因分析（C 项）</b>：DOWN23 六桶互斥归因——downTick23 在 step 顶部（换型/停电分支之前，两类步同样经过）按优先级 停电 &gt; 换型 &gt; 故障 &gt; 保养 &gt; CIP &gt; 待料饥饿 把本步 dtMin 计入一桶，合计 ≤ runMin；待料判定读 stationStatus/lineStatus 的 STARVED（与状态灯同源）。日报按 DAYREP.base 的 down 快照做差出当日归因（dayrepSnapshot/dayrepDelta 同步扩字段，旧 base 无 down 时按全量计）。与 OEE 分工：OEE 按故障次数扣开动率，这里按分钟答时间去向。<b>④ 例行回归（D 项）</b>：__r23Check() = R22 全量 + r23 读数；各探针与守恒/DrawCall 等动态项由当轮在活页面实跑，数字写交付汇报、不在本节预填。DrawCall（R23 复测）：三线待机 637 为新基线（较 R20 的 592 上浮原因与第 4 线 +45 renderables 的结构增量见抽屉 #perfSource 的 R23 附记）；全部计时走仿真分钟（总表第 23/24 项）。</div></div>
       <div class="dcell wide"><div class="l">R24 PDCA 打包轮（码垛机高速化改造 + 告警处置闭环 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R23 量化出的码垛瓶颈（四线包装下线峰值 533 箱/分 &gt; 码垛额定 460、运力比 1.16 的告警已挂在告警中心）本轮收口；R23 的告警中心只有「看」没有「处置」。新参数全在 <b>CONFIG.r24</b>，读数口 <b>window.__r24()</b>，探针口 <b>window.__r24Probe</b>（palRun / alertsRun / soak4Run），回归包 <b>window.__r24Check()</b>。<b>【A 项 · 码垛机高速化改造（PALUP）】</b>：与扩容系列同模式的投资选项——调度台「码垛能力扩容」区点钮只弹确认（费用 ¥68,000 / 工期 300 仿真分钟 / 停机积压与完工速率明示），确认才扣款（当前产品台账 fixedCost、日报当日做差、归档摘要带行）。工期 stepPalUp 走仿真时钟；期间码垛机<b>停机</b>：stepPalletizer 的 R24 闸门只入账不推进——良品瓶照常成箱进进料缓冲（60 箱），满后余量留在瓶账 bottleBank，积压量 = caseQueue + 瓶账折箱（PAL.queuePeak 证据口径不变），码垛工位围挡 + 2 名施工人员（buildPalUpSite，完工/重置即撤），物流播报与告警中心同步显示改造与积压。完工 completePalUp 把 CONFIG.r14.rateCasesPerMin 由 460 切到 <b>640</b>（CONFIG.r24.palletUpgrade.rateAfter，≥620 下限）——对四线峰值 533 的运力比由 0.86 回到 <b>1.20</b>，R23 的码垛瓶颈告警随 palUtilization23() 同源自动消解；积压按新速率在后续 stepPalletizer 自然追赶清空（探针 palRun 给积压峰值与清空耗时）。只许一次；重置 palUpReset 复原额定 460 与全部状态。<b>为何选改造不选第二台码垛机（如实记录）</b>：第二台需要第二条进料带与第二个出托口——包装下线簇是单路拓扑、下线暂存位 stagePos 是单入口，入库 AGV 取托点、码垛位 hitbox、谱系「成托」事件点（logiStagePush 以当刻在制批打 batchKey）都要分叉成双口，等于重做 R9/R14 已验过的物流拓扑与守恒事件链；高速化改造只换抓手驱动与成层节拍（额定速率一个数），占地/路径/AGV 衔接/托盘规格（25 箱/托）全不动——结论以<b>不破坏现有物流拓扑</b>为准，占地与衔接口径都更省，工期与风险更小。<b>【B 项 · 告警处置闭环（ALERTC）】</b>：判定零改动，来源只接 alerts23() 既有信号（R24 另补两路既有状态：PALUP 改造施工中、PAL 进料积压 ≥ 缓冲上限——都是已存在状态的呈现，非新造判定）。alerts23() 每条新增稳定键 key（文本数字归一，与 alertLogTick23 去重同键）与严重度 sev。ALERTC.items 按键聚合：同类告警只在「不活跃→活跃」跳变时 count+1（持续存在不刷屏、抽屉带 ×N 计数）；抽屉列表按严重度排序（bad 在前、同级未确认在前、计数高在前），每条未确认告警带「确认」钮——ackAlert24 置 acked、记确认时刻（仿真时钟）、写生产日志、进处置历史 history（上限 40 条）；告警消失后复现视为新一次发生（重新未确认、count 再 +1）。未确认时长 unackSince 起算，确认/消失/活跃中三路同口径结算当日最长值。当日处置计数 day{trig/ack/maxUnackMin} 随 archiveDay 翻页清零，呈现三处同源：抽屉「告警处置」格、日报格「告警处置（当日 · R24）」行 + 码垛扩容行、下载 txt 两行、归档摘要行尾。重置 alertCenterReset24 全清（告警确认态不跨新工厂）。<b>【C 项 · 例行回归】</b>：__r24Check() = R23 全家桶 + r24 读数；守恒 20,000 步在四线状态下走 __r24Probe.soak4Run 复跑；DrawCall 待机以四线建成状态同口径（俯瞰 · 桌面档 · __perfSnapshot 含阴影通道）给新基线，&gt;650 时在交付汇报说明构成（码垛改造本身无新增常驻几何，施工围挡为临时件）。动态数字写当轮交付汇报，不在本节预填。全部计时走仿真分钟（总表第 25 项）。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致</div></div>
+      <div class="dcell wide"><div class="l">R25 PDCA 打包轮（一键演示日 + 存档导出/导入 + 性能复检）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：25 轮内容攒厚后的收口轮——新用户上手成本、跨设备迁移、性能基线三件一起清。新参数全在 <b>CONFIG.r25</b>，读数口 <b>window.__r25()</b>，探针口 <b>window.__r25Probe</b>（demoRun / saveRoundTrip / saveReject），回归包 <b>window.__r25Check()</b>。<b>【A 项 · 一键演示日（DEMO）】</b>：控制台「▶ 演示日」一键脚本化跑完一个浓缩生产日，阶段机 demoTick25 挂在 step() 内、全程读仿真时钟：目标产品订单入队（既有 dueOffsetMin 交期核定口径；只入队目标产品单——当前单完成后队列自动接单，与排空换型同向推进，不互相打架）→ 抽检（把 QC.elapsed 推满 qcIntervalMinutes，由 stepQC 真实出样判定，不伪造结果）→ 健康预警（挑一台在册设备真实压到 65 分，stepPM 真实预警后走 startMaintenance 既有保养链）→ 排空换型（reserveChangeover 预订，带守卫防与队列接单重复触发）→ 发货波次（等 WAVES 真实成波）→ archiveDay 出日报。每段经 showTourCaption 解说（.tour-cap.demo 形态、隐藏导览按钮），演示以 4 倍速推进、结束恢复原倍速；用户点任意处（捕获期监听，点演示钮本身为启停）或 Esc 立即接管——状态如实保留、绝不回滚，日报与手动跑一天同口径（dayrepDelta 同源）。阶段超时（1500 仿真分钟）如实跳过并记进演示日志，不假装完成。<b>【B 项 · 存档导出/导入（SAVE25）】</b>：抽屉「存档」区——导出把全量运行状态（S/各台账/仓库逐货位/谱系/订单队列/投资与施工/日报归档/满意度/车辆在途托）封成带格式版本（FSIM_SAVE v1）与双种子 cyrb53 校验和的 JSON 文件下载；产品对象引用经占位标记序列化、恢复时换回 PRODUCTS 活引用。导入先验版本与校验和，再验结构（货位数须与扩容进度自洽、产线数须与四线投资自洽），不合法拒绝并给原因；恢复主线走真实 reset 再按投资进度重建扩容/四线/码垛改造，然后逐字段回填，末尾跑 __whCheck 守恒自检并把结果示给用户。这是 R10 持久化结论的正道落地：不冒充自动持久化，跨设备靠文件手动迁移。探针实测抓到并已修复两个恢复真 bug：① 交接垛可见性是事件驱动的（无逐帧同步），恢复时若不在「在途托归位之后」按 LOGI.handover 显式对齐垛体可见性，叉车取货条件永假、出库链死锁；② 在途入库托回暂存位必须按当前空闲位重派位号（旧位号可能已被占/越界），暂存满转货位。取舍如实记：SMED 面板瞬时态与压力测试的待触发连环故障（持对象引用）不入档，恢复后 STRESS 链式字段置空。<b>【C 项 · 性能复检】</b>：活页面同栈实测（无头 SwiftShader 口径，帧率非真机口径）——待机（初始三线 · 俯瞰 · 桌面档）DrawCall 637，≤650 目标达标、与 R23 基线持平（本轮零新增几何）；四线满配作业态 995–1020（与 R23 自报同口径 ~990 同量级，增量为 R24 改造件与读数波动）；无头低帧率触发自适应降级后收敛 649（shadowTier 降 mid、renderables 1021→675）——护栏靠既有自适应系统守住，本轮不做结构性压减。待机前三贡献（__drawProfile 分区）：月台/车辆/外场 · 灌装产线区 · 包装/码垛/交接。移动低端档复调结论：参数维持（pixelRatioCap 1.0 / shadowTier eco / lodDistance 110）——待机已达标且自适应降级实测有效，无需再砍。farCull 开启、剔除 309 件。<b>【D 项 · 例行回归】</b>：11 项数字写交付汇报（守恒 20,000 步 / 三段补证 / 混合车队会车 / CSS 安全区 / 罚金三方 / 市场三方 / 促销对账 / 谱系抽查 / 健康度时序 / 出库链速 / 码垛运力比 1.20）。注：__r24Probe.palRun 的积压清空判据在货架饱和的热状态下会假阴性（满架时码垛产出被物理阻塞、非速率问题）——额定 640 与运力比 1.20 以 __r24() 读数为准，积压在有货位时可清（长跑实测瓶账回落）。全部计时走仿真分钟（总表第 26 项）。</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1019,6 +1033,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R23 告警中心 + 班次目标 + 停机归因：抽屉顶部三格随 renderKpis 刷新且与 window.__r23() 一致；把备件置 0——告警中心与大屏预警行同时出现备件耗尽告警（__r23Probe.alertsRun().spareAlertHit = true）；__r23Probe.downRun()——杀菌机 30 分故障实跑后 downtime.fault 增量 ≥20 分、六桶合计 ≤ runMin；__r23Probe.targetRun()——target &gt; 0、done 不倒退、pct = done/target；造一托滞销（回拨 inAtMin 到保质期 80%）——告警中心出现滞销严重告警且生产日志 240 分钟内只记一次；日报格/下载 txt/归档行均有「告警与停机」行且当日归因与 __r23().downtime 做差一致；跨班次交接后 target 按新班重计（done 回落到新班增量）；重置后 downtime 六桶清零；window.__r23Check() 全绿、时间基准总表已续第 23 项</li>
       <li>R23 第 4 条线 + 趋势 + 浸泡：调度台点「新建第 4 条灌装线」只弹确认不扣款，确认后 __r23().line4.buildingLeftMin 出现、三线 LINE_Z 重排为 [-40.5,-13.5,13.5,40.5]、南侧新线位有围挡与施工人员且 lines.length 仍为 3；__r23Probe.lineRun()——capAfter &gt; capBefore（上游拉满口径）、dueAfter &lt; dueBefore、chargeOk（台账增量 = ¥120,000）、隔离只开第 4 线时 line4Done &gt; 0 且入库/库存增量 &gt; 0、wh.ok；建成后按钮置灰、再点只提示；告警中心出现码垛峰值瓶颈提示（palUtil 1.16）；重置后 lines.length 与 CONFIG.lineCount 回 3、LINE_Z 回 [-40,0,40]、开线控件回 3 钮；__r23Probe.trendRun()——归档 +2、每条带 data、trendSummary 与逐条手算一致、归档上限 30；抽屉经营趋势四指标可切换、月度汇总与 __r23().trend.summary 一致；__r23Probe.soakRun(100000)——ok = true（守恒/无 NaN/无负值）、pools 中 stagePallets ≤ 6、traceRecords ≤ 60、slotsTaken ≤ slotsTotal（有界证据）</li>
       <li>R24 码垛改造 + 告警处置：调度台点「码垛机高速化改造」只弹确认不扣款，确认后 __r24().palletUpgrade.buildingLeftMin 出现、码垛机停机且进料积压（caseQueue + 瓶账折箱）随生产增长、物流播报显示改造中与积压数；__r24Probe.palRun()——ratioBefore = 460/533 = 0.86、chargeOk（台账增量 = ¥68,000）、backlogPeakDuringBuild &gt; 0、完工 rateAfter = 640 且 ratioAfter = 1.20 ≥ 1.15、clearPumpSec 有数（积压清空）、四线满速段 stagePeakAfter ≤ 6 且 wh.ok；建成后按钮置灰、码垛瓶颈告警消失；重置后额定回 460、PALUP 全清。告警处置：__r24Probe.alertsRun()——备件置 0 后告警出现、重复 tick 计数不涨（aggOk）、ackAlert24 后 acked = true 且 ackMin 有值、day.ack +1、history +1、current 列表按严重度降序；抽屉告警行带 ×N 计数与「确认」钮/已确认时刻；日报格/下载 txt/归档行均有「告警处置（当日 · R24）」且与 __r24().alerts.day 一致；__r24Probe.soak4Run(20000) 在四线状态下 ok = true（守恒/无 NaN）；window.__r24Check() 全绿、DrawCall 待机（四线建成）同口径实测写交付汇报</li>
+      <li>R25 演示日 + 存档 + 性能复检：控制台点「▶ 演示日」——__r25Probe.demoRun() ok = true 且 phase 日志含入队/真实抽检（QC.samples 增）/预警+保养（PM.maintenances 增）/换型完成/波次成波/archiveDay 归档（DAYREP.history +1），结束产品 = 目标产品、wh.ok；点任意处或 Esc 接管后 DEMO.on = false 且状态保留。存档：__r25Probe.saveRoundTrip() ok = true（before/after 的 finished/stock/taken/profit/product/simMin/slots/sat 全等 + wh.ok，stage 仅作读数——在途托按空闲位重派属位置重分类）；恢复后继续泵 600 秒出库车次必须递增（交接垛可见性回归哨）；__r25Probe.saveReject() 三路全拒（改数据→校验和不符 / version=99→版本不符 / 删字段→结构缺失）。性能：__perfSnapshot 待机（初始三线 · 俯瞰 · 桌面档）≤650（本轮基线 637）、四线作业态读数与 farCull.count 一并写交付汇报；window.__r25Check() 全绿；回归 11 项数字齐全（出库链速 __r19Probe.shipRun ≥1.75、码垛运力比 __r24().palletUpgrade.ratioNow = 1.20）</li>
     </ul>
   </div>
 </aside>
@@ -1528,6 +1543,18 @@ var CONFIG = {
   r24: {
     palletUpgrade: { costYuan: 68000, buildMinutes: 300, rateBefore: 460, rateAfter: 640 },
     alerts: { historyCap: 40 }
+  },
+  /* ---- R25 打包轮参数（一键演示日 + 存档导出/导入 + 性能复检，改这里） ----
+   * demo：speed = 演示倍速（浓缩一天，退出恢复演示前倍速）；healthSet = 健康预警
+   * 阶段把目标设备健康度定点压到的值（须 < R15 预警线 70 且 > 故障线 28，由
+   * stepPM 真实预警）；phaseTimeoutMin = 换型/波次阶段的仿真分钟超时（超时如实
+   * 记录并继续，不假装完成）。
+   * save：存档格式标识与版本（导入只认 magic 相同且 version 相同的存档）。
+   * perf：idleTarget = 四线满配状态待机 DrawCall 护栏（与 R16/R23 同口径）。 */
+  r25: {
+    demo: { speed: 4, healthSet: 65, phaseTimeoutMin: 1500 },
+    save: { magic: "FSIM_SAVE", version: 1 },
+    perf: { idleTarget: 650 }
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -3869,6 +3896,7 @@ function renderR23(){
   renderLine4();
   renderPalUp();
   renderTrend();
+  renderSave25();   /* R25：存档状态行随抽屉节奏刷新 */
 }
 
 /* ================= [M1] R24 · 告警处置闭环（ALERTC） =================
@@ -4291,6 +4319,7 @@ function step(dtMin){
   promoTick();   /* R21：促销到期走仿真时钟（总表第 20 项） */
   stressTick22(dtMin);   /* R22：压力测试恢复判据/连环二段/复电爬坡走仿真时钟（总表第 21 项） */
   downTick23(dtMin); alertLogTick23(); alertCenterTick24();   /* R23：停机归因分桶 + 严重告警去重入日志（总表第 23 项；钩子在换型/停电分支之前，两类步同样计入）；R24：告警聚合/未确认时长同点推进（总表第 25 项） */
+  demoTick25();   /* R25：演示日脚本按仿真时钟检查阶段完成条件（总表第 26 项；DEMO.off 时空转返回） */
   accrueShiftLabor(shSegs);
   var shNowInfo = shiftInfoAt(S.simMin);
   if(shNowInfo.key !== shPrevKey){
@@ -10613,6 +10642,447 @@ window.__r24Check = function(){
            cssSafeArea: c23.cssSafeArea, healthModel: c23.healthModel, market: c23.market,
            palletizer: c23.palletizer, marketAudit: c23.marketAudit, bigScreen: c23.bigScreen,
            sat: c23.sat, farCull: c23.farCull, r19: c23.r19, r20: c23.r20, r21: c23.r21, r22: c23.r22, r23: c23.r23, r24: window.__r24(), draw: c23.draw };
+};
+
+/* ================= [M1] R25 · 一键演示日（DEMO） =================
+ * 控制台「▶ 演示日」：脚本化跑完一个浓缩生产日，全程走真实状态机与台账——
+ * 接单 enqueueCurrentOrder（当前产品）+ 第二产品队列单（同一交期核定口径）；
+ * 开工置 S.running；抽检阶段把 QC.elapsed 推满，由 stepQC 真实抽一次（结果
+ * 随机、合格/临界/不合格的整改与隔离报废全走既有链）；健康预警阶段把一台
+ * 在用设备的健康度定点压到 CONFIG.r25.demo.healthSet，由 stepPM 真实预警、
+ * 再走 startMaintenance 真实保养恢复；排空换型 reserveChangeover 到第二产品；
+ * 发货阶段等 WAVES 真实成波装车；收尾 archiveDay 出日报（与手动跑一天同
+ * 口径同源，演示结束可逐项对账）。阶段推进由 demoTick25 在 step 末尾按仿真
+ * 时钟检查完成条件（总表第 26 项），超时如实记录并继续、绝不假装完成。
+ * 字幕复用巡游字幕 #tourCap（showTourCaption），加 .demo 类隐藏巡游按钮。
+ * 接管：演示中点任意处（演示钮本身除外）或按 Esc 立即停脚本——订单、在制、
+ * 库存、台账全部如实保留、不回滚；倍速在开始时切 CONFIG.r25.demo.speed、
+ * 退出时恢复演示前倍速（倍速是观看设置而非生产状态）。重置会结束演示。 */
+var DEMO = { on: false, phase: -1, t0Min: 0, prevSpeed: 1, startedAt: 0, marks: {}, target: null, healthName: null, sub: 0, log: [] };
+function syncSpeedSeg25(){
+  document.querySelectorAll("#speedSeg button").forEach(function(b){ b.classList.toggle("on", +b.dataset.speed === S.speed); });
+}
+function demoCaption(title, text){
+  showTourCaption({ title: "演示日 · " + title, text: text });
+  $("tourCap").classList.add("demo");
+}
+function demoNote(s){ DEMO.log.push({ min: Math.round(S.simMin), note: s }); if(DEMO.log.length > 30) DEMO.log.shift(); }
+function startDemo(){
+  if(DEMO.on) return false;
+  if(typeof BIG !== "undefined" && BIG.on){ log("大屏模式中，请先退出大屏再开始演示日。", "warn"); return false; }
+  if(S.changeover){ log("换型进行中，暂不能开始演示日（等换型完成再试）。", "warn"); return false; }
+  if(touring) stopTour();
+  DEMO.on = true; DEMO.startedAt = performance.now();
+  DEMO.prevSpeed = S.speed; S.speed = CONFIG.r25.demo.speed; syncSpeedSeg25();
+  DEMO.marks = { finished: S.finished, qcSamples: QC.samples, waves: WAVES };
+  DEMO.target = PRODUCTS[(PRODUCTS.indexOf(product) + 1) % PRODUCTS.length];
+  DEMO.healthName = null; DEMO.sub = 0; DEMO.log = [];
+  /* ① 自动接单：只把第二产品订单入队（真实交期核定口径）——当前单继续生产，
+   * 当前单完成后队列自动接目标产品单，与演示的排空换型同向推进、不互相打架 */
+  var ahead2 = Math.max(0, S.orderTarget - S.orderDone) + ORDERQ.reduce(function(a, q){ return a + q.target; }, 0);
+  ORDERQ.push({ pid: DEMO.target.id, target: S.orderTarget, dueMin: S.simMin + dueOffsetMin(S.orderTarget, ahead2, DEMO.target) });
+  renderOrderQueue();
+  log("演示接单：「" + DEMO.target.name + "」订单已入队（目标 " + fmt(S.orderTarget) + " 瓶，交期自动核定），当前单完成后自动接单。", "good");
+  /* ② 开工 */
+  if(!S.running){ S.running = true; var pb = $("playBtn"); if(pb) pb.textContent = "⏸ 暂停"; }
+  DEMO.phase = 0; DEMO.t0Min = S.simMin;
+  var db = $("demoBtn"); if(db) db.textContent = "⏹ 演示中（点任意处接管）";
+  demoCaption("接单与开工", "演示日开始：当前「" + product.name + "」订单继续生产，「" + DEMO.target.name + "」的新订单已入队（目标 " + fmt(S.orderTarget) + " 瓶，交期按当前产能与排队量自动核定，调度台订单队列可查，当前单完成后自动接单）。产线已开工，演示以 " + CONFIG.r25.demo.speed + " 倍速浓缩一天：先看原料经调配、杀菌、无菌罐顺流到灌装线成瓶、下线码垛。");
+  demoNote("目标产品单入队并开工");
+  log("▶ 演示日开始：自动接单 → 开工 → 质检抽检 → 健康预警与保养 → 排空换型 → 发货波次 → 日报收尾，全程真实状态机与台账；演示中点任意处可随时接管（状态不回滚）。", "good");
+  renderKpis();
+  return true;
+}
+function endDemo(takeover){
+  if(!DEMO.on) return;
+  DEMO.on = false; DEMO.phase = -1;
+  S.speed = DEMO.prevSpeed; syncSpeedSeg25();
+  $("tourCap").classList.remove("demo"); hideTourCaption();
+  var db = $("demoBtn"); if(db) db.textContent = "▶ 演示日";
+  demoNote(takeover ? "用户接管退出" : "演示完成");
+  log(takeover ? "演示日已被接管：脚本停止，订单 / 在制 / 库存 / 台账全部如实保留，工厂继续按当前状态运行。" : "▶ 演示日完成：浓缩生产日跑完——接单、开工、抽检、预警保养、排空换型、发货波次、日报归档全部走真实状态机，日报已进抽屉「生产日报」可逐项对账。", "good");
+  renderKpis();
+}
+function demoReserve(){
+  /* 换型预订守卫：已在目标产品、或订单队列接单已触发换型时不重复预订（防自换型） */
+  if(product.id === DEMO.target.id || S.changeover || S.reservation) return false;
+  reserveChangeover(DEMO.target);
+  return true;
+}
+function demoTick25(){
+  if(!DEMO.on) return;
+  var C = CONFIG.r25.demo, age = S.simMin - DEMO.t0Min;
+  function next(i){ DEMO.phase = i; DEMO.t0Min = S.simMin; DEMO.sub = 0; }
+  if(DEMO.phase === 0){                       /* 生产爬坡 → 触发抽检 */
+    if(S.finished - DEMO.marks.finished >= 1500 || age > 300){
+      QC.elapsed = CONFIG.r10.qcIntervalMinutes;   /* 只把计时推满：抽与不抽、结果如何全由 stepQC 既有逻辑决定 */
+      demoCaption("质检抽检", "产量爬坡中。实验室每 " + CONFIG.r10.qcIntervalMinutes + " 仿真分钟抽检一次在制批次——演示把抽检计时推满，下一刻就由质检系统真实抽一次：合格放行，临界 / 不合格会触发整改期良品率扣减与无菌库存隔离报废，结果记进台账与客户满意度。盯生产日志与抽屉「质检抽检」。");
+      demoNote("抽检计时推满，等真实抽检");
+      next(1);
+    }
+  } else if(DEMO.phase === 1){                /* 等抽检发生 → 健康预警 */
+    if(QC.samples > DEMO.marks.qcSamples || age > 180){
+      var fired = QC.samples > DEMO.marks.qcSamples;
+      var pick = null;
+      healthEntries().forEach(function(e){
+        if(!pick && !e.warned && !(e.obj.faultLeft > 0) && (e.obj.maintLeft || 0) <= 0 && e.obj.on !== false && e.health > CONFIG.r15.warnThreshold) pick = e;
+      });
+      if(pick){ pick.health = C.healthSet; DEMO.healthName = pick.name; }
+      demoCaption("健康度预警与保养", (fired ? "抽检结果：" + QC.lastResult + "。" : "抽检未在窗口内发生（如实记录）。") + (pick ? "接着演示预测性维护：把「" + pick.name + "」的健康度定点压到 " + C.healthSet + "（模拟长期磨损），它跌破预警线 " + CONFIG.r15.warnThreshold + " 后系统会真实预警；预警一到就安排保养，看它如何在劣化成故障之前被救回来——保养费与停机都进台账。" : "当前没有可定点压降的健康设备（均已预警或停机），本步直接继续。"));
+      demoNote(fired ? "抽检完成：" + QC.lastResult : "抽检窗口内未发生");
+      next(2);
+    }
+  } else if(DEMO.phase === 2){                /* 等预警 → 保养 → 换型 */
+    if(!DEMO.healthName){
+      if(age > 30){ demoReserve(); demoCaption("排空换型", "健康预警步跳过。接下来换产品：排空换型到「" + DEMO.target.name + "」——不停线，把无菌库存与在制全部灌装成现产品成品后自动清洗换型（排空省的是料，换型费与清洗时长不变）。盯顶部横幅的排空进度与 SMED 计时牌。"); demoNote("跳过预警步，预约排空换型"); next(3); }
+      return;
+    }
+    var he = null; healthEntries().forEach(function(e){ if(e.name === DEMO.healthName) he = e; });
+    if(DEMO.sub === 0){
+      if((he && he.warned) || age > 120){
+        var low = pmLowest(); if(low) startMaintenance(low.obj);
+        DEMO.marks.maint0 = PM.maintenances; DEMO.sub = 1; DEMO.t0Min = S.simMin;
+        demoCaption("保养恢复中", "预警已真实触发（告警中心与生产日志可见）。已对健康度最低的设备安排保养：停机 " + CONFIG.r15.maintMinutes + " 分钟、费用 ¥" + fmt(CONFIG.r15.maintCost) + " 进当前产品台账、不耗备件，完成后健康度恢复到 " + CONFIG.r15.maintHealth + "。取舍就在这：花小钱停几分钟，还是等健康度耗尽劣化成故障——停更久、搭备件、修好也只回 " + CONFIG.r15.repairHealth + "。");
+        demoNote("预警触发并安排保养");
+      }
+    } else if((PM.maintenances > (DEMO.marks.maint0 || 0) && !healthEntries().some(function(e){ return (e.obj.maintLeft || 0) > 0; })) || age > 300){
+      demoReserve();
+      demoCaption("排空换型", "保养完成。接下来换产品：排空换型到「" + DEMO.target.name + "」——不停线，把无菌库存与在制全部灌装成现产品成品后自动清洗换型（排空省的是料）。盯顶部横幅的排空进度与 SMED 计时牌（排空 / 清洗 / 首件三段计时）。");
+      demoNote("保养完成，预约排空换型");
+      next(3);
+    }
+  } else if(DEMO.phase === 3){                /* 等换型完成 → 发货波次 */
+    if(product.id === DEMO.target.id && !S.changeover && !S.reservation){
+      DEMO.marks.waves = WAVES;
+      demoCaption("发货波次", "换型完成，现在生产「" + product.name + "」。成品经码垛机整层码托、入库 AGV 送上货架；攒够波次（或库存压力达线）后，出库 AGV 按先进先出取最老批次那托送交接位、月台叉车装车发运。看仓库货架颜色（越深批次越老）与月台车次——波次数与装车量都会进今日日报。");
+      demoNote("换型完成，等发货波次");
+      next(4);
+    } else if(age > C.phaseTimeoutMin){
+      DEMO.marks.waves = WAVES;
+      demoCaption("发货波次", "换型未在窗口内完成（如实记录，不假装）——先继续看发货：成品码垛成托、AGV 上架，波次成波后按先进先出装车发运，波次数与装车量进今日日报。");
+      demoNote("换型超时，如实跳过");
+      next(4);
+    }
+  } else if(DEMO.phase === 4){                /* 等波次 → 日报收尾 */
+    if(WAVES > DEMO.marks.waves || age > C.phaseTimeoutMin){
+      var waved = WAVES > DEMO.marks.waves;
+      archiveDay();
+      demoCaption("收尾 · 今日日报", (waved ? "发货波次已成波并装车发运。" : "波次未在窗口内成波（如实记录）。") + "演示日收尾：今日生产日报已生成并归档（抽屉「生产日报」与「经营趋势」），产量 / 利润 / 罚金 / 采购 / 告警处置与手动跑一天同口径同源——本次演示累计产量 " + fmt(S.finished) + " 瓶、预估利润 " + fmtMoney(totalProfit()) + "、日报归档共 " + DAYREP.history.length + " 天。演示到此结束，工厂保持当前状态继续运行，点任意处即可接管。");
+      demoNote(waved ? "波次成波，日报归档" : "波次超时，日报归档");
+      next(5);
+    }
+  } else if(DEMO.phase === 5){                /* 尾声字幕停留后自动收尾 */
+    if(age > 120) endDemo(false);
+  }
+}
+$("demoBtn").addEventListener("click", function(){ if(DEMO.on) endDemo(true); else startDemo(); });
+$("resetBtn").addEventListener("click", function(){ if(DEMO.on) endDemo(false); });
+document.addEventListener("click", function(e){
+  if(!DEMO.on) return;
+  if(performance.now() - DEMO.startedAt < 600) return;   /* 开始演示的那次点击不算接管 */
+  if(e.target && e.target.closest && e.target.closest("#demoBtn")) return;
+  endDemo(true);
+}, true);
+document.addEventListener("keydown", function(e){ if(DEMO.on && e.key === "Escape") endDemo(true); });
+
+/* ================= [M1] R25 · 运行存档导出 / 导入（SAVE） =================
+ * 静态页没有跨设备自动持久化（R10 结论），正道是文件存档：导出当前运行状态
+ * 为 JSON（生产状态 S / 各产品台账 / 仓库逐货位 SLOTS / 暂存与交接 / 批次
+ * 谱系 TRACE / 订单与队列 / 投资与施工进度 EXP·EXP4·PALUP / 日报归档 /
+ * 满意度 / 市场与质检等），信封带格式标识、版本与 cyrb53 双种子校验和；
+ * 导入先做前置校验（版本 / 校验和 / 结构 / 货位与产线数对齐），不过关拒绝
+ * 并说明原因；过关后走与「↺ 重置」完全相同的复位路径，再按存档重建结构
+ * （第 4 条线重排 + 完工或施工现场、仓库扩容排、码垛改造现场），经
+ * applyProduct 回到存档产品，逐项回填，最后 syncWhStock + __whCheck 守恒
+ * 自检并把结果写进存档区状态行。产品对象引用在序列化时换成 {__prod25:id}、
+ * 恢复时由 saveRevive 换回 PRODUCTS 引用。车辆在途托盘导出时单列 carried：
+ * 导入时入库在途回暂存位、出库 / 叉车在途回交接位（无空位则回货架空位），
+ * 守恒恒等式不破。已知取舍：SMED 当班计时牌与 STRESS 连环故障的待发第二击
+ * （持有设备对象引用）不入存档，恢复后从干净状态继续，不影响任何账目。 */
+var SAVE25 = { lastMsg: "" };
+function saveHash53(str, seed){
+  var h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for(var i = 0, ch; i < str.length; i++){
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+}
+function saveChecksum(str){ return saveHash53(str, 1) + "-" + saveHash53(str, 7); }
+function saveStringify(payload){
+  return JSON.stringify(payload, function(k, v){
+    if(v && typeof v === "object" && PRODUCTS.indexOf(v) >= 0) return { __prod25: v.id };
+    return v;
+  });
+}
+function saveRevive(o){
+  if(!o || typeof o !== "object") return o;
+  if(o.__prod25) return prodById(o.__prod25) || PRODUCTS[0];
+  Object.keys(o).forEach(function(k){ o[k] = saveRevive(o[k]); });
+  return o;
+}
+function clone25(o){ return o == null ? o : JSON.parse(JSON.stringify(o)); }
+function pick25(obj, keys){
+  var r = {};
+  keys.forEach(function(k){ if(obj && obj[k] !== undefined) r[k] = clone25(obj[k]); });
+  return r;
+}
+function assignInto25(target, src){
+  if(!src) return target;
+  Object.keys(src).forEach(function(k){ target[k] = src[k]; });
+  return target;
+}
+function saveCapture(){
+  var carried = [];
+  if(typeof D !== "undefined" && D.agvs) D.agvs.forEach(function(a){
+    if(a.carry && a.task) carried.push({ kind: a.task.type === "out" ? "out" : "in", pallet: pick25(a.carry, ["seq", "productId", "batchKey"]) });
+  });
+  if(typeof D !== "undefined" && D.forklifts) D.forklifts.forEach(function(f){
+    if(f.role === "dock" && f.carryPallet) carried.push({ kind: "fork", pallet: pick25(f.carryPallet, ["seq", "productId", "batchKey"]) });
+  });
+  var sCopy = Object.assign({}, S, { selected: null });
+  return {
+    productId: product.id,
+    S: sCopy,
+    ledger: ledger,
+    orderq: ORDERQ, ordersDone: ORDERS_DONE, waves: WAVES, coStats: CO_STATS,
+    qc: QC, eco: ECO, spares: SPARES, faultlog: FAULTLOG, market: MARKET, sat: SAT, audit17: AUDIT17, veh: VEH,
+    ship: SHIP, aseptic: ASEPTIC, raw: RAW, sterFeed: STER_FEED, sterDyn: STER_DYN, bp: BP, pal: PAL,
+    wh: pick25(WH, ["inCases", "outCases", "stockCases", "producedCases", "head", "sinceProduce"]),
+    stations: stations.map(function(st){ return pick25(st, ["queue", "done", "faults", "faultLeft", "maintLeft", "lastMove", "lastCap", "lastDt", "cipLeft", "sinceCip"]); }),
+    lines: lines.map(function(l){ return pick25(l, ["on", "queue", "capQ", "done", "faults", "faultLeft", "maintLeft", "lastMove"]); }),
+    health: HEALTH.map(function(e){ return { name: e.name, health: e.health, warned: e.warned }; }),
+    pm: PM,
+    trace: { epoch: TRACE.epoch, records: TRACE.records, yieldByKey: TRACE.yieldByKey, lastQcSamples: TRACE.lastQcSamples },
+    slots: SLOTS.map(function(s){ return pick25(s, ["taken", "reserved", "seq", "productId", "batchKey", "inAtMin"]); }),
+    logi: { nextSeq: LOGI.nextSeq, stage: LOGI.stage, handover: LOGI.handover },
+    carried: carried,
+    dayrep: { base: DAYREP.base, history: DAYREP.history },
+    alertc: { items: ALERTC.items, day: ALERTC.day, history: ALERTC.history },
+    down23: DOWN23, tgt23: TGT23, age: AGE,
+    exp: pick25(EXP, ["done", "building", "spent", "builds"]),
+    exp4: pick25(EXP4, ["built", "building", "spent"]),
+    palup: clone25(PALUP),
+    promo: PROMO,
+    stress: pick25(STRESS, ["records", "rawCutUntil", "surgeUntil", "powerLeft"]),
+    staff: STAFF, shiftTotals: SHIFT.totals,
+    palRate: CONFIG.r14.rateCasesPerMin
+  };
+}
+function saveBuildEnvelope(){
+  var payload = JSON.parse(saveStringify(saveCapture()));   /* 先落成纯数据（产品引用已换 id 标记），校验和与导出文件同口径 */
+  return { magic: CONFIG.r25.save.magic, version: CONFIG.r25.save.version, app: "R25",
+           savedAt: new Date().toISOString(), simMin: Math.round(S.simMin),
+           checksum: saveChecksum(saveStringify(payload)), payload: payload };
+}
+function saveValidate(env){
+  var C = CONFIG.r25.save;
+  if(!env || typeof env !== "object") return "文件内容不是 JSON 存档对象";
+  if(env.magic !== C.magic) return "格式标识不符（不是本模拟的存档文件）";
+  if(env.version !== C.version) return "存档版本 " + env.version + " 与当前支持版本 " + C.version + " 不符";
+  if(!env.payload || typeof env.payload !== "object") return "存档缺少 payload（状态数据）";
+  if(saveChecksum(saveStringify(env.payload)) !== env.checksum) return "校验和不符（文件被修改或已损坏）";
+  var req = ["S", "ledger", "slots", "logi", "trace", "dayrep", "productId"];
+  for(var i = 0; i < req.length; i++) if(env.payload[req[i]] === undefined) return "存档结构缺失：" + req[i];
+  var baseSlots = (typeof D !== "undefined" && D.baseSlotCount) || CONFIG.r20.slotsPerRack * 3;
+  var wantSlots = baseSlots + CONFIG.r20.slotsPerRack * ((env.payload.exp && env.payload.exp.done) || 0);
+  if(!env.payload.slots || env.payload.slots.length !== wantSlots) return "货位数不符：存档 " + (env.payload.slots ? env.payload.slots.length : 0) + " 位 vs 按其扩容进度应为 " + wantSlots + " 位";
+  var wantLines = 3 + ((env.payload.exp4 && env.payload.exp4.built) ? 1 : 0);
+  if(!env.payload.lines || env.payload.lines.length !== wantLines) return "产线数不符：存档 " + (env.payload.lines ? env.payload.lines.length : 0) + " 条 vs 按其扩容进度应为 " + wantLines + " 条";
+  return null;
+}
+function saveRestore(p){
+  if(DEMO.on) endDemo(false);
+  $("resetBtn").click();   /* 与手动重置完全相同的复位路径 */
+  /* 结构重建：先把存档里的工厂「形状」建回来，再回填状态 */
+  if(p.exp4 && (p.exp4.built || p.exp4.building)){
+    line4Respace();
+    if(p.exp4.built) completeLine4();
+    else { EXP4.building = clone25(p.exp4.building); buildLine4Site(); }
+  }
+  var expDone = (p.exp && p.exp.done) || 0;
+  for(var i = 0; i < expDone; i++){ EXP.building = { rack: 3 + i, leftMin: 0 }; completeExpansion(); }
+  if(p.exp && p.exp.building){ EXP.building = clone25(p.exp.building); buildExpansionSite(p.exp.building.rack); }
+  if(p.palup && p.palup.building) buildPalUpSite();
+  applyProduct(prodById(p.productId) || PRODUCTS[0]);
+  /* 逐项回填（saveRevive 把 {__prod25} 换回产品对象引用） */
+  var R = function(o){ return saveRevive(clone25(o)); };
+  assignInto25(S, R(p.S));
+  PRODUCTS.forEach(function(pr){ if(p.ledger && p.ledger[pr.id]) assignInto25(ledger[pr.id], clone25(p.ledger[pr.id])); });
+  ORDERQ.length = 0; (p.orderq || []).forEach(function(q){ ORDERQ.push(clone25(q)); });
+  ORDERS_DONE = p.ordersDone || 0; WAVES = p.waves || 0;
+  assignInto25(CO_STATS, clone25(p.coStats)); assignInto25(QC, clone25(p.qc)); assignInto25(ECO, clone25(p.eco));
+  assignInto25(SPARES, clone25(p.spares)); assignInto25(FAULTLOG, clone25(p.faultlog));
+  assignInto25(MARKET, clone25(p.market)); assignInto25(SAT, clone25(p.sat));
+  assignInto25(AUDIT17, clone25(p.audit17)); assignInto25(VEH, clone25(p.veh));
+  assignInto25(SHIP, clone25(p.ship)); assignInto25(ASEPTIC, clone25(p.aseptic));
+  assignInto25(RAW, clone25(p.raw)); assignInto25(STER_FEED, R(p.sterFeed)); assignInto25(STER_DYN, clone25(p.sterDyn));
+  assignInto25(BP, clone25(p.bp)); assignInto25(PAL, clone25(p.pal));
+  assignInto25(WH, clone25(p.wh));
+  (p.stations || []).forEach(function(ss, i){ if(stations[i]) assignInto25(stations[i], clone25(ss)); });
+  (p.lines || []).forEach(function(ls, i){ if(lines[i]) assignInto25(lines[i], clone25(ls)); });
+  (p.health || []).forEach(function(h){
+    for(var i = 0; i < HEALTH.length; i++) if(HEALTH[i].name === h.name){ HEALTH[i].health = h.health; HEALTH[i].warned = h.warned; break; }
+  });
+  assignInto25(PM, clone25(p.pm));
+  TRACE.epoch = p.trace.epoch || 0; TRACE.records = clone25(p.trace.records) || [];
+  TRACE.yieldByKey = clone25(p.trace.yieldByKey) || {}; TRACE.lastQcSamples = p.trace.lastQcSamples || 0;
+  TRACE.byKey = {}; TRACE.records.forEach(function(r){ TRACE.byKey[r.key] = r; });
+  p.slots.forEach(function(ss, i){
+    var s = SLOTS[i]; if(!s) return;
+    s.taken = !!ss.taken; s.reserved = !!ss.reserved; s.seq = ss.seq || 0;
+    s.productId = ss.productId || null; s.batchKey = ss.batchKey || null; s.inAtMin = (ss.inAtMin === undefined ? null : ss.inAtMin);
+  });
+  LOGI.nextSeq = p.logi.nextSeq || LOGI.nextSeq;
+  LOGI.stage = clone25(p.logi.stage) || [];
+  (p.logi.handover || []).forEach(function(h, i){ LOGI.handover[i] = h ? clone25(h) : null; LOGI.handoverRsv[i] = false; });
+  /* 车辆在途托盘归位：入库在途回暂存、出库 / 叉车在途回交接（无空位回货架空位） */
+  (p.carried || []).forEach(function(c){
+    if(!c.pallet) return;
+    if(c.kind === "in"){
+      /* 入库在途托回暂存位：位号按当前空闲位重派（存档里的旧位号可能已被占），暂存满则转货位 */
+      var used25 = {}; LOGI.stage.forEach(function(p){ used25[p.posIdx] = true; });
+      var free25 = -1; for(var fi = 0; fi < CONFIG.r9.stagePos.length; fi++){ if(!used25[fi]){ free25 = fi; break; } }
+      if(free25 >= 0){ var cp = clone25(c.pallet); cp.posIdx = free25; cp.rsv = false; cp.sliding = false; LOGI.stage.push(cp); }
+      else { var fs = SLOTS.filter(function(s){ return !s.taken && !s.reserved; })[0];
+        if(fs){ fs.taken = true; fs.seq = c.pallet.seq; fs.productId = c.pallet.productId; fs.batchKey = c.pallet.batchKey || null; fs.inAtMin = S.simMin; LOGI.rackDirty = true; WH.inCases++; } }
+      return;
+    }
+    var placed = false;
+    for(var i = 0; i < LOGI.handover.length; i++) if(!LOGI.handover[i]){ LOGI.handover[i] = clone25(c.pallet); placed = true; break; }
+    if(!placed){
+      for(var j = 0; j < SLOTS.length; j++) if(!SLOTS[j].taken){
+        SLOTS[j].taken = true; SLOTS[j].seq = c.pallet.seq || 0; SLOTS[j].productId = c.pallet.productId || null;
+        SLOTS[j].batchKey = c.pallet.batchKey || null; SLOTS[j].inAtMin = S.simMin; placed = true; break;
+      }
+    }
+  });
+  DAYREP.base = clone25(p.dayrep.base); DAYREP.history = clone25(p.dayrep.history) || [];
+  if(p.alertc){ ALERTC.items = clone25(p.alertc.items) || {}; ALERTC.day = clone25(p.alertc.day) || ALERTC.day; ALERTC.history = clone25(p.alertc.history) || []; ALERTC.active = {}; }
+  assignInto25(DOWN23, clone25(p.down23)); assignInto25(TGT23, clone25(p.tgt23)); assignInto25(AGE, clone25(p.age));
+  assignInto25(EXP, clone25(p.exp)); assignInto25(EXP4, clone25(p.exp4)); assignInto25(PALUP, clone25(p.palup));
+  if(PALUP.done) CONFIG.r14.rateCasesPerMin = CONFIG.r24.palletUpgrade.rateAfter;
+  assignInto25(PROMO, clone25(p.promo));
+  assignInto25(STRESS, clone25(p.stress)); STRESS.active = null; STRESS.pendingChain = null; STRESS.chainTargets = null;
+  if(p.staff) assignInto25(STAFF, clone25(p.staff));
+  if(p.shiftTotals) SHIFT.totals = clone25(p.shiftTotals);
+  /* 交接垛可见性是事件驱动的（AGV 落托亮 / 叉车取货灭 / 重置全灭），没有逐帧同步——
+   * 必须在在途托归位全部完成之后再按 LOGI.handover 显式对齐：归位放进交接位的托盘
+   * 若垛体不可见，叉车取货条件 hs.g.visible 永假、出库链会死锁（R25 探针实测抓到） */
+  if(typeof D !== "undefined" && D.handoverStacks) D.handoverStacks.forEach(function(hs){
+    var hi = CONFIG.r8.handoverSlots.indexOf(hs.slotX);
+    hs.g.visible = hi >= 0 && !!LOGI.handover[hi];
+  });
+  syncWhStock(); LOGI.rackDirty = true;
+  renderAll();
+  return window.__whCheck();
+}
+function saveSetStatus(msg){ SAVE25.lastMsg = msg; var el = $("saveStatus"); if(el) el.textContent = msg; }
+function renderSave25(){
+  var el = $("saveStatus"); if(!el) return;
+  if(SAVE25.lastMsg){ el.textContent = SAVE25.lastMsg; return; }
+  var taken = 0; SLOTS.forEach(function(s){ if(s.taken) taken++; });
+  el.textContent = "当前状态：第 " + (Math.floor(S.simMin / 1440) + 1) + " 天 " + fmtSimClock(S.simMin) + " · 累计产量 " + fmt(S.finished) + " 瓶 · 在库 " + taken + " / " + SLOTS.length + " 托 · 日报归档 " + DAYREP.history.length + " 天——点「导出存档 JSON」即可带走这份状态。";
+}
+function saveExport(){
+  var env = saveBuildEnvelope();
+  var blob = new Blob([JSON.stringify(env)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "factory-save-day" + (Math.floor(S.simMin / 1440) + 1) + "-" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + ".json";
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  saveSetStatus("已导出存档（" + a.download + "）：格式 v" + env.version + " · 校验和 " + env.checksum.slice(0, 10) + "… · 导出于第 " + (Math.floor(S.simMin / 1440) + 1) + " 天 " + fmtSimClock(S.simMin) + "。把文件带到另一台设备，用「导入存档 JSON」恢复。");
+  log("⬇ 运行存档已导出为 JSON 文件（带版本与校验和），可跨设备手动迁移——本页不做跨设备自动保存，文件就是正道。", "good");
+}
+function saveImportFile(file){
+  var rd = new FileReader();
+  rd.onload = function(){
+    var env;
+    try { env = JSON.parse(rd.result); }
+    catch(e){ saveSetStatus("导入拒绝：文件不是合法 JSON（" + e.message + "）"); log("⬆ 存档导入拒绝：文件不是合法 JSON。", "bad"); return; }
+    var err = saveValidate(env);
+    if(err){ saveSetStatus("导入拒绝：" + err); log("⬆ 存档导入拒绝：" + err, "bad"); return; }
+    try {
+      var wh = saveRestore(env.payload);
+      var okTxt = wh.ok ? "守恒自检通过（在库 " + wh.stock + " 托 = 期初 + 入库 " + wh.inCases + " − 出库 " + wh.outCases + "）" : "守恒自检未通过（在库 " + wh.stock + " vs 应有 " + wh.expected + "），状态已恢复但请留意";
+      saveSetStatus("导入成功：已恢复到第 " + (Math.floor(S.simMin / 1440) + 1) + " 天 " + fmtSimClock(S.simMin) + " · 产品「" + product.name + "」· 累计产量 " + fmt(S.finished) + " 瓶 · " + okTxt + " · 日报归档 " + DAYREP.history.length + " 天。");
+      log("⬆ 存档导入成功（格式 v" + env.version + "，校验和通过）：" + okTxt + "。", wh.ok ? "good" : "bad");
+    } catch(ex){
+      saveSetStatus("导入失败（恢复过程出错）：" + ex.message);
+      log("⬆ 存档导入失败：" + ex.message, "bad");
+    }
+  };
+  rd.onerror = function(){ saveSetStatus("导入失败：文件读取出错"); };
+  rd.readAsText(file);
+}
+$("saveExportBtn").addEventListener("click", saveExport);
+$("saveImportBtn").addEventListener("click", function(){ $("saveFile").click(); });
+$("saveFile").addEventListener("change", function(){ if(this.files && this.files[0]) saveImportFile(this.files[0]); this.value = ""; });
+
+/* ================= R25 · 读数口与探针包 =================
+ * __r25()：演示状态与阶段日志 / 存档概览 / 性能复检参数。
+ * __r25Probe.demoRun(maxPumpSec)：真实入口 startDemo 后以 __pumpSim 推进，
+ *   直到演示自结束或泵送上限，返回各阶段证据（波次/抽检/产品切换/归档天数/守恒）。
+ * __r25Probe.saveRoundTrip()：内存中构建信封 → 校验 → saveRestore 回填 →
+ *   前后关键量对账（产量/库存/货位占用/利润/产品/归档天数）+ 守恒自检。
+ * __r25Probe.saveReject()：三类坏存档（改一字节动校验和 / 版本改 99 / 删字段）
+ *   逐一验证被拒且理由非空。
+ * __r25Check() = R24 全家桶 + r25 读数。 */
+window.__r25 = function(){
+  var taken = 0; SLOTS.forEach(function(s){ if(s.taken) taken++; });
+  return {
+    demo: { on: DEMO.on, phase: DEMO.phase, healthTarget: DEMO.healthName, target: DEMO.target ? DEMO.target.id : null, log: DEMO.log.slice() },
+    save: { lastMsg: SAVE25.lastMsg, slots: SLOTS.length, slotsTaken: taken, stage: LOGI.stage.length,
+            historyDays: DAYREP.history.length, format: CONFIG.r25.save },
+    perf: { farCullMaxEdge: CONFIG.r18.farCull.maxEdge, mobileLow: CONFIG.perf.mobileLow, idleTarget: CONFIG.r25.perf.idleTarget },
+    cfg: CONFIG.r25
+  };
+};
+window.__r25Probe = {
+  demoRun: function(maxPumpSec){
+    if(!startDemo()) return { ok: false, note: "演示启动失败（已在演示中或状态不允许）" };
+    var t = 0, cap = maxPumpSec || 9000;
+    while(DEMO.on && t < cap){ window.__pumpSim(25); t += 25; }
+    return { finished: !DEMO.on, pumpSec: t, phases: DEMO.log.map(function(x){ return x.note; }),
+             product: product.id, qcSamples: QC.samples, waves: WAVES, histDays: DAYREP.history.length,
+             maintenances: PM.maintenances, warnings: PM.warnings, wh: window.__whCheck(),
+             ok: !DEMO.on && DAYREP.history.length >= 1 && QC.samples >= 1 };
+  },
+  saveRoundTrip: function(){
+    var snap = function(){ var tk = 0; SLOTS.forEach(function(s){ if(s.taken) tk++; });
+      return { finished: S.finished, stock: WH.stockCases, taken: tk, profit: Math.round(totalProfit() * 100) / 100,
+               product: product.id, hist: DAYREP.history.length, simMin: Math.round(S.simMin), slots: SLOTS.length,
+               stage: LOGI.stage.length, sat: SAT.value }; };
+    var before = snap();
+    var env = saveBuildEnvelope();
+    var err = saveValidate(env);
+    if(err) return { ok: false, stage: "validate", err: err };
+    var wh = saveRestore(env.payload);
+    var after = snap();
+    /* stage 不进等值判定：在途托盘恢复时按空闲位重派位号（在车上 ↔ 在暂存位是位置
+     * 重分类、不是数量变化）；守恒由 stock/taken 等值 + wh.ok 恒等式把关 */
+    return { before: before, after: after, wh: wh,
+             ok: wh.ok && before.finished === after.finished && before.stock === after.stock && before.taken === after.taken &&
+                 before.product === after.product && before.hist === after.hist && before.slots === after.slots };
+  },
+  saveReject: function(){
+    var env = saveBuildEnvelope();
+    var bad1 = JSON.parse(JSON.stringify(env)); bad1.payload.S.finished = (bad1.payload.S.finished || 0) + 1;      /* 动数据不动校验和 */
+    var bad2 = JSON.parse(JSON.stringify(env)); bad2.version = 99;
+    var bad3 = JSON.parse(JSON.stringify(env)); delete bad3.payload.slots;
+    var r1 = saveValidate(bad1), r2 = saveValidate(bad2), r3 = saveValidate(bad3);
+    return { checksum: r1, version: r2, missing: r3, ok: !!r1 && !!r2 && !!r3 };
+  }
+};
+window.__r25Check = function(){
+  var c24 = window.__r24Check();
+  var out = {}; Object.keys(c24).forEach(function(k){ out[k] = c24[k]; });
+  out.r25 = window.__r25();
+  return out;
 };
 
 function loop(ts){
