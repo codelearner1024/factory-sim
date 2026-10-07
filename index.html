@@ -592,6 +592,12 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div style="height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden"><div id="satBar" style="height:100%;width:85%;background:#2fbf8f;border-radius:4px;transition:width .4s"></div></div>
       <p class="hint" id="satNote" style="margin:6px 2px 0">满意度由近 12 单按时率、近 40 次抽检合格率与延误罚金滚动计算；它调制客户新单的到达间隔与规模——口碑好来单更密更大，口碑差来单稀疏。客户新单自动入队（与手动入队同一队列）。</p>
     </div>
+    <div class="ctl">
+      <div class="lab"><label>产品组合建议（R26 · 只建议，不动手）</label></div>
+      <div class="supply-alert ok" id="mixText" role="status">样本不足：尚无日报归档。</div>
+      <button class="btn" id="mixAdoptBtn" style="width:100%;justify-content:center;margin-top:7px">采纳建议（设为下一次手动下单默认）</button>
+      <p class="hint" style="margin:6px 2px 0">综合近 7 天日报归档的单瓶毛利、分产品按时交付（满意度贡献）、在库平均库龄（周转）与当前库存水位打分；归档不足 2 天如实显示样本不足。点「采纳」只把建议产品设为下一次手动下单的默认选中——不自动下单、不自动换型，入队后默认即消费恢复。</p>
+    </div>
     <div class="sec-label">扰动</div>
     <div class="toggles">
       <button class="tgl on" id="faultTgl">⚠ 随机故障：开</button>
@@ -844,6 +850,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <button class="btn trend-btn" data-trend="profit">日利润</button>
       <button class="btn trend-btn" data-trend="satAvg">满意度</button>
       <button class="btn trend-btn" data-trend="perPower">单瓶电耗</button>
+      <button class="btn trend-btn" data-trend="perCarbonG">单瓶碳排</button>
     </div>
     <div class="chart-wrap">
       <svg id="trendChart" viewBox="0 0 640 150" role="img" aria-label="经营趋势图">
@@ -954,7 +961,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R23 PDCA 打包轮（产能扩容第 4 条线 + 多日经营趋势 + 长跑浸泡回归 + 告警中心/班次目标/停机归因）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：前 22 轮把告警散在各面板（大屏预警行、调度台各区、精益看板行），没有一个统一入口；班次只有小计没有目标；OEE 只给扣分结果、答不出「时间丢在哪」；仓库能扩容（R20）、产能却不能；日报归档只留 7 天、看不出多日趋势。新参数全在 <b>CONFIG.r23</b>，读数口 <b>window.__r23()</b>，探针口 <b>window.__r23Probe</b>（alertsRun / downRun / targetRun / lineRun / trendRun / soakRun），回归包 <b>window.__r23Check()</b>。<b>【A 项 · 产能扩容投资：第 4 条灌装线（EXP4）】</b>：调度台「产能扩容投资」——点钮只弹确认（费用 ¥120,000 / 工期 360 仿真分钟 / 码垛瓶颈提示明示），确认才扣款（进当前产品台账 fixedCost、日报当日做差）。开工先<b>重排让位</b>：line4Respace 把 LINE_Z 由 [-40,0,40] 改为 spacingAfter=27 的四线位 [-40.5,-13.5,13.5,40.5]——既有三线整组 z 偏移（dyn.group）、无菌下引管逐线同步（D.asepticLinePipes）、PERSON_OBSTACLES 逐线 6 条目重建为 8 条目（原 6 条存 EXP4.savedObstacles 供回滚）；维修工路线末线判定由写死 LINE_Z===40 改按末线索引（三线布局逐值一致）。施工期南侧新线位围挡 + 2 名施工人员（buildLine4Site），且<b>无第 4 条 line 对象</b>——结构上不可用。完工 completeLine4：CONFIG.lineCount=4 → lines.push 同构新线（fillRate 闭合同式）→ buildLine(3) 原位建 3D（36 头/封盖实例化同路）→ HEALTH 补条目 → 下引管补一根 → buildLineSeg 重建开线控件（原 IIFE 抽成命名函数）→ 标题文案刷新 → 新线默认开启。名义产能 nominalCapPerMin / 交期 dueOffsetMin / OEE stageList /公用工程（activeLines 派生）/ 包装下线峰值（CONFIG.lineCount 派生）全部自动含新线。<b>码垛如实预警</b>：palUtilization23() = 四线包装峰值 533 箱/分 ÷ 码垛额定 460 = 1.16 &gt; 1——建成后告警中心常驻提示码垛成峰值瓶颈（默认灌装负荷下实际箱流约 267 箱/分仍有富余，口径差异在弹窗与告警文案中明示）。只许建一次（建成按钮置灰注明）；重置 line4Reset 整组回滚（移除线组/实例/点选盒/HEALTH 条目、恢复线位与障碍、lineCount 回 3、控件文案复原）。探针 lineRun：上游拉满使灌装成名义瓶颈后对账——名义产能与 300k 单交期扩容前后、扣款三方（EXP4.spent 与台账 fixedCost 增量 = ¥120,000）、隔离只开第 4 线泵 600 秒验首瓶下线→成品/入库增量→守恒。<b>【B 项 · 多日经营趋势（TREND）】</b>：归档上限 7 → <b>30</b>（CONFIG.r23.trend.historyCap，newDay 抽成 archiveDay() 命名函数、钮与探针共用）。归档条目新增 <b>data</b> 结构化字段（archiveDayData：当日 finished/profit/fine/buySpent 做差 + 归档刻 oee + 满意度当日采样均值 satAvg + 单瓶电耗 perPower），与摘要行同刻同源；旧格式归档（无 data）保留在历史列表、趋势统计跳过并在峰值行注明条数（存储兼容）。抽屉「经营趋势」节：四指标小折线（日产量/日利润/满意度/单瓶电耗，按钮切换 TREND.metric，SVG 与产能曲线同画法）+ 月度汇总行（trendSummary 对带 data 归档求和/均值：总量/总利/均 OEE/罚金合计/采购合计）；归档不足时显示实际天数、不补数。探针 trendRun 连归两天验条数/data/汇总手算一致。<b>【C 项 · 长跑浸泡 + 例行回归】</b>：探针 soakRun(100000)——step(0.55) 直推 100,000 步（与 longRun 同口径），每 20,000 步真实换型一产品、@30,000 爆单演练、@55,000 杀菌故障，事件混跑；跑后报守恒 __whCheck / NaN 与负值扫描 / 期末对象池（暂存托 ≤ stagePos 上限、谱系 records ≤ 60 上限回收、货位 taken ≤ 总位、ORDERQ/buysLog/满意度到达/归档条数）。例行回归沿 __r23Check() 全家桶 + 当轮活页面实跑逐项给数字（见交付汇报）。<b>① 告警中心（A 项）</b>：抽屉顶部新节 alerts23()——以大屏 bigAlerts() 六路为底（故障/原料/健康度/质检整改/备件耗尽/交期，判定零改动、不另算第二套），补六路：库龄滞销（bad）/临期（warn）（ageSummary 同源）、备件仅剩 1 件、满意度 &lt; satWarnBelow=60、下线暂存 ≥ stageFullPallets=6 托钉满、货架已满（bad）、压力测试进行中。严重告警经 alertLogTick23 写生产日志：键 = 文本数字归一（剩余分钟变化不算新警），同键 alertLogDedupeMin=240 仿真分钟内只记一次。<b>② 班次产量目标（B 项）</b>：目标 = nominalCapPerMin(当前产品) × 班长 720 × targetUtilization=0.62——与交期核定同源的名义产能（含班次系数），随产品/开线数/夜班自动变，不写死瓶数；进度 TGT23 按班次实例起点（simMin − pos）对 S.finished 做差，交接换班自动重计。抽屉格 + 日报三处（抽屉格/下载 txt/归档行走当日口径附带当前班目标进度）同源呈现。<b>③ 停机原因分析（C 项）</b>：DOWN23 六桶互斥归因——downTick23 在 step 顶部（换型/停电分支之前，两类步同样经过）按优先级 停电 &gt; 换型 &gt; 故障 &gt; 保养 &gt; CIP &gt; 待料饥饿 把本步 dtMin 计入一桶，合计 ≤ runMin；待料判定读 stationStatus/lineStatus 的 STARVED（与状态灯同源）。日报按 DAYREP.base 的 down 快照做差出当日归因（dayrepSnapshot/dayrepDelta 同步扩字段，旧 base 无 down 时按全量计）。与 OEE 分工：OEE 按故障次数扣开动率，这里按分钟答时间去向。<b>④ 例行回归（D 项）</b>：__r23Check() = R22 全量 + r23 读数；各探针与守恒/DrawCall 等动态项由当轮在活页面实跑，数字写交付汇报、不在本节预填。DrawCall（R23 复测）：三线待机 637 为新基线（较 R20 的 592 上浮原因与第 4 线 +45 renderables 的结构增量见抽屉 #perfSource 的 R23 附记）；全部计时走仿真分钟（总表第 23/24 项）。</div></div>
       <div class="dcell wide"><div class="l">R24 PDCA 打包轮（码垛机高速化改造 + 告警处置闭环 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R23 量化出的码垛瓶颈（四线包装下线峰值 533 箱/分 &gt; 码垛额定 460、运力比 1.16 的告警已挂在告警中心）本轮收口；R23 的告警中心只有「看」没有「处置」。新参数全在 <b>CONFIG.r24</b>，读数口 <b>window.__r24()</b>，探针口 <b>window.__r24Probe</b>（palRun / alertsRun / soak4Run），回归包 <b>window.__r24Check()</b>。<b>【A 项 · 码垛机高速化改造（PALUP）】</b>：与扩容系列同模式的投资选项——调度台「码垛能力扩容」区点钮只弹确认（费用 ¥68,000 / 工期 300 仿真分钟 / 停机积压与完工速率明示），确认才扣款（当前产品台账 fixedCost、日报当日做差、归档摘要带行）。工期 stepPalUp 走仿真时钟；期间码垛机<b>停机</b>：stepPalletizer 的 R24 闸门只入账不推进——良品瓶照常成箱进进料缓冲（60 箱），满后余量留在瓶账 bottleBank，积压量 = caseQueue + 瓶账折箱（PAL.queuePeak 证据口径不变），码垛工位围挡 + 2 名施工人员（buildPalUpSite，完工/重置即撤），物流播报与告警中心同步显示改造与积压。完工 completePalUp 把 CONFIG.r14.rateCasesPerMin 由 460 切到 <b>640</b>（CONFIG.r24.palletUpgrade.rateAfter，≥620 下限）——对四线峰值 533 的运力比由 0.86 回到 <b>1.20</b>，R23 的码垛瓶颈告警随 palUtilization23() 同源自动消解；积压按新速率在后续 stepPalletizer 自然追赶清空（探针 palRun 给积压峰值与清空耗时）。只许一次；重置 palUpReset 复原额定 460 与全部状态。<b>为何选改造不选第二台码垛机（如实记录）</b>：第二台需要第二条进料带与第二个出托口——包装下线簇是单路拓扑、下线暂存位 stagePos 是单入口，入库 AGV 取托点、码垛位 hitbox、谱系「成托」事件点（logiStagePush 以当刻在制批打 batchKey）都要分叉成双口，等于重做 R9/R14 已验过的物流拓扑与守恒事件链；高速化改造只换抓手驱动与成层节拍（额定速率一个数），占地/路径/AGV 衔接/托盘规格（25 箱/托）全不动——结论以<b>不破坏现有物流拓扑</b>为准，占地与衔接口径都更省，工期与风险更小。<b>【B 项 · 告警处置闭环（ALERTC）】</b>：判定零改动，来源只接 alerts23() 既有信号（R24 另补两路既有状态：PALUP 改造施工中、PAL 进料积压 ≥ 缓冲上限——都是已存在状态的呈现，非新造判定）。alerts23() 每条新增稳定键 key（文本数字归一，与 alertLogTick23 去重同键）与严重度 sev。ALERTC.items 按键聚合：同类告警只在「不活跃→活跃」跳变时 count+1（持续存在不刷屏、抽屉带 ×N 计数）；抽屉列表按严重度排序（bad 在前、同级未确认在前、计数高在前），每条未确认告警带「确认」钮——ackAlert24 置 acked、记确认时刻（仿真时钟）、写生产日志、进处置历史 history（上限 40 条）；告警消失后复现视为新一次发生（重新未确认、count 再 +1）。未确认时长 unackSince 起算，确认/消失/活跃中三路同口径结算当日最长值。当日处置计数 day{trig/ack/maxUnackMin} 随 archiveDay 翻页清零，呈现三处同源：抽屉「告警处置」格、日报格「告警处置（当日 · R24）」行 + 码垛扩容行、下载 txt 两行、归档摘要行尾。重置 alertCenterReset24 全清（告警确认态不跨新工厂）。<b>【C 项 · 例行回归】</b>：__r24Check() = R23 全家桶 + r24 读数；守恒 20,000 步在四线状态下走 __r24Probe.soak4Run 复跑；DrawCall 待机以四线建成状态同口径（俯瞰 · 桌面档 · __perfSnapshot 含阴影通道）给新基线，&gt;650 时在交付汇报说明构成（码垛改造本身无新增常驻几何，施工围挡为临时件）。动态数字写当轮交付汇报，不在本节预填。全部计时走仿真分钟（总表第 25 项）。</div></div>
       <div class="dcell wide"><div class="l">R25 PDCA 打包轮（一键演示日 + 存档导出/导入 + 性能复检）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：25 轮内容攒厚后的收口轮——新用户上手成本、跨设备迁移、性能基线三件一起清。新参数全在 <b>CONFIG.r25</b>，读数口 <b>window.__r25()</b>，探针口 <b>window.__r25Probe</b>（demoRun / saveRoundTrip / saveReject），回归包 <b>window.__r25Check()</b>。<b>【A 项 · 一键演示日（DEMO）】</b>：控制台「▶ 演示日」一键脚本化跑完一个浓缩生产日，阶段机 demoTick25 挂在 step() 内、全程读仿真时钟：目标产品订单入队（既有 dueOffsetMin 交期核定口径；只入队目标产品单——当前单完成后队列自动接单，与排空换型同向推进，不互相打架）→ 抽检（把 QC.elapsed 推满 qcIntervalMinutes，由 stepQC 真实出样判定，不伪造结果）→ 健康预警（挑一台在册设备真实压到 65 分，stepPM 真实预警后走 startMaintenance 既有保养链）→ 排空换型（reserveChangeover 预订，带守卫防与队列接单重复触发）→ 发货波次（等 WAVES 真实成波）→ archiveDay 出日报。每段经 showTourCaption 解说（.tour-cap.demo 形态、隐藏导览按钮），演示以 4 倍速推进、结束恢复原倍速；用户点任意处（捕获期监听，点演示钮本身为启停）或 Esc 立即接管——状态如实保留、绝不回滚，日报与手动跑一天同口径（dayrepDelta 同源）。阶段超时（1500 仿真分钟）如实跳过并记进演示日志，不假装完成。<b>【B 项 · 存档导出/导入（SAVE25）】</b>：抽屉「存档」区——导出把全量运行状态（S/各台账/仓库逐货位/谱系/订单队列/投资与施工/日报归档/满意度/车辆在途托）封成带格式版本（FSIM_SAVE v1）与双种子 cyrb53 校验和的 JSON 文件下载；产品对象引用经占位标记序列化、恢复时换回 PRODUCTS 活引用。导入先验版本与校验和，再验结构（货位数须与扩容进度自洽、产线数须与四线投资自洽），不合法拒绝并给原因；恢复主线走真实 reset 再按投资进度重建扩容/四线/码垛改造，然后逐字段回填，末尾跑 __whCheck 守恒自检并把结果示给用户。这是 R10 持久化结论的正道落地：不冒充自动持久化，跨设备靠文件手动迁移。探针实测抓到并已修复两个恢复真 bug：① 交接垛可见性是事件驱动的（无逐帧同步），恢复时若不在「在途托归位之后」按 LOGI.handover 显式对齐垛体可见性，叉车取货条件永假、出库链死锁；② 在途入库托回暂存位必须按当前空闲位重派位号（旧位号可能已被占/越界），暂存满转货位。取舍如实记：SMED 面板瞬时态与压力测试的待触发连环故障（持对象引用）不入档，恢复后 STRESS 链式字段置空。<b>【C 项 · 性能复检】</b>：活页面同栈实测（无头 SwiftShader 口径，帧率非真机口径）——待机（初始三线 · 俯瞰 · 桌面档）DrawCall 637，≤650 目标达标、与 R23 基线持平（本轮零新增几何）；四线满配作业态 995–1020（与 R23 自报同口径 ~990 同量级，增量为 R24 改造件与读数波动）；无头低帧率触发自适应降级后收敛 649（shadowTier 降 mid、renderables 1021→675）——护栏靠既有自适应系统守住，本轮不做结构性压减。待机前三贡献（__drawProfile 分区）：月台/车辆/外场 · 灌装产线区 · 包装/码垛/交接。移动低端档复调结论：参数维持（pixelRatioCap 1.0 / shadowTier eco / lodDistance 110）——待机已达标且自适应降级实测有效，无需再砍。farCull 开启、剔除 309 件。<b>【D 项 · 例行回归】</b>：11 项数字写交付汇报（守恒 20,000 步 / 三段补证 / 混合车队会车 / CSS 安全区 / 罚金三方 / 市场三方 / 促销对账 / 谱系抽查 / 健康度时序 / 出库链速 / 码垛运力比 1.20）。注：__r24Probe.palRun 的积压清空判据在货架饱和的热状态下会假阴性（满架时码垛产出被物理阻塞、非速率问题）——额定 640 与运力比 1.20 以 __r24() 读数为准，积压在有货位时可清（长跑实测瓶账回落）。全部计时走仿真分钟（总表第 26 项）。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致</div></div>
+      <div class="dcell wide"><div class="l">R26 PDCA 打包轮（ESG 碳排/废水台账 + 产品组合建议 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：经营维度补上环境账与组合决策——前 25 轮把产能/物流/质量/市场/人力/韧性都做成了账，独缺 ESG 口径与「下一阶段主推哪个产品」的依据。新参数全在 <b>CONFIG.r26</b>，读数口 <b>window.__r26()</b>，探针口 <b>window.__r26Probe</b>（carbonAudit / ecoCarbonRun / mixRun），回归包 <b>window.__r26Check()</b>。<b>【A 项 · ESG 碳排与废水】</b>：碳账不另立累计量——碳排 = 电耗 × 电网因子 0.5703 kg CO₂/kWh（生态环境部 2021 年度全国电网平均排放因子）+ 汽耗 × 燃气锅炉折算因子 0.17 kg CO₂/kg 蒸汽，全部由 S.powerKwh / S.steamKg 在读数时派生（esgFromDelta 按日报做差段现算），与电/汽台账天然同源：ECO 打折后的实耗、车辆高速补偿的附加电耗都已经在电耗台账里，节能省下的碳与提速多排的碳同账可见，不存在第二套碳账。废水单列子账 ESG.wasteM3：只拆分清洗水——chargeUtilities 增可选 wasteM3 参数，仅 CIP 事件（cipEvent）与换产清洗事件（changeoverEvent）两个调用点传入「事件用水 × 排放系数 0.95」，工艺水入产品不计废水，不新造任何水量（用水总量口径一字未动）。呈现四处同源：抽屉日报格加「环境 · 当日碳排 / 当日废水」两格（总量 + 单瓶 g/瓶 与 L/瓶）、日报下载 txt 加环境行、archiveDayData 归档带 carbonKg/perCarbonG/wasteM3、经营趋势新增「单瓶碳排」折线（TREND_METRICS.perCarbonG）。探针 carbonAudit 逐项重算 0 差、ecoCarbonRun 验 ECO 开/关单瓶碳排与单瓶电耗同向。<b>【B 项 · 产品组合建议（MIX）】</b>：调度台满意度下方加「产品组合建议」卡——mixSuggest() 综合四件真实数据打分（权重 margin .5 / turn .2 / stock .15 / sat .15）：单瓶毛利 = 近 7 天日报归档 data.perProd 的分产品当日利润 ÷ 产量（dayrepSnapshot/Delta 本轮新增 perProdProfit 做差、archiveDayData 落 perProd——R26 前的旧归档无此字段、不计入样本）；满意度贡献 = MIXSTAT 分产品按时交付率（在 satOnOrderSettled 与 SAT 同一结算事件点记 orders/onTime，不另立第二套满意度）；库龄周转 = ageSummary 在库平均库龄（越小越快）；库存水位 = 当前在库托数（越少越值得补产）。归档 &lt; 2 天或无产品产量达 500 瓶 → 如实「样本不足」不硬凑建议。建议只显示：点「采纳建议」只写 MIX.defaultPid，enqueueCurrentOrder 入队时以它为默认产品并一次性消费——不自动下单、不自动换型、当前产品不变，入队按钮文案同步明示默认来源。探针 mixRun 真实构造（换型苏打长跑归档一天 + 矿泉水短跑归档一天 → 建议指向苏打 → 采纳 → 入队产品 = 苏打且当前产品/换型状态无副作用）。<b>【C 项 · 例行回归】</b>：13 项数字写交付汇报（守恒 20,000 步 / 三段补证 / 混合车队会车 / CSS 安全区 / 罚金三方 / 市场三方 / 促销对账 / 谱系抽查 / 健康度时序 / 满意度回路 / 出库链速 / 码垛运力比 1.20 / 存档往返 + 演示日完整跑）。存档 payload 同步扩 esg/mix/mixstat 三字段（旧存档无此三项时恢复走默认值、校验口径不变）。全部计时走仿真分钟（总表第 27 项：碳账为派生、废水为事件点拆分、建议为渲染节奏读数，均无独立计时）。</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1034,6 +1042,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R23 第 4 条线 + 趋势 + 浸泡：调度台点「新建第 4 条灌装线」只弹确认不扣款，确认后 __r23().line4.buildingLeftMin 出现、三线 LINE_Z 重排为 [-40.5,-13.5,13.5,40.5]、南侧新线位有围挡与施工人员且 lines.length 仍为 3；__r23Probe.lineRun()——capAfter &gt; capBefore（上游拉满口径）、dueAfter &lt; dueBefore、chargeOk（台账增量 = ¥120,000）、隔离只开第 4 线时 line4Done &gt; 0 且入库/库存增量 &gt; 0、wh.ok；建成后按钮置灰、再点只提示；告警中心出现码垛峰值瓶颈提示（palUtil 1.16）；重置后 lines.length 与 CONFIG.lineCount 回 3、LINE_Z 回 [-40,0,40]、开线控件回 3 钮；__r23Probe.trendRun()——归档 +2、每条带 data、trendSummary 与逐条手算一致、归档上限 30；抽屉经营趋势四指标可切换、月度汇总与 __r23().trend.summary 一致；__r23Probe.soakRun(100000)——ok = true（守恒/无 NaN/无负值）、pools 中 stagePallets ≤ 6、traceRecords ≤ 60、slotsTaken ≤ slotsTotal（有界证据）</li>
       <li>R24 码垛改造 + 告警处置：调度台点「码垛机高速化改造」只弹确认不扣款，确认后 __r24().palletUpgrade.buildingLeftMin 出现、码垛机停机且进料积压（caseQueue + 瓶账折箱）随生产增长、物流播报显示改造中与积压数；__r24Probe.palRun()——ratioBefore = 460/533 = 0.86、chargeOk（台账增量 = ¥68,000）、backlogPeakDuringBuild &gt; 0、完工 rateAfter = 640 且 ratioAfter = 1.20 ≥ 1.15、clearPumpSec 有数（积压清空）、四线满速段 stagePeakAfter ≤ 6 且 wh.ok；建成后按钮置灰、码垛瓶颈告警消失；重置后额定回 460、PALUP 全清。告警处置：__r24Probe.alertsRun()——备件置 0 后告警出现、重复 tick 计数不涨（aggOk）、ackAlert24 后 acked = true 且 ackMin 有值、day.ack +1、history +1、current 列表按严重度降序；抽屉告警行带 ×N 计数与「确认」钮/已确认时刻；日报格/下载 txt/归档行均有「告警处置（当日 · R24）」且与 __r24().alerts.day 一致；__r24Probe.soak4Run(20000) 在四线状态下 ok = true（守恒/无 NaN）；window.__r24Check() 全绿、DrawCall 待机（四线建成）同口径实测写交付汇报</li>
       <li>R25 演示日 + 存档 + 性能复检：控制台点「▶ 演示日」——__r25Probe.demoRun() ok = true 且 phase 日志含入队/真实抽检（QC.samples 增）/预警+保养（PM.maintenances 增）/换型完成/波次成波/archiveDay 归档（DAYREP.history +1），结束产品 = 目标产品、wh.ok；点任意处或 Esc 接管后 DEMO.on = false 且状态保留。存档：__r25Probe.saveRoundTrip() ok = true（before/after 的 finished/stock/taken/profit/product/simMin/slots/sat 全等 + wh.ok，stage 仅作读数——在途托按空闲位重派属位置重分类）；恢复后继续泵 600 秒出库车次必须递增（交接垛可见性回归哨）；__r25Probe.saveReject() 三路全拒（改数据→校验和不符 / version=99→版本不符 / 删字段→结构缺失）。性能：__perfSnapshot 待机（初始三线 · 俯瞰 · 桌面档）≤650（本轮基线 637）、四线作业态读数与 farCull.count 一并写交付汇报；window.__r25Check() 全绿；回归 11 项数字齐全（出库链速 __r19Probe.shipRun ≥1.75、码垛运力比 __r24().palletUpgrade.ratioNow = 1.20）</li>
+      <li>R26 ESG + 组合建议：__r26Probe.carbonAudit() ok = true（当日碳排与电×0.5703+汽×0.17 逐项重算差 0、归档带 perCarbonG 与 perProd）；__r26Probe.ecoCarbonRun() ok = true（ECO 开段单瓶碳排与单瓶电耗均低于关段、方向一致）；抽屉日报格有「环境 · 当日碳排/废水」两格、下载日报 txt 有环境行、经营趋势可切「单瓶碳排」；__r26Probe.mixRun() ok = true（苏打长跑 + 矿泉水短跑各归档一天后建议指向苏打、采纳后 MIX.defaultPid = soda、入队产品 = soda 且当前产品不变、默认被消费）；归档 &lt;2 天时建议卡显示样本不足；存档往返后 ESG.wasteM3 与 MIXSTAT 保持（saveRoundTrip 仍 ok）；window.__r26Check() 全绿、回归 13 项数字齐全、时间基准总表已续第 27 项</li>
     </ul>
   </div>
 </aside>
@@ -1556,6 +1565,22 @@ var CONFIG = {
     save: { magic: "FSIM_SAVE", version: 1 },
     perf: { idleTarget: 650 }
   },
+  /* ---- R26 打包轮参数（ESG 碳排/废水台账 + 产品组合建议，改这里） ----
+   * esg.gridKgPerKwh：电网排放因子 0.5703 kg CO₂/kWh——生态环境部公布的 2021 年度
+   * 全国电网平均排放因子（0.5703 t CO₂/MWh，全国平均口径，非区域电网因子）。
+   * esg.steamKgPerKg：蒸汽排放因子 0.17 kg CO₂/kg 蒸汽——天然气锅炉折算：燃气排放
+   * 56.1 kg CO₂/GJ × 每 kg 蒸汽耗热（蒸汽焓 2.76 MJ/kg ÷ 锅炉效率 92% ≈ 3.0 MJ）
+   * ≈ 0.168，取 0.17（估算口径，换锅炉/燃料须同步改这里）。
+   * esg.wasteFactor：CIP / 换产清洗用水的废水排放系数 0.95（少量蒸发与残留不排出）；
+   * 废水只拆分清洗水（cipEvent / changeoverEvent 两事件，与既有用水同源），工艺水
+   * 入产品不计废水——不新造任何水量。
+   * mix：建议取近 days 天带分产品数据的日报归档打分，归档 < minDays 天或各产品
+   * 产量 < minBottles 瓶如实报样本不足；weights 四分量权重（单瓶毛利 / 库龄周转 /
+   * 库存水位 / 满意度贡献=分产品按时交付率）。 */
+  r26: {
+    esg: { gridKgPerKwh: 0.5703, steamKgPerKg: 0.17, wasteFactor: 0.95 },
+    mix: { days: 7, minDays: 2, minBottles: 500, weights: { margin: 0.5, turn: 0.2, stock: 0.15, sat: 0.15 } }
+  },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
    * 预热 preheatX → 均质 homogenizer（偏南 homogenizerZ，与链主线错开一台位）→ 管式杀菌 sterilizerSkidX → 冷却 coolingX，
@@ -2024,8 +2049,14 @@ function satEvent(kind, mutate){
   else if(kind === "qcPass"){ SAT.day.qcDelta += d; }
   else if(kind === "fine"){ SAT.day.fineDelta += d; }
 }
+/* R26：产品组合建议状态——MIXSTAT = 分产品订单结算统计（与 SAT 同一事件点
+ * satOnOrderSettled 记账：orders / onTime，是建议里「满意度贡献」的真实来源，
+ * 不另设第二套满意度）；MIX.defaultPid = 采纳后的一次性默认下单产品（入队消费）。 */
+var MIX = { defaultPid: null };
+var MIXSTAT = {}; PRODUCTS.forEach(function(p){ MIXSTAT[p.id] = { orders: 0, onTime: 0 }; });
 function satOnOrderSettled(od){
   if(!od) return;
+  var ms26 = MIXSTAT[product.id]; if(ms26){ ms26.orders++; if(!(od.overdueMin > 0)) ms26.onTime++; }   /* R26：分产品按时交付（组合建议满意度分量） */
   if(od.overdueMin > 0){
     satEvent("late", function(){
       SAT.orderOutcomes.push(0);
@@ -2464,8 +2495,9 @@ function totalFine(){ return PRODUCTS.reduce(function(a,p){ return a + (ledger[p
 function totalSpareCost(){ return PRODUCTS.reduce(function(a,p){ return a + (ledger[p.id].spare||0); }, 0); }
 /* 公用工程入账：同时累加全厂总量 S 与指定产品账本 L（L 可为 null=只记全厂）。
  * 流量消耗、CIP 事件、换产事件都走这里入账，禁止在别处直接改这六个字段。 */
-function chargeUtilities(L, wM3, pKwh, sKg){
+function chargeUtilities(L, wM3, pKwh, sKg, wasteM3){
   S.waterM3 += wM3; S.powerKwh += pKwh; S.steamKg += sKg;
+  if(wasteM3) ESG.wasteM3 += wasteM3;   /* R26：废水子账——仅 CIP/换产清洗调用点传入（清洗水 × 排放系数），与用水同源拆分 */
   if(L){ L.waterM3 += wM3; L.powerKwh += pKwh; L.steamKg += sKg; }
 }
 function ledgerProfit(L){ return L.revenue - ledgerCost(L); }
@@ -2546,6 +2578,10 @@ var ORDERS_DONE = 0;
  * 备件：SPARES.stock 是唯一库存数；故障统一经 applyFaultStart 领件/判缺货，修复完成
  * （自然修好或抢修）经 faultCleared 记 MTTR；FAULTLOG.runMin 累计运行时长出 MTBF。 */
 var ECO = { on:false, savedKwh:0, savedSteamKg:0, savedYuan:0, onPower:0, onFinished:0, offPower:0, offFinished:0 };
+/* R26：ESG 子账——废水累计（m³，仅由 chargeUtilities 的 wasteM3 参数从 CIP/换产清洗
+ * 水拆分而来）；碳排不另立累计量，一律由 S.powerKwh / S.steamKg × CONFIG.r26.esg
+ * 因子派生（esgFromDelta / __r26），与电/汽台账天然同源、不存在第二套碳账。 */
+var ESG = { wasteM3: 0 };
 var SPARES = { stock: CONFIG.r12.spareInit, used: 0, restocked: 0, emergency: 0 };
 var FAULTLOG = { events: 0, repaired: 0, repairSumMin: 0, runMin: 0 };
 function mtbfMin(){ return FAULTLOG.events > 0 ? FAULTLOG.runMin / FAULTLOG.events : null; }
@@ -2760,7 +2796,9 @@ function dayrepSnapshot(){
     down: (typeof DOWN23 !== "undefined") ? { fault: DOWN23.fault, cip: DOWN23.cip, changeover: DOWN23.changeover, maint: DOWN23.maint, outage: DOWN23.outage, starved: DOWN23.starved, runMin: DOWN23.runMin } : null,   /* R23：停机归因当日做差 */
     line4Spent: (typeof EXP4 !== "undefined" && EXP4) ? EXP4.spent : 0,   /* R23：第 4 条线投资当日做差 */
     palUpSpent: (typeof PALUP !== "undefined" && PALUP) ? PALUP.spent : 0,   /* R24：码垛改造投资当日做差 */
-    perProd: PRODUCTS.map(function(p){ return ledger[p.id].finished; })
+    perProd: PRODUCTS.map(function(p){ return ledger[p.id].finished; }),
+    perProdProfit: PRODUCTS.map(function(p){ return ledgerProfit(ledger[p.id]); }),   /* R26：分产品利润快照（组合建议的近 N 天单瓶毛利做差来源） */
+    waste: (typeof ESG !== "undefined") ? ESG.wasteM3 : 0   /* R26：废水子账快照（当日废水做差） */
   };
 }
 function downDelta23(b){   /* R23：停机归因当日做差（base 无 down 快照时按全量计） */
@@ -2786,8 +2824,20 @@ function dayrepDelta(){
     line4: ((typeof EXP4 !== "undefined" && EXP4) ? EXP4.spent : 0) - (b.line4Spent || 0),   /* R23 */
     palUp: ((typeof PALUP !== "undefined" && PALUP) ? PALUP.spent : 0) - (b.palUpSpent || 0),   /* R24 */
     coI: CO_STATS.immediate - b.coI, coD: CO_STATS.drained - b.coD,
-    perProd: PRODUCTS.map(function(p, i){ return ledger[p.id].finished - b.perProd[i]; })
+    perProd: PRODUCTS.map(function(p, i){ return ledger[p.id].finished - b.perProd[i]; }),
+    perProdProfit: PRODUCTS.map(function(p, i){ return ledgerProfit(ledger[p.id]) - ((b.perProdProfit || [])[i] || 0); }),   /* R26 */
+    waste: ((typeof ESG !== "undefined") ? ESG.wasteM3 : 0) - (b.waste || 0)   /* R26：当日废水（旧 base 无此字段按 0） */
   };
+}
+/* R26：ESG 派生——碳排与单瓶口径全部由当日水/电/汽做差量 × CONFIG.r26.esg 因子
+ * 现算（ECO 打折后的实耗、车辆高速补偿附加电耗都已在电耗台账内，天然进碳账）。 */
+function esgFromDelta(d){
+  var C = CONFIG.r26.esg;
+  var carbonKg = d.power * C.gridKgPerKwh + d.steam * C.steamKgPerKg;
+  return { carbonKg: carbonKg,
+           perBottleG: d.finished > 0 ? carbonKg * 1000 / d.finished : null,
+           wasteM3: d.waste || 0,
+           wastePerBottleL: d.finished > 0 ? (d.waste || 0) * 1000 / d.finished : null };
 }
 function dayrepSummaryLine(d){
   return "产量 " + fmt(d.finished) + " 瓶 · 利润 " + fmtMoney(d.profit) + " · 换型 " + (d.coI + d.coD) + " 次（立即 " + d.coI + " / 排空 " + d.coD + "）· 波次 " + d.waves + " · 发车 " + d.trips
@@ -2860,12 +2910,16 @@ function fmtSimClock(min){
 }
 function enqueueCurrentOrder(){
   /* R12：交期按量与当前产能自动给出——在前量 = 当前单剩余 + 已排队各单量，
-   * 交期偏移 = (在前量 + 本单量) ÷ 名义瓶颈产能 × 富余系数（见 dueOffsetMin）。 */
+   * 交期偏移 = (在前量 + 本单量) ÷ 名义瓶颈产能 × 富余系数（见 dueOffsetMin）。
+   * R26：若组合建议已被采纳（MIX.defaultPid），本次手动下单用该产品为默认选中
+   * （一次性，入队即消费）；否则用当前产品。只改入队产品，不动产线当前产品。 */
+  var p26 = MIX.defaultPid ? prodById(MIX.defaultPid) : product;
+  var wasDefault26 = !!MIX.defaultPid; if(wasDefault26) MIX.defaultPid = null;
   var ahead = Math.max(0, S.orderTarget - S.orderDone) + ORDERQ.reduce(function(a, q){ return a + q.target; }, 0);
-  var entry = { pid: product.id, target: S.orderTarget, dueMin: S.simMin + dueOffsetMin(S.orderTarget, ahead, product) };
+  var entry = { pid: p26.id, target: S.orderTarget, dueMin: S.simMin + dueOffsetMin(S.orderTarget, ahead, p26) };
   ORDERQ.push(entry);
-  log("订单入队：第 "+ORDERQ.length+" 单「"+product.full+"」目标 "+fmt(entry.target)+" 瓶，交期 "+fmtSimClock(entry.dueMin)+" 前（按当前产能与排队量自动核定）。当前单完成后自动接单。","good");
-  renderOrderQueue();
+  log("订单入队：第 "+ORDERQ.length+" 单「"+p26.full+"」目标 "+fmt(entry.target)+" 瓶，交期 "+fmtSimClock(entry.dueMin)+" 前（按当前产能与排队量自动核定）。当前单完成后自动接单。" + (wasDefault26 ? "（本单用的是组合建议采纳的默认产品，默认已消费）" : ""),"good");
+  renderOrderQueue(); renderMix();
 }
 function advanceOrderQueue(){
   if(!ORDERQ.length) return;
@@ -3283,6 +3337,7 @@ $("reportDlBtn").addEventListener("click", function(){
     "当日利润：" + fmtMoney(dd.profit),
     "当日水/电/汽总耗：水 " + dd.water.toFixed(1) + " m³ · 电 " + fmt(dd.power) + " kWh · 蒸汽 " + fmt(dd.steam) + " kg",
     dd.finished > 0 ? "当日单瓶耗（每千瓶）：水 " + (dd.water / dd.finished * 1000 * 1000).toFixed(0) + " L · 电 " + (dd.power / dd.finished * 1000).toFixed(1) + " kWh · 汽 " + (dd.steam / dd.finished * 1000).toFixed(1) + " kg" : "当日单瓶耗：尚无产出",
+    "环境（当日 · ESG · R26）：碳排 " + fmt(Math.round(esgFromDelta(dd).carbonKg)) + " kg CO₂ · 单瓶碳排 " + (esgFromDelta(dd).perBottleG == null ? "—" : esgFromDelta(dd).perBottleG.toFixed(1) + " g/瓶") + " · 废水 " + esgFromDelta(dd).wasteM3.toFixed(2) + " m³ · 单瓶废水 " + (esgFromDelta(dd).wastePerBottleL == null ? "—" : esgFromDelta(dd).wastePerBottleL.toFixed(2) + " L/瓶") + "（因子：电 " + CONFIG.r26.esg.gridKgPerKwh + " kg CO₂/kWh · 汽 " + CONFIG.r26.esg.steamKgPerKg + " kg CO₂/kg；废水 = CIP/换产清洗水 × " + CONFIG.r26.esg.wasteFactor + "）",
     "当日换型：立即 " + dd.coI + " 次 · 排空 " + dd.coD + " 次",
     "平均换型时长（会话累计 · SMED 三段实测）：立即 " + (smedAvg("immediate") === null ? "—" : smedAvg("immediate").toFixed(1) + " 分钟（" + SMED.stats.immediate.n + " 次）") + " · 排空 " + (smedAvg("drained") === null ? "—" : smedAvg("drained").toFixed(1) + " 分钟（" + SMED.stats.drained.n + " 次）"),
     "当日延误罚金：" + fmtMoney(dd.fine) + "（口径 ¥" + CONFIG.r12.penaltyPerMinute + "/逾期分钟 · 已从利润扣除）",
@@ -3353,7 +3408,7 @@ function completeChangeover(){
   }
   ledger[np.id].coCost += CO_FEE;
   var he = CONFIG.utilities.changeoverEvent;
-  chargeUtilities(ledger[np.id], he.waterM3, he.powerKwh, he.steamKg); // 换产 CIP 冲洗的水/蒸汽/电计入新产品账本（与换型费同口径）
+  chargeUtilities(ledger[np.id], he.waterM3, he.powerKwh, he.steamKg, he.waterM3 * CONFIG.r26.esg.wasteFactor); // 换产 CIP 冲洗的水/蒸汽/电计入新产品账本（与换型费同口径）；R26：冲洗水按排放系数拆入废水子账
   applyProduct(np);
   SHIP.nextWaveAt = CONFIG.r2.shipWaveOrderStep;   /* R2：新订单的发货波次节点从头计（仓库成品库存不清，属已入库成品） */
   S.orderDone = 0; S.orderDoneLogged = false;
@@ -4240,14 +4295,20 @@ var TREND_METRICS = {
   finished: { label: "日产量", fmt: function(v){ return fmt(v) + " 瓶"; } },
   profit:   { label: "日利润", fmt: function(v){ return fmtMoney(v); } },
   satAvg:   { label: "满意度（日均）", fmt: function(v){ return v == null ? "—" : v.toFixed(1) + " 分"; } },
-  perPower: { label: "单瓶电耗", fmt: function(v){ return v == null ? "—" : v.toFixed(1) + " kWh/千瓶"; } }
+  perPower: { label: "单瓶电耗", fmt: function(v){ return v == null ? "—" : v.toFixed(1) + " kWh/千瓶"; } },
+  perCarbonG: { label: "单瓶碳排", fmt: function(v){ return v == null ? "—" : v.toFixed(1) + " g/瓶"; } }   /* R26 */
 };
 function archiveDayData(d){
+  var esg26 = esgFromDelta(d);   /* R26：归档带碳排/废水与分产品当日量（趋势单瓶碳排 + 组合建议的数据源） */
   return { finished: d.finished, profit: Math.round(d.profit * 100) / 100,
            oee: (oee() == null ? null : Math.round(oee() * 1000) / 1000),
            fine: Math.round((d.fine || 0) * 100) / 100, buySpent: Math.round((d.buySpent || 0) * 100) / 100,
            satAvg: (SAT.accN > 0 ? Math.round(SAT.accV / SAT.accN * 10) / 10 : Math.round(SAT.value * 10) / 10),
-           perPower: d.finished > 0 ? Math.round(d.power / d.finished * 1000 * 10) / 10 : null };
+           perPower: d.finished > 0 ? Math.round(d.power / d.finished * 1000 * 10) / 10 : null,
+           carbonKg: Math.round(esg26.carbonKg * 100) / 100,
+           perCarbonG: esg26.perBottleG == null ? null : Math.round(esg26.perBottleG * 10) / 10,
+           wasteM3: Math.round(esg26.wasteM3 * 1000) / 1000,
+           perProd: PRODUCTS.map(function(p, i){ return { fin: d.perProd[i] || 0, profit: Math.round(((d.perProdProfit || [])[i] || 0) * 100) / 100 }; }) };
 }
 function trendSummary(){
   var es = DAYREP.history.filter(function(h){ return !!h.data; });
@@ -4374,7 +4435,7 @@ function step(dtMin){
   if(ster.cipLeft>0){ ster.cipLeft = Math.max(0, ster.cipLeft-dtMin); if(ster.cipLeft===0) log("杀菌机 CIP 清洗完成，恢复生产。","good"); }
   else if(S.cipOn && S.running){
     ster.sinceCip += dtMin;
-    if(ster.sinceCip>=CONFIG.cipIntervalMinutes){ ster.sinceCip=0; ster.cipLeft=CONFIG.cipDurationMinutes; var ce = CONFIG.utilities.cipEvent; chargeUtilities(curL(), ce.waterM3, ce.powerKwh, ce.steamKg); log("杀菌机到时强制 CIP 清洗，预计 "+CONFIG.cipDurationMinutes+" 分钟。全线会一起等料。本次 CIP 消耗：水 "+ce.waterM3+" m³ · 蒸汽 "+ce.steamKg+" kg · 电 "+ce.powerKwh+" kWh，已计入当前产品账本。"); }
+    if(ster.sinceCip>=CONFIG.cipIntervalMinutes){ ster.sinceCip=0; ster.cipLeft=CONFIG.cipDurationMinutes; var ce = CONFIG.utilities.cipEvent; chargeUtilities(curL(), ce.waterM3, ce.powerKwh, ce.steamKg, ce.waterM3 * CONFIG.r26.esg.wasteFactor); log("杀菌机到时强制 CIP 清洗，预计 "+CONFIG.cipDurationMinutes+" 分钟。全线会一起等料。本次 CIP 消耗：水 "+ce.waterM3+" m³ · 蒸汽 "+ce.steamKg+" kg · 电 "+ce.powerKwh+" kWh，已计入当前产品账本。"); }
   }
 
   stepQC(dtMin);   /* R10：质检抽检时钟（整改期扣减经 effQuality 影响下方良品结算） */
@@ -4722,6 +4783,7 @@ function renderKpis(){
       if(satNote18) satNote18.textContent = "客户新单：到达间隔 ×" + satIntervalFactor().toFixed(2) + " · 规模 ×" + satSizeFactor().toFixed(2) + " · 已自动到达 " + SAT.arrivals.length + " 单（队列 " + ORDERQ.length + " 单）。满意度由近 12 单按时率、近 40 次抽检合格率与延误罚金滚动计算——逾期与抽检不合格会实打实拉低它。" + (PROMO.active ? " 🏷 促销中（" + prodById(PROMO.active.pid).name + "）：到达间隔再 ×" + CONFIG.r21.promo.intervalFactor + "、该产品选品倾斜 " + Math.round(CONFIG.r21.promo.productShare * 100) + "%、规模 ×" + CONFIG.r21.promo.sizeFactor + "。" : "");
     }
   }
+  renderMix();   /* R26：组合建议卡随 renderKpis 节奏刷新（建议只读归档/库龄/库存/结算统计，无第二套数） */
   /* R20：扩容状态（调度台）+ 库龄分布/预警/周转建议（抽屉 + 精益看板）——全部直读 EXP/逐货位账本，不另立第二套数；
    * 预警集合签名变化时置 rackDirty，让货架醒目色/红标记随库龄增长刷新（不依赖出入库事件）。 */
   (function(){
@@ -4848,6 +4910,7 @@ function renderKpis(){
       var dRejRate = dTotOut > 0 ? (dd.rejected / dTotOut * 100) : 0;
       var oNow = oee();
       var shareTxt = dd.finished > 0 ? PRODUCTS.map(function(p, i){ return dd.perProd[i] > 0 ? p.name + " " + fmt(dd.perProd[i]) + "（" + Math.round(dd.perProd[i] / dd.finished * 100) + "%）" : null; }).filter(Boolean).join(" · ") : "—";
+      var esgD = esgFromDelta(dd);   /* R26：环境账与日报同段做差同源 */
       var cells = [
         ["当日总产量（良品）", fmt(dd.finished) + " 瓶"],
         ["各产品产量与占比", shareTxt],
@@ -4862,6 +4925,8 @@ function renderKpis(){
         ["客户满意度（当日 · R18）", satDayText() + " · 新单到达 ×" + satIntervalFactor().toFixed(2) + " / 规模 ×" + satSizeFactor().toFixed(2) + " · 当日自动到达 " + SAT.arrivals.filter(function(a){ return a.t >= (DAYREP.base ? DAYREP.base.simMin : 0); }).length + " 单"],
         ["ECO 累计节省（会话）", fmtMoney(ECO.savedYuan) + " · 电 " + fmt(ECO.savedKwh) + " kWh · 汽 " + fmt(ECO.savedSteamKg) + " kg" + (ECO.on ? "（ECO 开启中）" : "")],
         ["单瓶电耗 ECO 开 / 关（每千瓶）", (ECO.onFinished > 0 ? (ECO.onPower / ECO.onFinished * 1000).toFixed(1) : "—") + " / " + (ECO.offFinished > 0 ? (ECO.offPower / ECO.offFinished * 1000).toFixed(1) : "—") + " kWh"],
+        ["环境 · 当日碳排（ESG · R26）", fmt(Math.round(esgD.carbonKg)) + " kg CO₂ · 单瓶 " + (esgD.perBottleG == null ? "—" : esgD.perBottleG.toFixed(1) + " g/瓶") + "（电 ×" + CONFIG.r26.esg.gridKgPerKwh + " kg/kWh + 汽 ×" + CONFIG.r26.esg.steamKgPerKg + " kg/kg，与电/汽台账同源；ECO 与车辆补偿附加电耗均已入账）"],
+        ["环境 · 当日废水（ESG · R26）", esgD.wasteM3.toFixed(2) + " m³ · 单瓶 " + (esgD.wastePerBottleL == null ? "—" : esgD.wastePerBottleL.toFixed(2) + " L/瓶") + "（来源 = CIP + 换产清洗用水 × 排放系数 " + CONFIG.r26.esg.wasteFactor + "，与用水同源拆分）"],
         ["故障与备件（会话累计）", "故障 " + FAULTLOG.events + " 次 · MTBF " + (mtbfMin() === null ? "—" : Math.round(mtbfMin()) + " 分") + " · MTTR " + (mttrMin() === null ? "—" : mttrMin().toFixed(1) + " 分") + " · 备件领用 " + SPARES.used + " 件 · 紧急采购 " + SPARES.emergency + " 次"],
         ["预测性维护（会话累计 · R15）", "预警 " + PM.warnings + " 次 · 保养 " + PM.maintenances + " 次（" + fmtMoney(PM.maintCost) + "）· 劣化故障 " + PM.degFaults + " 次 · 最低健康度 " + (pmLowest() ? Math.round(pmLowest().health) + "（" + pmLowest().name + "）" : "—")],
         ["批次追溯（R15）", "已归档谱系 " + TRACE.records.length + " 批（保留最近 " + CONFIG.r15.traceArchiveCap + " 批）· 抽屉「批次追溯」输批次号或点货架托盘查全链"],
@@ -9440,6 +9505,7 @@ $("resetBtn").addEventListener("click", function(){
   /* R12：交期/ECO/备件/故障统计全量复位（属生产状态）；当前单交期按初值重新核定 */
   S.orderDueMin = 0; S.pendingDueMin = null; setCurrentOrderDue();
   ECO.on = false; ECO.savedKwh = 0; ECO.savedSteamKg = 0; ECO.savedYuan = 0; ECO.onPower = 0; ECO.onFinished = 0; ECO.offPower = 0; ECO.offFinished = 0; renderEcoBtn();
+  ESG.wasteM3 = 0; MIX.defaultPid = null; PRODUCTS.forEach(function(p){ MIXSTAT[p.id] = { orders: 0, onTime: 0 }; });   /* R26：废水子账/组合建议默认/分产品结算统计复位（碳排随 S 三表清零自动归零） */
   SPARES.stock = CONFIG.r12.spareInit; SPARES.used = 0; SPARES.restocked = 0; SPARES.emergency = 0;
   FAULTLOG.events = 0; FAULTLOG.repaired = 0; FAULTLOG.repairSumMin = 0; FAULTLOG.runMin = 0;
   renderOrderQueue();
@@ -10869,7 +10935,8 @@ function saveCapture(){
     promo: PROMO,
     stress: pick25(STRESS, ["records", "rawCutUntil", "surgeUntil", "powerLeft"]),
     staff: STAFF, shiftTotals: SHIFT.totals,
-    palRate: CONFIG.r14.rateCasesPerMin
+    palRate: CONFIG.r14.rateCasesPerMin,
+    esg: ESG, mix: { defaultPid: MIX.defaultPid }, mixstat: MIXSTAT   /* R26：废水子账 + 组合建议默认与分产品结算统计 */
   };
 }
 function saveBuildEnvelope(){
@@ -10969,6 +11036,9 @@ function saveRestore(p){
   assignInto25(STRESS, clone25(p.stress)); STRESS.active = null; STRESS.pendingChain = null; STRESS.chainTargets = null;
   if(p.staff) assignInto25(STAFF, clone25(p.staff));
   if(p.shiftTotals) SHIFT.totals = clone25(p.shiftTotals);
+  if(p.esg) ESG.wasteM3 = p.esg.wasteM3 || 0;   /* R26：旧存档无此字段时保持 0 */
+  if(p.mix) MIX.defaultPid = p.mix.defaultPid || null;
+  if(p.mixstat) PRODUCTS.forEach(function(pp26){ if(p.mixstat[pp26.id]) MIXSTAT[pp26.id] = clone25(p.mixstat[pp26.id]); });
   /* 交接垛可见性是事件驱动的（AGV 落托亮 / 叉车取货灭 / 重置全灭），没有逐帧同步——
    * 必须在在途托归位全部完成之后再按 LOGI.handover 显式对齐：归位放进交接位的托盘
    * 若垛体不可见，叉车取货条件 hs.g.visible 永假、出库链会死锁（R25 探针实测抓到） */
@@ -11082,6 +11152,159 @@ window.__r25Check = function(){
   var c24 = window.__r24Check();
   var out = {}; Object.keys(c24).forEach(function(k){ out[k] = c24[k]; });
   out.r25 = window.__r25();
+  return out;
+};
+
+/* ================= [M1] R26 · 产品组合建议（MIX，只建议不动手） =================
+ * 数据全是既有账的读数：单瓶毛利 = 近 N 天日报归档 data.perProd 的分产品当日
+ * 利润 ÷ 产量（R26 起归档才有 perProd，旧归档不计入样本）；满意度贡献 =
+ * MIXSTAT 分产品按时交付率（与 SAT 同一结算事件点记账）；库龄周转 = ageSummary
+ * 的在库平均库龄（越小周转越快）；库存水位 = 当前在库托数。归档 < minDays 天
+ * 或无产品产量达 minBottles → 如实「样本不足」。采纳只写 MIX.defaultPid，
+ * enqueueCurrentOrder 入队时消费一次——不下单、不换型、无其他副作用。 */
+function mixSuggest(){
+  var C = CONFIG.r26.mix;
+  var days = DAYREP.history.filter(function(h){ return h.data && h.data.perProd; }).slice(0, C.days);
+  if(days.length < C.minDays) return { ok: false, days: days.length, rows: [],
+    text: "样本不足：带分产品数据的日报归档仅 " + days.length + " 天（需 ≥ " + C.minDays + " 天）。先正常生产并点「新的一天」归档两天，这里就会给出主推建议。" };
+  var age = ageSummary(), agePer = {};
+  age.per.forEach(function(r){ agePer[r.pid] = r; });
+  var rows = PRODUCTS.map(function(p, i){
+    var fin = 0, prof = 0;
+    days.forEach(function(h){ var pp = h.data.perProd[i]; if(pp){ fin += pp.fin || 0; prof += pp.profit || 0; } });
+    var st = MIXSTAT[p.id] || { orders: 0, onTime: 0 }, ag = agePer[p.id];
+    return { pid: p.id, name: p.name, fin: fin,
+             margin: fin >= C.minBottles ? prof / fin : null,
+             avgAgeDays: ag ? Math.round(ag.avgDays * 10) / 10 : null, pallets: ag ? ag.pallets : 0,
+             orders: st.orders, onTimeRate: st.orders > 0 ? st.onTime / st.orders : null };
+  });
+  var cand = rows.filter(function(r){ return r.margin !== null; });
+  if(!cand.length) return { ok: false, days: days.length, rows: rows,
+    text: "样本不足：近 " + days.length + " 天内没有产品产量达到 " + C.minBottles + " 瓶，单瓶毛利无从比较。" };
+  function norm(v, arr, invert){
+    var vs = arr.filter(function(x){ return x !== null && x !== undefined; });
+    if(v === null || v === undefined || !vs.length) return 0.5;
+    var mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
+    if(mx <= mn) return 0.5;
+    var t = (v - mn) / (mx - mn); return invert ? 1 - t : t;
+  }
+  var margins = cand.map(function(r){ return r.margin; }), ages = cand.map(function(r){ return r.avgAgeDays; }),
+      pals = cand.map(function(r){ return r.pallets; }), sats = cand.map(function(r){ return r.onTimeRate; });
+  cand.forEach(function(r){
+    r.sMargin = norm(r.margin, margins, false);
+    r.sTurn = norm(r.avgAgeDays, ages, true);
+    r.sStock = norm(r.pallets, pals, true);
+    r.sSat = norm(r.onTimeRate, sats, false);
+    r.score = C.weights.margin * r.sMargin + C.weights.turn * r.sTurn + C.weights.stock * r.sStock + C.weights.sat * r.sSat;
+  });
+  var ranked = cand.slice().sort(function(a, b){ return b.score - a.score; });
+  var best = ranked[0];
+  var facts = ["近 " + days.length + " 天单瓶毛利 ¥" + best.margin.toFixed(2) + (best.sMargin >= 0.999 ? "（候选最高）" : "")];
+  if(best.avgAgeDays !== null) facts.push("在库平均库龄 " + best.avgAgeDays.toFixed(1) + " 天");
+  facts.push("当前在库 " + best.pallets + " 托");
+  if(best.orders > 0) facts.push("按时交付率 " + Math.round(best.onTimeRate * 100) + "%（" + best.orders + " 单）");
+  return { ok: true, pid: best.pid, name: best.name, days: days.length, score: Math.round(best.score * 100) / 100, rows: rows,
+           text: "建议下一阶段主推「" + best.name + "」：" + facts.join(" · ") + "。点「采纳」只把它设为下一次手动下单的默认产品。" };
+}
+function renderMix(){
+  var t = $("mixText"); if(!t) return;
+  var s = mixSuggest();
+  if(MIX.defaultPid) t.textContent = "已采纳：下一次手动下单默认「" + prodNameOf(MIX.defaultPid) + "」（入队后自动恢复当前产品）。当前建议：" + s.text;
+  else t.textContent = s.text;
+  t.className = "supply-alert " + (s.ok ? "ok" : "warn");
+  var b = $("mixAdoptBtn");
+  if(b){ var already = s.ok && MIX.defaultPid === s.pid; b.disabled = !s.ok || already; b.textContent = already ? "已采纳（下一次手动下单默认）" : "采纳建议（设为下一次手动下单默认）"; }
+  var eb = $("enqueueBtn");
+  if(eb) eb.textContent = MIX.defaultPid ? "＋ 把『" + prodNameOf(MIX.defaultPid) + "』（组合建议默认）+ 目标加入订单队列" : "＋ 把当前产品 + 目标加入订单队列";
+}
+$("mixAdoptBtn").addEventListener("click", function(){
+  var s = mixSuggest();
+  if(!s.ok) return;
+  MIX.defaultPid = s.pid;
+  log("组合建议已采纳：「" + s.name + "」设为下一次手动下单的默认产品（只改默认选中，不自动下单、不自动换型）。", "good");
+  renderMix();
+});
+
+/* ================= R26 · 读数口与探针包 =================
+ * __r26()：ESG 当日/累计派生 + 因子 / 组合建议全文与各产品分量 / 默认下单状态。
+ * __r26Probe.carbonAudit()：碳账逐项重算（当日增量口径与全周期口径各验一次）。
+ * __r26Probe.ecoCarbonRun(sec)：ECO 关/开两段等长泵送，单瓶碳排与单瓶电耗
+ *   同向对比（ECO 的电/汽折扣都在 chargeUtilities 之前生效，碳账天然跟随）。
+ * __r26Probe.mixRun()：真实构造——换型到苏打（名义毛利最高）长跑归档一天、
+ *   再换矿泉水短跑归档一天，建议应指向苏打；随后点采纳 → 入队验证默认被
+ *   消费、当前产品与换型状态无副作用。
+ * __r26Check() = R25 全家桶 + r26 读数。 */
+window.__r26 = function(){
+  var d = dayrepDelta();
+  return {
+    esg: { day: esgFromDelta(d), wasteTotalM3: ESG.wasteM3, factors: CONFIG.r26.esg,
+           totals: { powerKwh: S.powerKwh, steamKg: S.steamKg, waterM3: S.waterM3,
+                     carbonKgTotal: S.powerKwh * CONFIG.r26.esg.gridKgPerKwh + S.steamKg * CONFIG.r26.esg.steamKgPerKg } },
+    mix: { suggest: mixSuggest(), defaultPid: MIX.defaultPid, stat: MIXSTAT },
+    cfg: CONFIG.r26
+  };
+};
+window.__r26Probe = {
+  carbonAudit: function(){
+    var C = CONFIG.r26.esg, d = dayrepDelta(), e = esgFromDelta(d);
+    var reDay = d.power * C.gridKgPerKwh + d.steam * C.steamKgPerKg;
+    var reTot = S.powerKwh * C.gridKgPerKwh + S.steamKg * C.steamKgPerKg;
+    var arch = DAYREP.history.length && DAYREP.history[0].data ? DAYREP.history[0].data : null;
+    return { dayCarbonKg: e.carbonKg, reDay: reDay, dayDiff: Math.abs(e.carbonKg - reDay),
+             totalCarbonKg: reTot, wasteM3: ESG.wasteM3, dayWaste: d.waste,
+             archPerCarbonG: arch ? arch.perCarbonG : null, archPerProd: arch ? !!arch.perProd : false,
+             ok: Math.abs(e.carbonKg - reDay) < 1e-9 && isFinite(reTot) };
+  },
+  ecoCarbonRun: function(sec){
+    sec = sec || 900;
+    if(!S.running){ S.running = true; var pb = $("playBtn"); if(pb) pb.textContent = "⏸ 暂停"; }
+    function seg(ecoOn){
+      ECO.on = ecoOn; renderEcoBtn();
+      var p0 = S.powerKwh, s0 = S.steamKg, f0 = S.finished;
+      window.__pumpSim(sec);
+      var dp = S.powerKwh - p0, ds = S.steamKg - s0, df = S.finished - f0;
+      var ck = dp * CONFIG.r26.esg.gridKgPerKwh + ds * CONFIG.r26.esg.steamKgPerKg;
+      return { finished: df, powerKwh: Math.round(dp * 10) / 10, steamKg: Math.round(ds * 10) / 10,
+               perPower: df > 0 ? Math.round(dp / df * 1000 * 10) / 10 : null,
+               perCarbonG: df > 0 ? Math.round(ck * 1000 / df * 10) / 10 : null };
+    }
+    var off = seg(false), on = seg(true);
+    ECO.on = false; renderEcoBtn();
+    return { off: off, on: on, ok: off.perCarbonG !== null && on.perCarbonG !== null && on.perCarbonG < off.perCarbonG && on.perPower < off.perPower };
+  },
+  mixRun: function(){
+    if(!S.running){ S.running = true; var pb = $("playBtn"); if(pb) pb.textContent = "⏸ 暂停"; }
+    var keepSpeed = S.speed; S.speed = 4;
+    function toProduct(pid){
+      if(product.id === pid) return;
+      if(!S.changeover) startChangeover(prodById(pid));
+      var t = 0;
+      while((product.id !== pid || S.changeover) && t < 3000){ window.__pumpSim(25); t += 25; }
+    }
+    toProduct("soda");                 /* 苏打：名义单瓶毛利 ¥1.35 五产品最高 */
+    window.__pumpSim(1500);            /* 长跑一天量 → 归档（毛利被固定成本摊薄最少） */
+    archiveDay();
+    toProduct("water");                /* 矿泉水：名义毛利 ¥0.68 最低，短跑一天 */
+    window.__pumpSim(500);
+    archiveDay();
+    S.speed = keepSpeed;
+    var s = mixSuggest();
+    var before = { pid: product.id, co: !!S.changeover, qLen: ORDERQ.length };
+    $("mixAdoptBtn").click();
+    var adopted = MIX.defaultPid;
+    enqueueCurrentOrder();
+    var last = ORDERQ[ORDERQ.length - 1];
+    return { suggestPid: s.pid, suggestOk: s.ok, rows: s.rows, adopted: adopted,
+             enqueuedPid: last ? last.pid : null, productAfter: product.id, changeoverAfter: !!S.changeover,
+             defaultAfter: MIX.defaultPid, before: before,
+             ok: s.ok && s.pid === "soda" && adopted === "soda" && last && last.pid === "soda" &&
+                 product.id === before.pid && MIX.defaultPid === null };
+  }
+};
+window.__r26Check = function(){
+  var c25 = window.__r25Check();
+  var out = {}; Object.keys(c25).forEach(function(k){ out[k] = c25[k]; });
+  out.r26 = window.__r26();
   return out;
 };
 
