@@ -598,6 +598,21 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <button class="btn" id="mixAdoptBtn" style="width:100%;justify-content:center;margin-top:7px">采纳建议（设为下一次手动下单默认）</button>
       <p class="hint" style="margin:6px 2px 0">综合近 7 天日报归档的单瓶毛利、分产品按时交付（满意度贡献）、在库平均库龄（周转）与当前库存水位打分；归档不足 2 天如实显示样本不足。点「采纳」只把建议产品设为下一次手动下单的默认选中——不自动下单、不自动换型，入队后默认即消费恢复。</p>
     </div>
+    <div class="sec-label">季节（R29 · 需求与价格季节因子）</div>
+    <div class="ctl">
+      <div class="lab"><label>当前季节</label><output id="seasonOut">—</output></div>
+      <p class="hint" id="seasonFactors" style="margin:6px 2px 0">季节因子：需求 ×— · 价格目标 ×—（夏季旺季量价齐升、冬季回落，曲线参数在 CONFIG.r29.season；与满意度/促销/爆单因子在订单生成处叠乘，最近一单的因子明细在数据抽屉「资金与现金流」上方小字与 window.__r29().factors 可查）。</p>
+    </div>
+    <div class="sec-label">资金与贷款（R29）</div>
+    <div class="ctl">
+      <div class="lab"><label>现金余额</label><output id="cashOut">—</output></div>
+      <div class="lab" style="margin-top:7px"><label>贷款档位</label><output id="loanTierOut">¥300,000 · 60 天</output></div>
+      <div class="toggles" id="loanTierSeg">
+        <button class="tgl" data-tier="0">¥10 万 · 30 天</button><button class="tgl on" data-tier="1">¥30 万 · 60 天</button><button class="tgl" data-tier="2">¥60 万 · 90 天</button>
+      </div>
+      <button class="btn" id="loanBtn" style="width:100%;justify-content:center;margin-top:7px">🏦 申请贷款（先看条款 · 确认才到账）</button>
+      <p class="hint" id="loanNote" style="margin:6px 2px 0">现金账是汇总层：期初现金 + 累计利润 + 净借款 + 应付未付利息，全部收支仍走既有台账（口径不变）。利息按仿真日计提进成本台账；到期自动还款（先息后本），还款不把余额压过授信下限 ¥−150,000，不足转逾期（利率 ×1.5、禁新贷、有钱优先补还）。</p>
+    </div>
     <div class="sec-label">扰动</div>
     <div class="toggles">
       <button class="tgl on" id="faultTgl">⚠ 随机故障：开</button>
@@ -837,6 +852,17 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <tbody id="ledgerBody"></tbody>
     </table>
 
+    <h3>资金与现金流（R29 · 现金账汇总层）</h3>
+    <p class="hint">现金余额 = 期初现金（¥500,000）+ 累计利润（全台账同源）+ 净借款 + 应付未付利息——销售/采购/投资/备件/保养/人工/罚金/让利/能耗全部既有收支都经各台账进利润、再汇总到这本现金账，台账口径一分未动。当日净现金流与日报同源做差；利息按仿真日计提进成本台账（应付未付部分在余额公式中加回，现金实际流出在还款时）。自动还款下限与逾期处置见调度台「资金与贷款」。</p>
+    <div class="econ">
+      <div class="dcell"><div class="l">现金余额</div><div class="v mono" id="cashBal" style="font-size:15px">—</div></div>
+      <div class="dcell"><div class="l">当日净现金流</div><div class="v mono" id="cashDayNet" style="font-size:15px">—</div></div>
+      <div class="dcell"><div class="l">累计利息（已计提 / 已付）</div><div class="v mono" id="cashInterest" style="font-size:13px">—</div></div>
+      <div class="dcell"><div class="l">未偿贷款（本金 + 应付利息）</div><div class="v mono" id="cashDebt" style="font-size:13px">—</div></div>
+      <div class="dcell wide"><div class="l">贷款明细</div><div class="v" id="cashLoans" style="font-size:12.5px;line-height:1.6;font-weight:500">暂无贷款。</div></div>
+      <div class="dcell wide"><div class="l">最近客户单因子明细（R29 季节接入）</div><div class="v mono" id="seasonLastFactors" style="font-size:12px;line-height:1.6;font-weight:500">尚无客户单到达。</div></div>
+    </div>
+
     <h3>生产日报（当前生产日 · 自动汇总）</h3>
     <p class="hint">按当前生产日分段汇总：总产量、各产品产量与占比、OEE、利润、水/电/汽总耗与单瓶耗、换型次数（立即/排空分开计）、发货波次数、当前库存——全部由全厂累计台账做差得到，与 KPI 同源不打架。点「新的一天」把当日归档为一行摘要（最多留 30 行 · R23 起扩容）并从此刻重新分段；重置清空归档。</p>
     <div class="report-grid" id="shiftReport"></div>
@@ -964,7 +990,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R26 PDCA 打包轮（ESG 碳排/废水台账 + 产品组合建议 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：经营维度补上环境账与组合决策——前 25 轮把产能/物流/质量/市场/人力/韧性都做成了账，独缺 ESG 口径与「下一阶段主推哪个产品」的依据。新参数全在 <b>CONFIG.r26</b>，读数口 <b>window.__r26()</b>，探针口 <b>window.__r26Probe</b>（carbonAudit / ecoCarbonRun / mixRun），回归包 <b>window.__r26Check()</b>。<b>【A 项 · ESG 碳排与废水】</b>：碳账不另立累计量——碳排 = 电耗 × 电网因子 0.5703 kg CO₂/kWh（生态环境部 2021 年度全国电网平均排放因子）+ 汽耗 × 燃气锅炉折算因子 0.17 kg CO₂/kg 蒸汽，全部由 S.powerKwh / S.steamKg 在读数时派生（esgFromDelta 按日报做差段现算），与电/汽台账天然同源：ECO 打折后的实耗、车辆高速补偿的附加电耗都已经在电耗台账里，节能省下的碳与提速多排的碳同账可见，不存在第二套碳账。废水单列子账 ESG.wasteM3：只拆分清洗水——chargeUtilities 增可选 wasteM3 参数，仅 CIP 事件（cipEvent）与换产清洗事件（changeoverEvent）两个调用点传入「事件用水 × 排放系数 0.95」，工艺水入产品不计废水，不新造任何水量（用水总量口径一字未动）。呈现四处同源：抽屉日报格加「环境 · 当日碳排 / 当日废水」两格（总量 + 单瓶 g/瓶 与 L/瓶）、日报下载 txt 加环境行、archiveDayData 归档带 carbonKg/perCarbonG/wasteM3、经营趋势新增「单瓶碳排」折线（TREND_METRICS.perCarbonG）。探针 carbonAudit 逐项重算 0 差、ecoCarbonRun 验 ECO 开/关单瓶碳排与单瓶电耗同向。<b>【B 项 · 产品组合建议（MIX）】</b>：调度台满意度下方加「产品组合建议」卡——mixSuggest() 综合四件真实数据打分（权重 margin .5 / turn .2 / stock .15 / sat .15）：单瓶毛利 = 近 7 天日报归档 data.perProd 的分产品当日利润 ÷ 产量（dayrepSnapshot/Delta 本轮新增 perProdProfit 做差、archiveDayData 落 perProd——R26 前的旧归档无此字段、不计入样本）；满意度贡献 = MIXSTAT 分产品按时交付率（在 satOnOrderSettled 与 SAT 同一结算事件点记 orders/onTime，不另立第二套满意度）；库龄周转 = ageSummary 在库平均库龄（越小越快）；库存水位 = 当前在库托数（越少越值得补产）。归档 &lt; 2 天或无产品产量达 500 瓶 → 如实「样本不足」不硬凑建议。建议只显示：点「采纳建议」只写 MIX.defaultPid，enqueueCurrentOrder 入队时以它为默认产品并一次性消费——不自动下单、不自动换型、当前产品不变，入队按钮文案同步明示默认来源。探针 mixRun 真实构造（换型苏打长跑归档一天 + 矿泉水短跑归档一天 → 建议指向苏打 → 采纳 → 入队产品 = 苏打且当前产品/换型状态无副作用）。<b>【C 项 · 例行回归】</b>：13 项数字写交付汇报（守恒 20,000 步 / 三段补证 / 混合车队会车 / CSS 安全区 / 罚金三方 / 市场三方 / 促销对账 / 谱系抽查 / 健康度时序 / 满意度回路 / 出库链速 / 码垛运力比 1.20 / 存档往返 + 演示日完整跑）。存档 payload 同步扩 esg/mix/mixstat 三字段（旧存档无此三项时恢复走默认值、校验口径不变）。全部计时走仿真分钟（总表第 27 项：碳账为派生、废水为事件点拆分、建议为渲染节奏读数，均无独立计时）。</div></div>
       <div class="dcell wide"><div class="l">R27 PDCA 打包轮（P0 防撞回归定案 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：平台审计长跑探针在 38,002 次采样中测得 agvMinEquip=−0.75、minVehicle=−1.50，与 R18/R19/R20 文档里「与基线逐值相同、均为对接工位确定性接触」的旧口径冲突——本轮先取证定案再修。新参数全在 <b>CONFIG.r27</b>（guardMargin / asideClear / crewWorkRadius），读数口 <b>window.__r27()</b>，复测探针 <b>window.__r27Probe.navRun()</b>，回归包 <b>window.__r27Check()</b>。<b>【定位清单（__navStats 本轮新增 worst 上下文 + neg 负样本计数取证）】</b>：① <b>真穿模 · 靠边路点无障碍钳制</b>：agvMinEquip 的最差样本是入库 2 号 phase=toSlot、路点头为 aside 点 (83.8,−3.0)——已在货架 A 排矩形 [82.7,−28,85.3,28] 内部；另一最差样本为出库车 aside 点 (69.3,33.5) 在月台台体矩形（z≥33.05）内。旧靠边构造只按全局范围钳制（x∈[71.6,117]、z∈[−33.5,33.5]），且已靠边车辆冷却后可从靠边位置再次触发、逐级棘轮外扩。负样本 119–387 个/轮。同源真穿模还有一处：agvRoute 默认起点已在车道网上——从交接位落托点（x=58..82、z=31.4）出发返程时，第一段沿 x=fx 直穿中线设备带（实测自 (64,31.4) 沿 x=64 北上、(64,−1.6) 已在带内）；自巷间靠边点斜穿回程路点同理可切货架角。② <b>真穿模 · 车车无硬间隔</b>：minVehicle 最差样本 centerDist=0.00——两台 AGV 同刻同点 (73.5,−31)（NW 角共用路点，两车 route0 均为该点），另有同巷同 z 取货点 (79.5,−10.5) 的完全重叠；跟驰判定按「前方投影」找阻挡者，对已停在共用路点上/正转弯的领队会漏判，后车长驱直入同一坐标。负样本 266–489 个/轮。③ <b>合法对接侵入：车辆侧 0 例</b>——暂存叉取（车停西道 x=73.5、转移托盘东滑至暂存位 x=70.2）、货位存取（车停取货车道、托盘滑入货位）、交接落托（车停南横道 z=31.4）、叉车装车（车身对卡车最小 +1.05）全部由转移托盘/货叉完成对接，车体中心从不进入设备矩形，故车辆侧<b>不设豁免包络</b>（设了就是放水）。④ <b>人员侧 1 例作业接触</b>：personMinEquip −0.35 的构成是站位/边界擦碰——维修工供应站作业位 (−79,−13) 恰在原料罐区矩形东缘（x=−79 = 矩形边，表面距离 0、非穿透），及行走积分沿车头整步迈出（crewWalk 无步长钳制）在泵送口径下横切输送带矩形南缘 z=−41 的样本。<b>【修复】</b>：(a) 车车硬间隔守卫 navSeparationBlocked——agvDrive 与 moveVehicle（叉车）在落步前验候选位置：与任一他车中心距 &lt; 半径和 + guardMargin=0.15 且非分离方向则本步改 yield（yieldT 照常积累、既有靠边逃逸接管解开对峙；已在阈值内时只许分离方向，存档恢复不锁死）；(b) 靠边点障碍钳制 asidePointClear——候选按主方向 → 反方向 → 后退点依次验「到任一 AGV 障碍矩形表面距离 ≥ 车体半径 + asideClear=0.35」，全不过则本轮不靠边（冷却后重试），棘轮外扩与台体/货架侵入一并堵死；(c) crewWalk 步长钳到剩余距离、朝向偏差 &gt;75° 先原地转向；(e) agvRoute 起点归一化——起点不在纵向车道上（交接位/靠边点）时先沿当前 z 横移到最近车道再拼三段，堵掉沿任意 x 直穿设备带/斜切货架角的拼法；靠边机动另成对插入回归点（靠边点 + 当前段车道线投影），先轴向回归车道再续原路线——只验靠边点本身不够，斜穿回归段同样切货架角（实测 B 排 NW 角）；(f) 人员路径/站位修正——维修东西向段原走 z=−42 直穿 1 号线一体机占地矩形，改走 z=−46.5 北通道绕行；供应站位由罐区矩形东缘线上外移到栅口外 x=−80.2、杀菌站位由 UHT 链占地内改走罐南通道到链南侧 (−14,−13.8)，作业接触从「压线/占地内」变为「贴边外站位」，行走段不再借豁免；crewStartBack 改为途中收工只回溯已走路点（旧版整表反转会先横穿设备带去还没到的站位再折返）；(g) 长滞自救（复测中逼出的守卫副作用）：硬间隔让两车在交接横道正对停车后，最高优先车无更高优先让行者可参照、对方 yieldT 又在闪烁区间凑不齐逃逸阈值，互让僵持实测 &gt;15,000 仿真秒、出库链冻死——逃逸逻辑加第二触发：yieldT 超阈值 4 倍仍未解开时，取 6 内最近车辆作相向参照自行靠边（优先级只让位于已确认僵持）；(d) 人员作业接触豁免 crewWork——仅 mode=work 且距派单站位（crewDispatch 记 c.standPos）&lt; crewWorkRadius=0.45 的样本单列 exempt.crewWork、不计 personMinEquip，行走样本照常全计（豁免半径按站位容差给据，不按设备尺寸放大）。<b>【口径同步】</b>：抽屉净距行标注 R27 口径与豁免计数、与 __navStats 同源；__navStats 新增 worst（每类最小值的车辆/阶段/路点/障碍上下文）、neg（各类负样本数）、exempt 三件取证字段，__resetNavStats 同步复位。<b>【复测口径】</b>：__r27Probe.navRun() = 重置统计 → shipRun 3 仿真小时（完整入库—出库—装车波次）→ 重置 → compRun 2 倍速混合车队 120 泵送秒，两段 agvMinEquip / minVehicle（豁免外）须 ≥0 且 neg.agvEquip = neg.vehicle = 0，数字写交付汇报、不在本节预填。<b>【例行回归】</b>：13 项沿 R26 清单 + 演示日/存档各一条本轮回归，全在活页面实跑给数字。全部计时走仿真分钟（总表第 28 项：守卫与钳制是车辆/人员时钟步内的纯几何判定，无新计时）。</div></div>
       <div class="dcell wide"><div class="l">R28 PDCA 打包轮（作业态 DrawCall 攻坚 + 防撞断言常驻化 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R25 复检口径下待机 637 达标，但四线作业态 995–1020、靠自适应降级才收敛——作业态本身没有结构护栏；同时 R27 的防撞定案靠一次性复测、未固化为常驻断言。新参数全在 <b>CONFIG.r28</b>（workTarget 800 / idleTarget 650 / runtimePostProcess / truckLoadInstances / navGate），读数口 <b>window.__r28()</b>，探针口 <b>window.__r28Probe</b>（workRun / navGate），回归包 <b>window.__r28Check()</b>。<b>【A 项 · 作业态攻坚】</b>：先普查后动手（drawCensus28 按注册根 × 几何类型计数）——定案：瓶流（110/线）、箱流（7/线）、码垛箱（40）、货架托均已是 InstancedMesh，不是大头；大头是<b>第 4 条线整组从未走过建场后处理</b>：它在完工事件点运行时新建，建场尾部的阴影投射体审计（R16）、静态子件深合并（R7）、farCull 候选收集（R18）一件都没轮到，实测一组 330 个原始网格全量渲染 + 68 个投阴影，而建场三线同组经后处理后仅 ≈95 网格 + 8 投阴影。修法 = 完工事件点补走同三件（postProcessRuntime28：casterAuditSubtree28 按 r16 同阈值审计 → mergeLineStatic28 线内深合并，被驱动件/点选盒/透明件/热材质件按 collectDynamicRegistry 同判定排除、dyn.stack 等状态显隐件不合 → restoreFarCullVis28 还原自然可见性后整表重收 + farCullStep 立即落位；line4Reset 移除整组后同样整表重收防陈条），口径逐项与建场一致、降级策略一字未动；另把卡车装载箱 8 个逐件网格改单个 InstancedMesh（显隐为严格前缀式，count = 应显数逐位等价、位姿同位同序）。实测（同法：lineRun 建满四线 + 全线生产泵送 + restoreQuality 后实渲一帧读 renderer.info）：作业态 calls <b>991 → 734</b>（renderables 1018 → 761、casters 166 → 112），待机 <b>637</b> 不回退，前三贡献变化：第 4 条线 330 → 95 网格（深合并 22 桶）且投阴影 68 → 8（审计 cut 60）、farCull 候选 301 → 339（新线小件纳入俯瞰剔除）、卡车装载箱 8 → 1 次绘制。<b>【B 项 · 防撞断言常驻化】</b>：__r28Probe.navGate() 把 R27 净距复测固化为断言门——口径 = 豁免口径版（车辆侧无豁免、navGate.vehicleExempt 恒 false；人员仅 crewWork 作业接触单列、半径 r27.crewWorkRadius=0.45），复跑 __r27Probe.navRun() 两段（完整波次 + 2× 混合车队），判定 = 两段四类最小值（豁免外）全 ≥0 且四类 neg 负样本全 0，结果存 __r28NavGateLast 并进 __r28Check().navGate；任一轮复测出现豁免外负值即判不通过：汇报必须标红并自动列为下一轮 P0。<b>规矩（自 R28 起常驻）：改路点 / 车队 / 人员路径的轮次，交付必须附 navGate 数字，无数字不算交付。</b><b>【C 项 · 例行回归】</b>：16 项沿 R27 清单 + 净距复测以 navGate 首跑入列，数字写交付汇报。全部计时走仿真分钟（总表第 29 项：后处理为完工事件点一次性动作、navGate 为探针读数口径，均无独立计时）。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）</div></div>
+      <div class="dcell wide"><div class="l">R29 PDCA 打包轮（现金流与贷款 + 季节性需求 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：钱账散在五本分产品台账里，看不见「手里到底有多少钱」；需求与价格全年一条直线，没有季节。参数全在 <b>CONFIG.r29</b>（期初现金/警戒线/还款下限/逾期倍数/三档贷款/年长与季节曲线），读数口 <b>window.__r29()</b>，探针口 <b>window.__r29Probe</b>（cashRun / seasonRun），回归包 <b>window.__r29Check()</b>。<b>【A 项 · 现金账（汇总层，台账口径一分未动）】</b>：余额是<b>派生值</b>——cashBalance29() = 期初现金 initialCash ¥500,000 + totalProfit()（全台账利润：销售收入、原料采购 procure、扩容/四线/码垛投资、备件 spare、保养与抢修、人工与固定费率、罚金 fine、能耗 util 全在既有台账内，促销让利已在收入净额中）+ 净借款（CASH.disbursed − repaidPrincipal）+ 应付未付利息 interestPayable29()。利息计提进当前产品 fixedCost 使利润即时反映、但现金未出，故派生式把应付利息加回；还款时本息同减、余额同额下降——恒等式由构造保证，探针以 dayrepDelta 的独立快照路径验区间分解（Δ余额 = Δ利润 + Δ净借款 + Δ应付利息）。呈现：抽屉「资金与现金流」四格（现金余额 / 当日净现金流 / 累计利息（计提/实付）/ 未偿本金+应付利息）+ 贷款明细 + 日报三处同源（抽屉格、下载 txt「资金（当日）」行、归档 data 带 cashEnd/cashFlow/cashInt 与摘要行）。<b>【贷款】</b>：调度台三档（¥10 万/30 天/7.2% · ¥30 万/60 天/8.4% · ¥60 万/90 天/9.6%），点申请只弹确认（金额/期限/年化/预计利息/到期应还/下限与逾期处置全明示），确认才到账；stepCash29 在 step 内（换型/停电分支之前）按仿真日计提（本金 × 年化 ÷ 365 × 天数），到期 attemptRepay29 自动还款：可用额 = 余额 − <b>cashFloor ¥−150,000</b>，先息后本。<b>下限与逾期处置（写明）</b>：自动还款绝不把余额压过 cashFloor；不足部分转 overdue——利率 ×1.5 继续计提、告警中心 bad 级「贷款逾期」、期间禁新贷、每步以可用现金优先补还；经营本身把余额打到负数是真实亏损（告警「现金为负」bad / 低于警戒线 ¥80,000 为「资金紧张」warn，均接 alerts23 既有信号面、不新造事件）。同时未偿上限 2 笔。存档 cash29 纯数据随档（余额派生口径下恢复后与未偿自动一致，往返探针验），演示日不触现金状态、照常兼容；重置 cashReset29 清贷款回期初。<b>【B 项 · 季节性需求】</b>：seasonInfo29(simMin) 纯派生——日序 floor(simMin/1440)、年内日对 yearDays=360 取模、因子 = 1 + amp·cos(2π(doy − peakDoy)/年长)，peakDoy=135（盛夏）：需求 amp 0.30（夏 1.30 / 冬 0.70）、价格 amp 0.15（夏 1.15 / 冬 0.85）；季节名按年内日四分。接入三处：客户单到达间隔 ÷ 需求因子（satArrivalInterval）、单规模 × 需求因子（satTickArrivals）、市场指数均值回归目标 1 → 价格因子（stepMarket，钳制 [0.70,1.42] 不变）。与满意度/促销/爆单三路调制<b>叠乘不冲突</b>：每单生成时四路因子（间隔与规模各一组）记入 SEASON29.last*Factors，抽屉资金区「最近客户单因子明细」与 __r29().factors 可拆查，客户单日志同带季节因子。调度台「季节」区显示当前季节、年内日与需求/价格因子。探针 seasonRun：满意度窗回先验后在峰值日/谷值日各采样到达间隔生成器 20,000 次，到达率比与因子比相对误差须 &lt;5%（生成器即到达过程本身，随机间隔分布两季同条件）。<b>【C 项 · 例行回归】</b>：沿 R28 清单 + navGate 常驻门 + DrawCall 双态，逐项数字写交付汇报。全部计时走仿真分钟（总表第 30 项）。</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1047,6 +1074,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R26 ESG + 组合建议：__r26Probe.carbonAudit() ok = true（当日碳排与电×0.5703+汽×0.17 逐项重算差 0、归档带 perCarbonG 与 perProd）；__r26Probe.ecoCarbonRun() ok = true（ECO 开段单瓶碳排与单瓶电耗均低于关段、方向一致）；抽屉日报格有「环境 · 当日碳排/废水」两格、下载日报 txt 有环境行、经营趋势可切「单瓶碳排」；__r26Probe.mixRun() ok = true（苏打长跑 + 矿泉水短跑各归档一天后建议指向苏打、采纳后 MIX.defaultPid = soda、入队产品 = soda 且当前产品不变、默认被消费）；归档 &lt;2 天时建议卡显示样本不足；存档往返后 ESG.wasteM3 与 MIXSTAT 保持（saveRoundTrip 仍 ok）；window.__r26Check() 全绿、回归 13 项数字齐全、时间基准总表已续第 27 项</li>
       <li>R27 防撞定案：window.__r27Probe.navRun() ok = true（shipRun 波次段与 compRun 2× 混合车队段的 agvMinEquip / minVehicle 均 ≥0、neg.agvEquip = neg.vehicle = 0、采样数与豁免计数一并给出）；__navStats.worst 能定位任一负值的车辆/阶段/路点/障碍（修复后车辆类 worst 应为正值样本）；抽屉净距行带 R27 口径标注与 exempt.crewWork 计数；演示日 __r25Probe.demoRun() 与存档 __r25Probe.saveRoundTrip() 本轮复跑仍 ok；window.__r27Check() 全绿、回归 13 项数字齐全、时间基准总表已续第 28 项</li>
       <li>R28 作业态 DrawCall + 防撞常驻：window.__r28Probe.workRun()——workCalls ≤800 且 idleCalls ≤650（同法：四线满配生产 + restoreQuality 后实渲一帧读 renderer.info）、__r28Post.merge 第 4 条线 before 330 → after ≤120、audit.cut ≥50、farCull 候选较建场 +≥30；卡车装车中 __r28().truckLoadInstanced = true 且装载箱随 loadCases 前缀显形（count 同步）；window.__r28Probe.navGate() pass = true（两段四类最小值 ≥0、四类 neg 全 0、exempt.crewWork 单列计数在返回值内）——此门自 R28 起为每轮常驻回归项，改路点/车队/人员路径的轮次必须附 navGate 数字；window.__r28Check() 全绿、回归 16 项数字齐全、时间基准总表已续第 29 项</li>
+      <li>R29 现金/贷款 + 季节：window.__r29Probe.cashRun() ok = true（放款到账差 = 本金、计提利息 >0、区间恒等 |Δ余额 −（Δ利润+Δ净借款+Δ应付利息）| ≤¥0.5、到期自动结清、逾期路径 status=overdue 且告警中心有「贷款逾期」、恢复下限后自动补还结清）；调度台选档点「申请贷款」只弹确认（金额/期限/年化/预计利息/到期应还/还款下限与逾期处置全明示），确认后 __r29().cash.loans +1 笔且余额同额上升；压低余额（大额投资连开）触发告警中心「资金紧张/现金为负」；window.__r29Probe.seasonRun() ok = true（夏/冬到达率比与需求因子比相对误差 <5%）；调度台显示当前季节与需求/价格因子、客户单日志带季节因子、抽屉资金区有最近一单四路因子明细；存档往返（带未偿贷款）后 __r29().cash 的 balance/outstanding 与存档前一致；window.__r29Check() 全绿、回归逐项数字齐全、时间基准总表已续第 30 项</li>
     </ul>
   </div>
 </aside>
@@ -1096,6 +1124,18 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
     <div class="modal-btns">
       <button class="btn" id="palUpCancel">再想想</button>
       <button class="btn primary" id="palUpConfirm">确认改造（扣款开工）</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= R29 LOAN CONFIRM ======= -->
+<div class="modal-overlay" id="loanModal" role="dialog" aria-modal="true" aria-labelledby="loanTitle">
+  <div class="modal">
+    <h3 id="loanTitle">申请贷款 · 确认条款</h3>
+    <p id="loanBody"></p>
+    <div class="modal-btns">
+      <button class="btn" id="loanCancel">再想想</button>
+      <button class="btn primary" id="loanConfirm">确认贷款（到账）</button>
     </div>
   </div>
 </div>
@@ -1618,6 +1658,29 @@ var CONFIG = {
     truckLoadInstances: 8,   /* 卡车装载箱实例数（与原逐件网格同位同序：count = 应显数） */
     navGate: { vehicleExempt: false, crewExemptKey: "crewWork" }
   },
+  /* ---- R29：现金流与贷款（CASH）+ 季节性需求（SEASON29） ----
+   * 现金账是汇总层：余额为派生值 = 期初现金 + 累计利润（totalProfit，全台账口径）
+   * + 净借款（放款 − 已还本金）+ 应付未付利息（已计提进成本台账、现金未出）。
+   * 利息按仿真日计提（本金 × 年化 ÷ 365 × 仿真天数）进当前产品 fixedCost；
+   * 到期自动还款：先息后本，还款最多把余额压到 cashFloor（授信下限），不足部分
+   * 转逾期（逾期利率 ×overdueRateMult 继续计提、告警中心 bad 级、禁新贷），
+   * 后续每步有可用现金即优先补还——不凭空扣成负无下限，处置口径如上写明。
+   * 季节：年长 yearDays 天、需求峰值在 peakDoy（盛夏），需求因子调制客户单到达
+   * 间隔（÷因子）与规模（×因子）、价格因子作市场指数均值回归目标，各调制来源
+   * （满意度/促销/爆单/季节）在订单生成处留 SEASON29.lastFactors 明细可查。 */
+  r29: {
+    initialCash: 500000,
+    cashWarnBelow: 80000,          /* 现金低于此值 → 告警中心「资金紧张」warn；<0 → bad */
+    cashFloor: -150000,            /* 自动还款下限：还款绝不把余额压到此线以下，余款转逾期 */
+    overdueRateMult: 1.5,          /* 逾期利率倍数（按原年化 × 此倍计提） */
+    maxLoans: 2,                   /* 同时未偿笔数上限；有逾期未清禁新贷 */
+    loanTiers: [
+      { principal: 100000, days: 30, annualRate: 0.072 },
+      { principal: 300000, days: 60, annualRate: 0.084 },
+      { principal: 600000, days: 90, annualRate: 0.096 }
+    ],
+    season: { yearDays: 360, peakDoy: 135, demandAmp: 0.30, priceAmp: 0.15 }
+  },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
    * 预热 preheatX → 均质 homogenizer（偏南 homogenizerZ，与链主线错开一台位）→ 管式杀菌 sterilizerSkidX → 冷却 coolingX，
@@ -1887,7 +1950,7 @@ function stepMarket(dtMin){
   while(MARKET.tickAcc >= C.tickMinutes){
     MARKET.tickAcc -= C.tickMinutes;
     var shock = (Math.random() * 2 - 1) * C.vol;
-    MARKET.idx = Math.max(C.idxFloor, Math.min(C.idxCeil, MARKET.idx + C.reversion * (1 - MARKET.idx) + shock * MARKET.idx));
+    MARKET.idx = Math.max(C.idxFloor, Math.min(C.idxCeil, MARKET.idx + C.reversion * (seasonPriceTarget29() - MARKET.idx) + shock * MARKET.idx));   /* R29：均值回归目标由 1 改为季节价格因子（夏高冬低），钳制区间不变 */
     MARKET.hist.push({ t: S.simMin, idx: Math.round(MARKET.idx * 1000) / 1000 });
     if(MARKET.hist.length > C.historyCap) MARKET.hist.splice(0, MARKET.hist.length - C.historyCap);
   }
@@ -2116,7 +2179,16 @@ function satOnQc(result){
 }
 function satIntervalFactor(){ return Math.max(0.45, Math.min(1.5, 1.5 - 0.0105 * SAT.value)); }
 function satSizeFactor(){ return Math.max(0.6, Math.min(1.25, 0.62 + 0.0058 * SAT.value)); }
-function satArrivalInterval(){ var iv = CONFIG.r18.sat.arrivalBaseMin * satIntervalFactor() * (0.75 + Math.random() * 0.5); if(typeof PROMO !== "undefined" && PROMO.active) iv *= CONFIG.r21.promo.intervalFactor; if(typeof STRESS !== "undefined" && STRESS.surgeUntil > S.simMin) iv *= CONFIG.r22.stress.surgeIntervalFactor; return iv; }   /* R21：促销期客户单到达间隔缩短（到达率提升，满意度因子并存相乘）；R22：爆单演练间隔再缩短（同为并存相乘） */
+function satArrivalInterval(){
+  var fSat = satIntervalFactor(), fP = 1, fS = 1;
+  var iv = CONFIG.r18.sat.arrivalBaseMin * fSat * (0.75 + Math.random() * 0.5);
+  if(typeof PROMO !== "undefined" && PROMO.active){ iv *= CONFIG.r21.promo.intervalFactor; fP = CONFIG.r21.promo.intervalFactor; }
+  if(typeof STRESS !== "undefined" && STRESS.surgeUntil > S.simMin){ iv *= CONFIG.r22.stress.surgeIntervalFactor; fS = CONFIG.r22.stress.surgeIntervalFactor; }
+  var fSe = 1 / seasonInfo29(S.simMin).demand;   /* R29：季节需求调制间隔（旺季需求高 → 间隔短、到达密），与满意度/促销/爆单并存相乘 */
+  iv *= fSe;
+  if(typeof SEASON29 !== "undefined") SEASON29.lastIntervalFactors = { sat: Math.round(fSat * 1000) / 1000, promo: fP, surge: fS, season: Math.round(fSe * 1000) / 1000 };
+  return iv;
+}   /* R21：促销期客户单到达间隔缩短（到达率提升，满意度因子并存相乘）；R22：爆单演练间隔再缩短（同为并存相乘） */
 function satTickArrivals(){
   if(SAT.nextArrivalMin === null){ SAT.nextArrivalMin = S.simMin + satArrivalInterval(); return; }
   if(!S.running || S.simMin < SAT.nextArrivalMin) return;
@@ -2130,12 +2202,18 @@ function satTickArrivals(){
   if(promoPick21) size = Math.round(size * CONFIG.r21.promo.sizeFactor / 100) * 100;   /* R21：促销产品单规模放大 */
   var surge22 = (typeof STRESS !== "undefined" && STRESS.surgeUntil > S.simMin);
   if(surge22) size = Math.round(size * CONFIG.r22.stress.surgeSizeFactor / 100) * 100;   /* R22：爆单演练单规模翻倍 */
+  var se29 = seasonInfo29(S.simMin);
+  size = Math.round(size * se29.demand / 100) * 100;   /* R29：季节需求调制规模（旺季单更大、淡季单更小），四路因子叠乘明细记 SEASON29 */
+  if(typeof SEASON29 !== "undefined"){
+    SEASON29.lastSizeFactors = { sat: Math.round(satSizeFactor() * 1000) / 1000, promo: promoPick21 ? CONFIG.r21.promo.sizeFactor : 1, surge: surge22 ? CONFIG.r22.stress.surgeSizeFactor : 1, season: Math.round(se29.demand * 1000) / 1000 };
+    SEASON29.lastArrival = { t: Math.round(S.simMin), pid: p.id, target: size, season: se29.name, demand: Math.round(se29.demand * 1000) / 1000 };
+  }
   var ahead = Math.max(0, S.orderTarget - S.orderDone) + ORDERQ.reduce(function(a, q){ return a + q.target; }, 0);
   var entry = { pid: p.id, target: size, dueMin: S.simMin + dueOffsetMin(size, ahead, p), auto: true, promo: !!promoPick21, surge: surge22 };   /* R22：爆单来源标记 */
   if(promoPick21) PROMO.arrivals++;
   ORDERQ.push(entry);
   SAT.arrivals.push({ t: Math.round(S.simMin), pid: p.id, target: size, sat: SAT.value });
-  log("📨 客户新单到达：「" + p.full + "」目标 " + fmt(size) + " 瓶，交期 " + fmtSimClock(entry.dueMin) + " 前（满意度 " + Math.round(SAT.value) + " · 到达间隔 ×" + satIntervalFactor().toFixed(2) + " · 规模 ×" + satSizeFactor().toFixed(2) + "）。已入订单队列。", "good");
+  log("📨 客户新单到达：「" + p.full + "」目标 " + fmt(size) + " 瓶，交期 " + fmtSimClock(entry.dueMin) + " 前（满意度 " + Math.round(SAT.value) + " · 到达间隔 ×" + satIntervalFactor().toFixed(2) + " · 规模 ×" + satSizeFactor().toFixed(2) + " · 季节 " + se29.name + "需求 ×" + se29.demand.toFixed(2) + "）。已入订单队列。", "good");
   renderOrderQueue();
   if(S.orderDoneLogged && !S.changeover && !S.reservation) advanceOrderQueue();   /* 当前单已结清且队列曾空：直接接上（与完成分支同一接单入口） */
 }
@@ -2835,7 +2913,8 @@ function dayrepSnapshot(){
     palUpSpent: (typeof PALUP !== "undefined" && PALUP) ? PALUP.spent : 0,   /* R24：码垛改造投资当日做差 */
     perProd: PRODUCTS.map(function(p){ return ledger[p.id].finished; }),
     perProdProfit: PRODUCTS.map(function(p){ return ledgerProfit(ledger[p.id]); }),   /* R26：分产品利润快照（组合建议的近 N 天单瓶毛利做差来源） */
-    waste: (typeof ESG !== "undefined") ? ESG.wasteM3 : 0   /* R26：废水子账快照（当日废水做差） */
+    waste: (typeof ESG !== "undefined") ? ESG.wasteM3 : 0,   /* R26：废水子账快照（当日废水做差） */
+    cashBal: (typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0, cashInt: (typeof CASH !== "undefined" && CASH) ? CASH.interestExpensed : 0   /* R29：现金余额/累计计提利息快照（当日净现金流做差） */
   };
 }
 function downDelta23(b){   /* R23：停机归因当日做差（base 无 down 快照时按全量计） */
@@ -2863,7 +2942,10 @@ function dayrepDelta(){
     coI: CO_STATS.immediate - b.coI, coD: CO_STATS.drained - b.coD,
     perProd: PRODUCTS.map(function(p, i){ return ledger[p.id].finished - b.perProd[i]; }),
     perProdProfit: PRODUCTS.map(function(p, i){ return ledgerProfit(ledger[p.id]) - ((b.perProdProfit || [])[i] || 0); }),   /* R26 */
-    waste: ((typeof ESG !== "undefined") ? ESG.wasteM3 : 0) - (b.waste || 0)   /* R26：当日废水（旧 base 无此字段按 0） */
+    waste: ((typeof ESG !== "undefined") ? ESG.wasteM3 : 0) - (b.waste || 0),   /* R26：当日废水（旧 base 无此字段按 0） */
+    cashFlow: ((typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0) - (b.cashBal == null ? ((typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0) : b.cashBal),   /* R29：当日净现金流 = 期末余额 − 日初快照（旧 base 无字段时按 0 计） */
+    cashIntDay: ((typeof CASH !== "undefined" && CASH) ? CASH.interestExpensed : 0) - (b.cashInt || 0),   /* R29：当日计提利息 */
+    cashBal: (typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0   /* R29：期末现金余额（归档/资金行同源） */
   };
 }
 /* R26：ESG 派生——碳排与单瓶口径全部由当日水/电/汽做差量 × CONFIG.r26.esg 因子
@@ -2888,6 +2970,7 @@ function dayrepSummaryLine(d){
     + " · 当日停机 " + downTopText(d.down)   /* R23：归档摘要带当日停机归因（与抽屉/下载同源做差） */
     + ((d.line4 || 0) > 0 ? " · 第 4 条线投资 " + fmtMoney(d.line4) : "")   /* R23：归档摘要带产能扩容支出 */
     + ((d.palUp || 0) > 0 ? " · 码垛改造投资 " + fmtMoney(d.palUp) : "")   /* R24：归档摘要带码垛改造支出 */
+    + " · 期末现金 " + fmtMoney(d.cashBal || 0) + "（当日净 " + fmtMoney(d.cashFlow || 0) + ((d.cashIntDay || 0) > 0 ? " · 计提利息 " + fmtMoney(d.cashIntDay) : "") + "）"   /* R29：归档摘要带现金（与资金行/日报同源做差） */
     + " · 告警处置（当日）：" + alertDayText24()   /* R24：归档摘要带当日告警处置（翻页清零前取行，顺序同班次小计口径） */
     + " · 最老在库 " + ageOldestText();   /* R20：归档行带最老批次库龄 */
 }
@@ -3388,6 +3471,8 @@ $("reportDlBtn").addEventListener("click", function(){
     "班次小计 · 夜班：产量 " + fmt(SHIFT.totals.night.finished) + " 瓶 · 利润 " + fmtMoney(SHIFT.totals.night.profit) + " · 人工成本 " + fmtMoney(SHIFT.totals.night.laborCost) + "（夜班津贴 ×1.30 · 产能系数 ×" + CONFIG.r13.shifts.nightCapacityFactor + "）",
     "原料供应（当日）：补料下单 " + dd.rawOrders + " 次 · 断料 " + dd.rawStockouts + " 次 / " + dd.rawStockoutMin.toFixed(1) + " 分 · 当前液位 " + Math.round(RAW.level*100) + "% · 预计耗尽 " + rawEtaText(),
     "原料采购（当日 · R16）：采购额 " + fmtMoney(dd.buySpent) + " · 到货 " + fmt(dd.buyQty) + " 瓶当量 · 当日均价指数 " + marketDayAvgIdx().toFixed(2) + " · 现价指数 " + MARKET.idx.toFixed(2) + "（采购额已按到货量 × 到货时指数计入成本台账）",
+    "资金（当日 · R29）：期末现金 " + fmtMoney(dd.cashBal || 0) + " · 当日净现金流 " + fmtMoney(dd.cashFlow || 0) + " · 当日计提利息 " + fmtMoney(dd.cashIntDay || 0) + " · 未偿本金 " + fmtMoney(outstandingPrincipal29()) + " / 应付利息 " + fmtMoney(interestPayable29()) + "（现金 = 期初 + 累计利润 + 净借款 + 应付利息，与抽屉资金行同源）",
+    "季节（当日 · R29）：" + seasonInfo29(S.simMin).name + " · 需求因子 ×" + seasonInfo29(S.simMin).demand.toFixed(2) + " · 价格因子 ×" + seasonInfo29(S.simMin).price.toFixed(2) + "（年内第 " + (seasonInfo29(S.simMin).doy + 1) + " 天；夏季旺季量价齐升、冬季回落）",
     "仓库扩容（当日 · R20）：支出 " + fmtMoney(dd.expand) + "（会话累计 " + fmtMoney(EXP.spent) + " · 已扩 " + EXP.done + " 次 · 当前货位 " + SLOTS.length + " 位）",
     "促销出货（当日 · R21）：让利 " + fmtMoney(dd.promoYuan || 0) + " · 促销期出货 " + (dd.promoShip || 0) + " 托（让利已按促销价结算进收入、单列于此；产品台账 promo 字段同源）",
     "压力测试（当日 · R22）：" + stressDayText() + "（恢复耗时自触发计、损失 = 报废/罚金/备件既有台账做差）",
@@ -3905,6 +3990,14 @@ function alerts23(){
   if(typeof PALUP !== "undefined" && PALUP && PALUP.building) out.push({ cls: "warn", txt: "⚙ 码垛机高速化改造中：停机施工剩 " + Math.ceil(PALUP.building.leftMin) + " 仿真分钟 · 进料段积压 " + (PAL.caseQueue + Math.ceil(PAL.bottleBank / CONFIG.r14.bottlesPerCase)) + " 箱（完工后按 " + CONFIG.r24.palletUpgrade.rateAfter + " 箱/分追赶清空）" });
   var palBacklog = PAL.caseQueue + Math.ceil(PAL.bottleBank / CONFIG.r14.bottlesPerCase);
   if(palBacklog >= CONFIG.r14.caseBufferCap) out.push({ cls: "warn", txt: "⚠ 码垛进料积压已达 " + palBacklog + " 箱（进料缓冲 " + CONFIG.r14.caseBufferCap + " 箱已满、余量在瓶账）：码垛段处理不及下线，查码垛机状态与下线暂存" });
+  /* R29 两路（既有状态：现金账余额与贷款逾期状态，均非新造判定）：逾期 bad / 现金为负 bad / 资金紧张 warn */
+  if(typeof CASH !== "undefined" && CASH){
+    var odLoan = CASH.loans.filter(function(l){ return l.status === "overdue"; })[0];
+    if(odLoan) out.push({ cls: "bad", txt: "🔴 贷款逾期：第 " + odLoan.id + " 笔未偿 " + fmtMoney(odLoan.principal + odLoan.accrued) + "（本金+利息）——利率 ×" + CONFIG.r29.overdueRateMult + " 计提中、禁新贷，有可用现金自动优先补还" });
+    var bal29 = cashBalance29();
+    if(bal29 < 0) out.push({ cls: "bad", txt: "🔴 现金为负：" + fmtMoney(bal29) + "——经营已透支（期初 " + fmtMoney(CONFIG.r29.initialCash) + " + 累计利润 + 净借款 + 应付利息），先保交期回款或在调度台贷款周转" });
+    else if(bal29 < CONFIG.r29.cashWarnBelow) out.push({ cls: "warn", txt: "⚠ 资金紧张：现金 " + fmtMoney(bal29) + " 已低于警戒线 " + fmtMoney(CONFIG.r29.cashWarnBelow) + "——大额投资/采购前先看现金，可在调度台「资金与贷款」周转" });
+  }
   out.forEach(function(a){ a.key = a.txt.replace(/[0-9]+/g, "#"); a.sev = a.cls === "bad" ? 2 : 1; });   /* R24：稳定键（数字归一，与日志去重同键）+ 严重度，供聚合/排序/确认留痕 */
   return out;
 }
@@ -4351,7 +4444,8 @@ function archiveDayData(d){
            carbonKg: Math.round(esg26.carbonKg * 100) / 100,
            perCarbonG: esg26.perBottleG == null ? null : Math.round(esg26.perBottleG * 10) / 10,
            wasteM3: Math.round(esg26.wasteM3 * 1000) / 1000,
-           perProd: PRODUCTS.map(function(p, i){ return { fin: d.perProd[i] || 0, profit: Math.round(((d.perProdProfit || [])[i] || 0) * 100) / 100 }; }) };
+           perProd: PRODUCTS.map(function(p, i){ return { fin: d.perProd[i] || 0, profit: Math.round(((d.perProdProfit || [])[i] || 0) * 100) / 100 }; }),
+           cashEnd: Math.round((d.cashBal || 0) * 100) / 100, cashFlow: Math.round((d.cashFlow || 0) * 100) / 100, cashInt: Math.round((d.cashIntDay || 0) * 100) / 100 };   /* R29：归档带期末现金/当日净现金流/当日计提利息（与资金行同源做差） */
 }
 function trendSummary(){
   var es = DAYREP.history.filter(function(h){ return !!h.data; });
@@ -4434,6 +4528,7 @@ function step(dtMin){
   var fc = dtMin * (CONFIG.fixedCostPerHour/60);
   S.fixedCost += fc;
   curL().fixedCost += fc;
+  stepCash29(dtMin);   /* R29：贷款计息/到期还款/逾期补还走仿真时钟（总表第 30 项；钩子在换型/停电分支之前，两类步同样推进） */
 
   if(S.changeover){
     S.changeover.left = Math.max(0, S.changeover.left - dtMin);
@@ -4816,6 +4911,7 @@ function renderKpis(){
     renderPromoBtn();   /* R21：促销按钮文案（产品/剩余分钟）随 renderKpis 节奏同源刷新 */
     renderStressStatus();   /* R22：压力测试状态行 + 排班摘要随 renderKpis 节奏同源刷新 */
     renderR23();   /* R23：告警中心 / 班次目标 / 停机归因随 renderKpis 节奏同源刷新 */
+    renderR29();   /* R29：季节/现金/贷款/因子明细随 renderKpis 节奏同源刷新 */
     }
     /* R18：调度台满意度行 + 当日均值采样（与 SAT 同源；采样随 renderKpis 既有节奏） */
     SAT.accV += SAT.value; SAT.accN++;
@@ -9712,6 +9808,7 @@ $("resetBtn").addEventListener("click", function(){
   MARKET.buysLog = []; AUDIT17.produced = {}; AUDIT17.qcHeldBottles = 0; AUDIT17.qcHeldYuan = 0; AUDIT17.qcHeldFullYuan = 0; AUDIT17.coScrapBottles = 0; AUDIT17.coScrapYuan = 0; AUDIT17.coScrapFullYuan = 0; AUDIT17.stressScrapBottles = 0; AUDIT17.stressScrapYuan = 0; AUDIT17.stressScrapFullYuan = 0;   /* R17：市场核对留痕随市场一并复位；R18：全额留痕字段一并清；R22：停电报废留痕一并清 */
   /* R18：满意度与车辆补偿全量复位（滚动窗回先验、到达节拍与车辆电耗清零） */
   SAT.orderOutcomes = CONFIG.r18.sat.priorOnTime.slice(); SAT.qcOutcomes = CONFIG.r18.sat.priorQc.slice(); SAT.fine24 = []; SAT.arrivals = []; SAT.nextArrivalMin = null; satRecompute(); satDayReset();
+  cashReset29();   /* R29：现金/贷款全量复位（余额为派生值，贷款清零即回到期初现金口径；季节为 simMin 纯派生随之归位） */
   VEH.totalKwh = 0; VEH.kwhPending = 0; VEH.compEnabled = true; VEH.compMode = "r21"; VEH.surchargeKwh = 0; promoReset(); stressReset(); downReset23(); line4Reset(); palUpReset(); alertCenterReset24();   /* R21：补偿模式/高速附加电耗/促销全量复位；R22：压力测试全量复位（排班档位是用户偏好、保留不重置）；R23：停机归因/告警去重/班次目标基线全清 + 第 4 条线整组回滚三线新工厂；R24：码垛改造复原额定 460 + 告警处置全清 */
   var fmSeg = $("fillModeSeg"); if(fmSeg) for(var fi = 0; fi < fmSeg.children.length; fi++) fmSeg.children[fi].classList.toggle("on", fmSeg.children[fi].getAttribute("data-fillmode") === "full");
   SHIFT.totals.day = newShiftTotals(); SHIFT.totals.night = newShiftTotals(); SHIFT.changes = 0;
@@ -10119,6 +10216,162 @@ function cssSafeAreaCheck(){
   return { rows: rows, allOk: rows.every(function(r){ return r.ok; }) };
 }
 window.__cssSafeArea = cssSafeAreaCheck;
+/* ================= R29 · 现金流与贷款（CASH）+ 季节性需求（SEASON29） =================
+ * 【现金账 = 汇总层，余额派生】cashBalance29() = 期初现金 + totalProfit()（全台账
+ * 利润：收入/变动成本/公用/固定（含人工与固定费率）/换型/罚金/备件/采购全在内，
+ * 促销让利已在收入净额中）+ 净借款（放款 − 已还本金）+ 应付未付利息。利息计提
+ * 进当前产品 fixedCost（成本台账）使利润即时反映，但现金尚未流出，故派生式把
+ * 应付利息加回；还款时本息同减、派生余额同额下降——恒等式由构造保证，探针以
+ * dayrepDelta 的独立快照路径验「区间现金变动 = 区间利润 + 净借款变动 + 应付
+ * 利息变动」（0 差）。各台账口径一分未动。
+ * 【贷款】takeLoan29（确认弹窗后到账）→ stepCash29 在 step 内按仿真分钟计提
+ * （本金 × 年化 ÷ 365 × 天数，逾期 ×overdueRateMult）→ 到期/逾期每步
+ * attemptRepay29：可用额 = 余额 − cashFloor，先息后本；不足转 overdue（告警
+ * 中心 bad 级 + 禁新贷），有可用现金即优先补还。自动还款绝不把余额压过
+ * cashFloor——这是「不凭空扣成负无下限」的下限与处置，写明在此与 UI。
+ * 【季节】seasonInfo29(simMin) 纯派生：日序 = floor(simMin/1440)，年内日对
+ * yearDays 取模，需求/价格因子 = 1 + amp·cos(2π(doy − peakDoy)/yearDays)。
+ * 接入点三处：satArrivalInterval（间隔 ÷ 需求因子）、satTickArrivals 规模
+ * （× 需求因子）、stepMarket 均值回归目标（1 → 价格因子）。每单生成时把四路
+ * 因子（满意度/促销/爆单/季节）记进 SEASON29.last*Factors 供抽屉与读数口拆查。 */
+var CASH = { loans: [], nextId: 1, disbursed: 0, repaidPrincipal: 0, interestPaid: 0, interestExpensed: 0 };
+var SEASON29 = { lastIntervalFactors: null, lastSizeFactors: null, lastArrival: null };
+var LOANSEL29 = { tier: 1 };
+function seasonInfo29(simMin){
+  var C = CONFIG.r29.season;
+  var dayIdx = Math.floor(simMin / 1440);
+  var doy = ((dayIdx % C.yearDays) + C.yearDays) % C.yearDays;
+  var ph = 2 * Math.PI * (doy - C.peakDoy) / C.yearDays;
+  return { dayIdx: dayIdx, doy: doy,
+           name: doy < 90 ? "春季" : doy < 180 ? "夏季" : doy < 270 ? "秋季" : "冬季",
+           demand: 1 + C.demandAmp * Math.cos(ph), price: 1 + C.priceAmp * Math.cos(ph) };
+}
+function seasonPriceTarget29(){ return seasonInfo29(S.simMin).price; }
+function loanActive29(l){ return l.status === "active" || l.status === "overdue"; }
+function interestPayable29(){ return CASH.loans.reduce(function(a, l){ return a + (loanActive29(l) ? l.accrued : 0); }, 0); }
+function outstandingPrincipal29(){ return CASH.loans.reduce(function(a, l){ return a + (loanActive29(l) ? l.principal : 0); }, 0); }
+function cashBalance29(){ return CONFIG.r29.initialCash + totalProfit() + (CASH.disbursed - CASH.repaidPrincipal) + interestPayable29(); }
+function cashAudit29(){
+  return { balance: Math.round(cashBalance29() * 100) / 100, initial: CONFIG.r29.initialCash,
+           profit: Math.round(totalProfit() * 100) / 100,
+           netBorrowed: Math.round((CASH.disbursed - CASH.repaidPrincipal) * 100) / 100,
+           interestPayable: Math.round(interestPayable29() * 100) / 100,
+           interestExpensed: Math.round(CASH.interestExpensed * 100) / 100,
+           interestPaid: Math.round(CASH.interestPaid * 100) / 100,
+           outstanding: Math.round(outstandingPrincipal29() * 100) / 100,
+           floor: CONFIG.r29.cashFloor,
+           loans: CASH.loans.map(function(l){ return { id: l.id, principal0: l.principal0, principal: Math.round(l.principal * 100) / 100,
+             accrued: Math.round(l.accrued * 100) / 100, annualRate: l.annualRate, days: l.days, status: l.status,
+             dueInMin: Math.round(l.dueMin - S.simMin) }; }) };
+}
+function takeLoan29(tierIdx){
+  var C = CONFIG.r29, t = C.loanTiers[tierIdx];
+  if(!t) return false;
+  var act = CASH.loans.filter(loanActive29);
+  if(act.some(function(l){ return l.status === "overdue"; })){ log("🏦 贷款被拒：有逾期贷款未清偿——先补还逾期（有可用现金会自动优先补还），再谈新贷。", "bad"); return false; }
+  if(act.length >= C.maxLoans){ log("🏦 贷款被拒：未偿笔数已达上限 " + C.maxLoans + " 笔，先还清一笔再借。", "bad"); return false; }
+  var loan = { id: CASH.nextId++, principal0: t.principal, principal: t.principal, annualRate: t.annualRate, days: t.days,
+               startMin: S.simMin, dueMin: S.simMin + t.days * 1440, accrued: 0, status: "active" };
+  CASH.loans.push(loan); CASH.disbursed += t.principal;
+  log("🏦 贷款到账：第 " + loan.id + " 笔 ¥" + fmt(t.principal) + "（期限 " + t.days + " 仿真日 · 年化 " + (t.annualRate * 100).toFixed(1) + "% · 到期 " + fmtSimClock(loan.dueMin) + "）——现金余额 " + fmtMoney(cashBalance29()) + "。利息按仿真日计提进成本台账，到期自动还款（先息后本）。", "good");
+  renderKpis();
+  return true;
+}
+function attemptRepay29(loan){
+  var C = CONFIG.r29;
+  var due = loan.principal + loan.accrued;
+  if(due <= 0.005){ loan.principal = 0; loan.accrued = 0; loan.status = "repaid"; return true; }
+  var pay = Math.min(due, Math.max(cashBalance29() - C.cashFloor, 0));
+  if(pay > 0.005){
+    var payI = Math.min(pay, loan.accrued); loan.accrued -= payI; CASH.interestPaid += payI;
+    var payP = pay - payI; loan.principal -= payP; CASH.repaidPrincipal += payP;
+    due = loan.principal + loan.accrued;
+  }
+  if(due <= 0.005){
+    loan.principal = 0; loan.accrued = 0; loan.status = "repaid";
+    log("🏦 贷款结清：第 " + loan.id + " 笔本息还清（利息实付累计 " + fmtMoney(CASH.interestPaid) + "），现金余额 " + fmtMoney(cashBalance29()) + "。", "good");
+    return true;
+  }
+  if(loan.status !== "overdue"){
+    loan.status = "overdue";
+    log("🏦⚠ 贷款逾期：第 " + loan.id + " 笔到期应还 " + fmtMoney(due) + "，但全额还款会把现金压过授信下限 " + fmtMoney(C.cashFloor) + "——已按可用额先息后本部分偿还，余款转逾期（利率 ×" + C.overdueRateMult + " 继续计提、期间禁新贷），后续每步有可用现金即优先补还，不会凭空扣成负无下限。", "bad");
+  }
+  return false;
+}
+function stepCash29(dtMin){
+  if(!CASH.loans.length) return;
+  var dayFrac = dtMin / 1440;
+  CASH.loans.forEach(function(loan){
+    if(!loanActive29(loan)) return;
+    var rate = loan.annualRate * (loan.status === "overdue" ? CONFIG.r29.overdueRateMult : 1);
+    var inc = loan.principal * rate / 365 * dayFrac;
+    if(inc > 0){ loan.accrued += inc; CASH.interestExpensed += inc; S.fixedCost += inc; curL().fixedCost += inc; }
+    if(loan.status === "overdue") attemptRepay29(loan);
+    else if(S.simMin >= loan.dueMin) attemptRepay29(loan);
+  });
+}
+function cashReset29(){
+  CASH.loans = []; CASH.nextId = 1; CASH.disbursed = 0; CASH.repaidPrincipal = 0; CASH.interestPaid = 0; CASH.interestExpensed = 0;
+  SEASON29.lastIntervalFactors = null; SEASON29.lastSizeFactors = null; SEASON29.lastArrival = null;
+}
+function renderR29(){
+  var se = seasonInfo29(S.simMin);
+  var so = $("seasonOut"); if(so) so.textContent = se.name + " · 年内第 " + (se.doy + 1) + " / " + CONFIG.r29.season.yearDays + " 天";
+  var sf = $("seasonFactors"); if(sf) sf.textContent = "季节因子：需求 ×" + se.demand.toFixed(2) + "（客户单到达间隔 ÷此值、单规模 ×此值）· 价格回归目标 ×" + se.price.toFixed(2) + "（夏季旺季量价齐升、冬季回落；曲线参数 CONFIG.r29.season）。最近一单的四路因子明细（满意度/促销/爆单/季节）在数据抽屉「资金与现金流」区与 window.__r29().factors。";
+  var bal = cashBalance29(), d = dayrepDelta();
+  var co = $("cashOut"); if(co) co.textContent = fmtMoney(bal) + " · 未偿 " + fmtMoney(outstandingPrincipal29() + interestPayable29());
+  var cb = $("cashBal"); if(cb){ cb.textContent = fmtMoney(bal); cb.style.color = bal < 0 ? "var(--red)" : (bal < CONFIG.r29.cashWarnBelow ? "var(--amber)" : ""); }
+  var cn = $("cashDayNet"); if(cn){ cn.textContent = fmtMoney(d.cashFlow || 0); cn.style.color = (d.cashFlow || 0) < 0 ? "var(--red)" : ""; }
+  var ci = $("cashInterest"); if(ci) ci.textContent = fmtMoney(CASH.interestExpensed) + " / " + fmtMoney(CASH.interestPaid);
+  var cd = $("cashDebt"); if(cd) cd.textContent = fmtMoney(outstandingPrincipal29()) + " + " + fmtMoney(interestPayable29());
+  var cl = $("cashLoans");
+  if(cl){
+    var act = CASH.loans.filter(loanActive29);
+    cl.innerHTML = act.length ? act.map(function(l){
+      return "第 " + l.id + " 笔：本金 " + fmtMoney(l.principal) + "（原 " + fmtMoney(l.principal0) + "）· 年化 " + (l.annualRate * 100).toFixed(1) + "%" + (l.status === "overdue" ? "（逾期 ×" + CONFIG.r29.overdueRateMult + "）" : "") + " · 应付利息 " + fmtMoney(l.accrued) + " · " + (l.status === "overdue" ? "<b>已逾期</b>，有可用现金自动补还" : "到期 " + fmtSimClock(l.dueMin) + "（剩 " + Math.max(0, Math.ceil((l.dueMin - S.simMin) / 1440)) + " 仿真日）");
+    }).join("<br>") : "暂无未偿贷款（已结清 " + CASH.loans.filter(function(l){ return l.status === "repaid"; }).length + " 笔）。";
+  }
+  var lf = $("seasonLastFactors");
+  if(lf){
+    var F = SEASON29;
+    lf.textContent = F.lastArrival ? ("第 " + F.lastArrival.t + " 分到达「" + prodNameOf(F.lastArrival.pid) + "」" + F.lastArrival.target + " 瓶（" + F.lastArrival.season + " · 需求因子 ×" + F.lastArrival.demand + "）——间隔因子：满意度 ×" + (F.lastIntervalFactors ? F.lastIntervalFactors.sat : "—") + " · 促销 ×" + (F.lastIntervalFactors ? F.lastIntervalFactors.promo : "—") + " · 爆单 ×" + (F.lastIntervalFactors ? F.lastIntervalFactors.surge : "—") + " · 季节 ×" + (F.lastIntervalFactors ? F.lastIntervalFactors.season : "—") + "；规模因子：满意度 ×" + (F.lastSizeFactors ? F.lastSizeFactors.sat : "—") + " · 促销 ×" + (F.lastSizeFactors ? F.lastSizeFactors.promo : "—") + " · 爆单 ×" + (F.lastSizeFactors ? F.lastSizeFactors.surge : "—") + " · 季节 ×" + (F.lastSizeFactors ? F.lastSizeFactors.season : "—"))
+      : "尚无客户单到达。";
+  }
+  var ln = $("loanNote");
+  if(ln){
+    var od = CASH.loans.some(function(l){ return l.status === "overdue"; });
+    ln.textContent = od ? "⚠ 有逾期贷款未清：期间禁新贷，系统每步以可用现金（余额 − 下限 " + fmtMoney(CONFIG.r29.cashFloor) + "）优先补还，利息按 ×" + CONFIG.r29.overdueRateMult + " 计提。"
+      : "现金账是汇总层：期初现金 + 累计利润 + 净借款 + 应付未付利息，全部收支仍走既有台账（口径不变）。利息按仿真日计提进成本台账；到期自动还款（先息后本），还款不把余额压过授信下限 " + fmtMoney(CONFIG.r29.cashFloor) + "，不足转逾期（利率 ×" + CONFIG.r29.overdueRateMult + "、禁新贷、有钱优先补还）。未偿 " + CASH.loans.filter(loanActive29).length + " / " + CONFIG.r29.maxLoans + " 笔。";
+  }
+}
+/* R29 控件绑定：贷款档位段 + 申请钮 + 确认弹窗（与扩容系列同模式：点钮只弹确认、确认才到账） */
+(function bindLoan29(){
+  var seg = $("loanTierSeg");
+  if(seg) seg.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest("[data-tier]") : null;
+    if(!b) return;
+    LOANSEL29.tier = parseInt(b.getAttribute("data-tier"), 10) || 0;
+    for(var i = 0; i < seg.children.length; i++) seg.children[i].classList.toggle("on", seg.children[i] === b);
+    var t = CONFIG.r29.loanTiers[LOANSEL29.tier];
+    var out = $("loanTierOut"); if(out) out.textContent = "¥" + fmt(t.principal) + " · " + t.days + " 天 · 年化 " + (t.annualRate * 100).toFixed(1) + "%";
+  });
+  var btn = $("loanBtn"); if(btn) btn.addEventListener("click", openLoanConfirm29);
+  var cf = $("loanConfirm"); if(cf) cf.addEventListener("click", function(){ $("loanModal").classList.remove("show"); takeLoan29(LOANSEL29.tier); });
+  var cc = $("loanCancel"); if(cc) cc.addEventListener("click", function(){ $("loanModal").classList.remove("show"); });
+  var md = $("loanModal"); if(md) md.addEventListener("click", function(e){ if(e.target === this) this.classList.remove("show"); });
+})();
+function openLoanConfirm29(){
+  var C = CONFIG.r29, t = C.loanTiers[LOANSEL29.tier];
+  var act = CASH.loans.filter(loanActive29);
+  var estInt = t.principal * t.annualRate * t.days / 365;
+  var blocked = act.some(function(l){ return l.status === "overdue"; }) ? "当前有逾期贷款未清偿——须先补还逾期（有可用现金会自动优先补还），本次不能放款。"
+    : (act.length >= C.maxLoans ? "未偿笔数已达上限 " + C.maxLoans + " 笔——先还清一笔再借。" : null);
+  $("loanBody").innerHTML = "贷款金额 <b>" + fmtMoney(t.principal) + "</b> · 期限 <b>" + t.days + " 仿真日</b> · 年化利率 <b>" + (t.annualRate * 100).toFixed(1) + "%</b>（按仿真日计提：本金 × 年化 ÷ 365 × 天数，进当前产品成本台账）<br>预计到期利息约 <b>" + fmtMoney(estInt) + "</b> · 到期应还约 <b>" + fmtMoney(t.principal + estInt) + "</b>，到期自动还款（先息后本）。<br>当前现金 <b>" + fmtMoney(cashBalance29()) + "</b> · 未偿本金 " + fmtMoney(outstandingPrincipal29()) + "（" + act.length + " / " + C.maxLoans + " 笔）。<br>还款下限与逾期处置：自动还款最多把余额压到 <b>" + fmtMoney(C.cashFloor) + "</b>；不足部分转逾期（利率 ×" + C.overdueRateMult + " 继续计提、期间禁新贷），后续有可用现金每步优先补还——不会凭空扣成负无下限。" + (blocked ? "<br><b>⚠ " + blocked + "</b>" : "");
+  var cfBtn = $("loanConfirm"); if(cfBtn) cfBtn.disabled = !!blocked;
+  $("loanModal").classList.add("show");
+  return !blocked;
+}
+
 /* ================= R16 · 读数口与回归探针包 =================
  * __r16()：本轮两项交付的单一读数口（DrawCall 分区 + 原料市场/采购）。
  * __r16Probe：定点推进工具（step/pump 同既有口径；setIdx 定点压价格指数；
@@ -11265,7 +11518,8 @@ function saveCapture(){
     stress: pick25(STRESS, ["records", "rawCutUntil", "surgeUntil", "powerLeft"]),
     staff: STAFF, shiftTotals: SHIFT.totals,
     palRate: CONFIG.r14.rateCasesPerMin,
-    esg: ESG, mix: { defaultPid: MIX.defaultPid }, mixstat: MIXSTAT   /* R26：废水子账 + 组合建议默认与分产品结算统计 */
+    esg: ESG, mix: { defaultPid: MIX.defaultPid }, mixstat: MIXSTAT,   /* R26：废水子账 + 组合建议默认与分产品结算统计 */
+    cash29: clone25(CASH)   /* R29：现金/贷款状态（贷款为纯数据；余额是派生值，恢复后按公式与未偿自动一致；旧存档无此字段时保持重置态） */
   };
 }
 function saveBuildEnvelope(){
@@ -11368,6 +11622,7 @@ function saveRestore(p){
   if(p.esg) ESG.wasteM3 = p.esg.wasteM3 || 0;   /* R26：旧存档无此字段时保持 0 */
   if(p.mix) MIX.defaultPid = p.mix.defaultPid || null;
   if(p.mixstat) PRODUCTS.forEach(function(pp26){ if(p.mixstat[pp26.id]) MIXSTAT[pp26.id] = clone25(p.mixstat[pp26.id]); });
+  if(p.cash29) assignInto25(CASH, clone25(p.cash29));   /* R29：现金/贷款回填（余额派生口径下，恢复后余额与未偿与存档刻自动一致，往返探针验之） */
   /* 交接垛可见性是事件驱动的（AGV 落托亮 / 叉车取货灭 / 重置全灭），没有逐帧同步——
    * 必须在在途托归位全部完成之后再按 LOGI.handover 显式对齐：归位放进交接位的托盘
    * 若垛体不可见，叉车取货条件 hs.g.visible 永假、出库链会死锁（R25 探针实测抓到） */
@@ -11733,6 +11988,80 @@ window.__r28Check = function(){
   var out = {}; Object.keys(c27).forEach(function(k){ out[k] = c27[k]; });
   out.r28 = window.__r28();
   out.navGate = window.__r28NavGateLast || { pass: null, note: "本会话尚未跑 __r28Probe.navGate()——回归包要求先跑净距门再读本项" };
+  return out;
+};
+
+/* ================= R29 · 读数口 / 探针 / 回归包 =================
+ * __r29()：现金审计（余额构成四项）+ 季节当前值 + 最近一单四路因子明细 + 目标。
+ * __r29Probe.cashRun()：贷款全周期实跑——放款到账差 = 本金、泵送后计提利息 >0、
+ *   区间恒等（Δ余额 = Δ利润 + Δ净借款 + Δ应付利息，独立快照路径）≤¥0.5、到期
+ *   自动结清、逾期路径（临时把还款下限抬到余额之上 → overdue + 告警在场 → 恢复
+ *   下限后自动补还结清）。
+ * __r29Probe.seasonRun()：同口径采样到达间隔生成器（满意度窗回先验、促销/爆单
+ *   同条件）——夏季峰值日 vs 冬季谷值日各 20,000 次采样，到达率（1/均值间隔）
+ *   之比与需求因子之比的相对误差须 <5%；现场（simMin/满意度窗）跑后恢复。
+ * __r29Check() = R28 全家桶 + r29 读数 + navGate 透传。 */
+window.__r29 = function(){
+  var se = seasonInfo29(S.simMin);
+  return { cash: cashAudit29(), season: { name: se.name, doy: se.doy, demand: Math.round(se.demand * 1000) / 1000, price: Math.round(se.price * 1000) / 1000 },
+           factors: { interval: SEASON29.lastIntervalFactors, size: SEASON29.lastSizeFactors, lastArrival: SEASON29.lastArrival },
+           cfg: CONFIG.r29 };
+};
+window.__r29Probe = {
+  cashRun: function(){
+    if(!S.running){ S.running = true; var pb = $("playBtn"); if(pb) pb.textContent = "⏸ 暂停"; }
+    var out = {};
+    var b0 = cashBalance29(), p0 = totalProfit(), nb0 = CASH.disbursed - CASH.repaidPrincipal, pay0 = interestPayable29();
+    out.takeOk = takeLoan29(0);
+    out.disburseDelta = Math.round((cashBalance29() - b0) * 100) / 100;
+    var loan = CASH.loans[CASH.loans.length - 1];
+    for(var k = 0; k < 6; k++) window.__pumpSim(120);
+    out.interestAccrued = Math.round(loan.accrued * 100) / 100;
+    var b1 = cashBalance29(), p1 = totalProfit(), nb1 = CASH.disbursed - CASH.repaidPrincipal, pay1 = interestPayable29();
+    out.intervalDiff = Math.round(((b1 - b0) - ((p1 - p0) + (nb1 - nb0) + (pay1 - pay0))) * 100) / 100;
+    loan.dueMin = S.simMin + 0.5;
+    window.__pumpSim(30);
+    out.afterMaturity = { status: loan.status, interestPaid: Math.round(CASH.interestPaid * 100) / 100, outstanding: Math.round(outstandingPrincipal29() * 100) / 100 };
+    out.take2 = takeLoan29(2);
+    var loan2 = CASH.loans[CASH.loans.length - 1];
+    var keepFloor = CONFIG.r29.cashFloor; CONFIG.r29.cashFloor = 1e12;
+    loan2.dueMin = S.simMin + 0.5;
+    window.__pumpSim(30);
+    out.overdue = { status: loan2.status, alert: alerts23().some(function(a){ return a.txt.indexOf("贷款逾期") >= 0; }) };
+    CONFIG.r29.cashFloor = keepFloor;
+    window.__pumpSim(60);
+    out.afterCure = { status: loan2.status, outstanding: Math.round(outstandingPrincipal29() * 100) / 100 };
+    out.audit = cashAudit29();
+    out.ok = !!(out.takeOk && Math.abs(out.disburseDelta - CONFIG.r29.loanTiers[0].principal) < 0.01 && out.interestAccrued > 0 &&
+      Math.abs(out.intervalDiff) <= 0.5 && out.afterMaturity.status === "repaid" && out.take2 &&
+      out.overdue.status === "overdue" && out.overdue.alert && out.afterCure.status === "repaid");
+    return out;
+  },
+  seasonRun: function(){
+    var keepMin = S.simMin, keepNext = SAT.nextArrivalMin;
+    var keepOut = SAT.orderOutcomes, keepQc = SAT.qcOutcomes;
+    SAT.orderOutcomes = CONFIG.r18.sat.priorOnTime.slice(); SAT.qcOutcomes = CONFIG.r18.sat.priorQc.slice(); satRecompute();
+    function sample(dayIdx){
+      S.simMin = dayIdx * 1440 + 480;
+      var n = 20000, sum = 0;
+      for(var i = 0; i < n; i++) sum += satArrivalInterval();
+      var se = seasonInfo29(S.simMin), meanIv = sum / n;
+      return { season: se.name, demand: Math.round(se.demand * 1000) / 1000, price: Math.round(se.price * 1000) / 1000,
+               meanInterval: Math.round(meanIv * 100) / 100, ratePerMin: Math.round(1 / meanIv * 10000) / 10000 };
+    }
+    var summer = sample(CONFIG.r29.season.peakDoy);
+    var winter = sample(CONFIG.r29.season.peakDoy + CONFIG.r29.season.yearDays / 2);
+    var rateRatio = summer.ratePerMin / winter.ratePerMin, factorRatio = summer.demand / winter.demand;
+    var err = Math.abs(rateRatio - factorRatio) / factorRatio;
+    S.simMin = keepMin; SAT.nextArrivalMin = keepNext; SAT.orderOutcomes = keepOut; SAT.qcOutcomes = keepQc; satRecompute();
+    return { summer: summer, winter: winter, rateRatio: Math.round(rateRatio * 1000) / 1000,
+             factorRatio: Math.round(factorRatio * 1000) / 1000, errPct: Math.round(err * 10000) / 100, ok: err < 0.05 };
+  }
+};
+window.__r29Check = function(){
+  var c28 = window.__r28Check();
+  var out = {}; Object.keys(c28).forEach(function(k){ out[k] = c28[k]; });
+  out.r29 = window.__r29();
   return out;
 };
 
