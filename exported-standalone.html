@@ -110,10 +110,11 @@ button{font-family:inherit;cursor:pointer}
 body.control-hidden .control-bar{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-50%) translateY(18px)}
 body.dispatch-hidden .dispatch{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(18px)}
 .show-stack{position:fixed;right:14px;bottom:var(--bottom-lift);z-index:26;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
-.panel-show{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border-radius:999px;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13px;font-weight:800;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity .24s ease,transform .24s ease,visibility .24s ease;min-height:44px}
+/* R31：唤回钮改 display 硬切换——未激活时 display:none 彻底退出渲染/无障碍树（旧 opacity:0+visibility:hidden 会被可达性检查判为「不可操作控件」，且在部分 webview 里仍占位）；激活时才是真实可点按钮，44px 热区与 --bottom-lift 手势安全区抬升不变 */
+.panel-show{display:none;align-items:center;gap:8px;padding:11px 15px;border-radius:999px;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);box-shadow:var(--shadow);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13px;font-weight:800;min-height:44px}
 .panel-show:active{transform:scale(.96)}
-body.dispatch-hidden .panel-show.dispatch-show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
-body.control-hidden .panel-show.console-show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
+body.dispatch-hidden .panel-show.dispatch-show{display:inline-flex}
+body.control-hidden .panel-show.console-show{display:inline-flex}
 /* R4 画质自动降级提示：平时隐藏，sampleFps 触发降级时出现（与帧率显示开关无关），带手动恢复钮 */
 .quality-notice{position:fixed;top:122px;left:50%;transform:translateX(-50%);z-index:17;padding:9px 12px;border-radius:12px;display:none;align-items:center;gap:10px;max-width:92vw;font-size:12.5px;font-weight:700}
 .quality-notice.show{display:flex}
@@ -349,6 +350,14 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
   .tc-btns{flex-direction:row}
   .tc-btns .btn{flex:1;padding:10px 12px}
   .btn{min-height:40px}
+  /* R31 触控总规矩：≤900px 全部可点元素热区 ≥40px（与 R11 贴底 --bottom-lift 合并为一条，见 R31 节） */
+  .hbtn{min-height:40px;display:inline-flex;align-items:center}
+  .seg button{min-height:40px}
+  .prod{min-height:40px}
+  .dispatch .dispatch-hide{min-height:40px}
+  .dispatch h3 button{min-height:40px;min-width:40px}
+  input[type=range]{height:32px}
+  .sec-label{font-size:11.5px}
   .seg button{padding:9px 11px}
   .info-card{width:min(264px,calc(100vw - 24px))}
   .control-bar{max-height:42vh;overflow-y:auto;overflow-x:hidden}
@@ -899,8 +908,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">月度汇总（归档口径）</div><div class="v" id="trendSummary" style="font-size:13px">尚无归档</div></div>
     </div>
 
-    <h3>经营复盘（R30 · 一键汇算）</h3>
-    <p class="hint">选区间点「生成」：核心指标（产量 / 利润 / 现金净流量 / 满意度均值 / 罚金与促销让利 / 碳排）全部由日报归档与当日做差同源汇算；自动归因五项（停机六桶最大项 / 告警最长未确认 / 满意度变化主因 / 库龄最老项 / 瓶颈运力比最紧项）每条带源数据具体数字。当日 = 未归档的实时段；近 7 / 30 天 = 带结构化数据的归档条目，归档不足区间时如实标注实际天数。</p>
+    <h3>经营复盘（R30 · 一键汇算 + R31 环比）</h3>
+    <p class="hint">选区间点「生成」：核心指标（产量 / 利润 / 现金净流量 / 满意度均值 / 罚金与促销让利 / 碳排）全部由日报归档与当日做差同源汇算；自动归因五项（停机六桶最大项 / 告警最长未确认 / 满意度变化主因 / 库龄最老项 / 瓶颈运力比最紧项）每条带源数据具体数字。当日 = 未归档的实时段；近 7 / 30 天 = 带结构化数据的归档条目，归档不足区间时如实标注实际天数。R31 起全文带「环比」行：与上一同长周期（当日对最近一个归档日、近 N 天对上一个 N 天窗）逐项对比增减幅，无上一周期归档时如实标注不可比。</p>
     <div class="seg" id="reviewSeg" role="group" aria-label="复盘区间">
       <button data-review="today" class="on">当日</button><button data-review="d7">近 7 天</button><button data-review="d30">近 30 天</button>
     </div>
@@ -1014,7 +1023,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R28 PDCA 打包轮（作业态 DrawCall 攻坚 + 防撞断言常驻化 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R25 复检口径下待机 637 达标，但四线作业态 995–1020、靠自适应降级才收敛——作业态本身没有结构护栏；同时 R27 的防撞定案靠一次性复测、未固化为常驻断言。新参数全在 <b>CONFIG.r28</b>（workTarget 800 / idleTarget 650 / runtimePostProcess / truckLoadInstances / navGate），读数口 <b>window.__r28()</b>，探针口 <b>window.__r28Probe</b>（workRun / navGate），回归包 <b>window.__r28Check()</b>。<b>【A 项 · 作业态攻坚】</b>：先普查后动手（drawCensus28 按注册根 × 几何类型计数）——定案：瓶流（110/线）、箱流（7/线）、码垛箱（40）、货架托均已是 InstancedMesh，不是大头；大头是<b>第 4 条线整组从未走过建场后处理</b>：它在完工事件点运行时新建，建场尾部的阴影投射体审计（R16）、静态子件深合并（R7）、farCull 候选收集（R18）一件都没轮到，实测一组 330 个原始网格全量渲染 + 68 个投阴影，而建场三线同组经后处理后仅 ≈95 网格 + 8 投阴影。修法 = 完工事件点补走同三件（postProcessRuntime28：casterAuditSubtree28 按 r16 同阈值审计 → mergeLineStatic28 线内深合并，被驱动件/点选盒/透明件/热材质件按 collectDynamicRegistry 同判定排除、dyn.stack 等状态显隐件不合 → restoreFarCullVis28 还原自然可见性后整表重收 + farCullStep 立即落位；line4Reset 移除整组后同样整表重收防陈条），口径逐项与建场一致、降级策略一字未动；另把卡车装载箱 8 个逐件网格改单个 InstancedMesh（显隐为严格前缀式，count = 应显数逐位等价、位姿同位同序）。实测（同法：lineRun 建满四线 + 全线生产泵送 + restoreQuality 后实渲一帧读 renderer.info）：作业态 calls <b>991 → 734</b>（renderables 1018 → 761、casters 166 → 112），待机 <b>637</b> 不回退，前三贡献变化：第 4 条线 330 → 95 网格（深合并 22 桶）且投阴影 68 → 8（审计 cut 60）、farCull 候选 301 → 339（新线小件纳入俯瞰剔除）、卡车装载箱 8 → 1 次绘制。<b>【B 项 · 防撞断言常驻化】</b>：__r28Probe.navGate() 把 R27 净距复测固化为断言门——口径 = 豁免口径版（车辆侧无豁免、navGate.vehicleExempt 恒 false；人员仅 crewWork 作业接触单列、半径 r27.crewWorkRadius=0.45），复跑 __r27Probe.navRun() 两段（完整波次 + 2× 混合车队），判定 = 两段四类最小值（豁免外）全 ≥0 且四类 neg 负样本全 0，结果存 __r28NavGateLast 并进 __r28Check().navGate；任一轮复测出现豁免外负值即判不通过：汇报必须标红并自动列为下一轮 P0。<b>规矩（自 R28 起常驻）：改路点 / 车队 / 人员路径的轮次，交付必须附 navGate 数字，无数字不算交付。</b><b>【C 项 · 例行回归】</b>：16 项沿 R27 清单 + 净距复测以 navGate 首跑入列，数字写交付汇报。全部计时走仿真分钟（总表第 29 项：后处理为完工事件点一次性动作、navGate 为探针读数口径，均无独立计时）。</div></div>
       <div class="dcell wide"><div class="l">R29 PDCA 打包轮（现金流与贷款 + 季节性需求 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：钱账散在五本分产品台账里，看不见「手里到底有多少钱」；需求与价格全年一条直线，没有季节。参数全在 <b>CONFIG.r29</b>（期初现金/警戒线/还款下限/逾期倍数/三档贷款/年长与季节曲线），读数口 <b>window.__r29()</b>，探针口 <b>window.__r29Probe</b>（cashRun / seasonRun），回归包 <b>window.__r29Check()</b>。<b>【A 项 · 现金账（汇总层，台账口径一分未动）】</b>：余额是<b>派生值</b>——cashBalance29() = 期初现金 initialCash ¥500,000 + totalProfit()（全台账利润：销售收入、原料采购 procure、扩容/四线/码垛投资、备件 spare、保养与抢修、人工与固定费率、罚金 fine、能耗 util 全在既有台账内，促销让利已在收入净额中）+ 净借款（CASH.disbursed − repaidPrincipal）+ 应付未付利息 interestPayable29()。利息计提进当前产品 fixedCost 使利润即时反映、但现金未出，故派生式把应付利息加回；还款时本息同减、余额同额下降——恒等式由构造保证，探针以 dayrepDelta 的独立快照路径验区间分解（Δ余额 = Δ利润 + Δ净借款 + Δ应付利息）。呈现：抽屉「资金与现金流」四格（现金余额 / 当日净现金流 / 累计利息（计提/实付）/ 未偿本金+应付利息）+ 贷款明细 + 日报三处同源（抽屉格、下载 txt「资金（当日）」行、归档 data 带 cashEnd/cashFlow/cashInt 与摘要行）。<b>【贷款】</b>：调度台三档（¥10 万/30 天/7.2% · ¥30 万/60 天/8.4% · ¥60 万/90 天/9.6%），点申请只弹确认（金额/期限/年化/预计利息/到期应还/下限与逾期处置全明示），确认才到账；stepCash29 在 step 内（换型/停电分支之前）按仿真日计提（本金 × 年化 ÷ 365 × 天数），到期 attemptRepay29 自动还款：可用额 = 余额 − <b>cashFloor ¥−150,000</b>，先息后本。<b>下限与逾期处置（写明）</b>：自动还款绝不把余额压过 cashFloor；不足部分转 overdue——利率 ×1.5 继续计提、告警中心 bad 级「贷款逾期」、期间禁新贷、每步以可用现金优先补还；经营本身把余额打到负数是真实亏损（告警「现金为负」bad / 低于警戒线 ¥80,000 为「资金紧张」warn，均接 alerts23 既有信号面、不新造事件）。同时未偿上限 2 笔。存档 cash29 纯数据随档（余额派生口径下恢复后与未偿自动一致，往返探针验），演示日不触现金状态、照常兼容；重置 cashReset29 清贷款回期初。<b>【B 项 · 季节性需求】</b>：seasonInfo29(simMin) 纯派生——日序 floor(simMin/1440)、年内日对 yearDays=360 取模、因子 = 1 + amp·cos(2π(doy − peakDoy)/年长)，peakDoy=135（盛夏）：需求 amp 0.30（夏 1.30 / 冬 0.70）、价格 amp 0.15（夏 1.15 / 冬 0.85）；季节名按年内日四分。接入三处：客户单到达间隔 ÷ 需求因子（satArrivalInterval）、单规模 × 需求因子（satTickArrivals）、市场指数均值回归目标 1 → 价格因子（stepMarket，钳制 [0.70,1.42] 不变）。与满意度/促销/爆单三路调制<b>叠乘不冲突</b>：每单生成时四路因子（间隔与规模各一组）记入 SEASON29.last*Factors，抽屉资金区「最近客户单因子明细」与 __r29().factors 可拆查，客户单日志同带季节因子。调度台「季节」区显示当前季节、年内日与需求/价格因子。探针 seasonRun：满意度窗回先验后在峰值日/谷值日各采样到达间隔生成器 20,000 次，到达率比与因子比相对误差须 &lt;5%（生成器即到达过程本身，随机间隔分布两季同条件）。<b>【C 项 · 例行回归】</b>：沿 R28 清单 + navGate 常驻门 + DrawCall 双态，逐项数字写交付汇报。全部计时走仿真分钟（总表第 30 项）。</div></div>
       <div class="dcell wide"><div class="l">R30 PDCA 打包轮（经营复盘报告 + 新手任务链 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：数据攒了 29 轮，缺一个「把账讲成人话」的出口；新玩家面对满屏系统也没有循序入口。参数全在 <b>CONFIG.r30</b>，读数口 <b>window.__r30()</b>，探针口 <b>window.__r30Probe</b>（reviewRun / tasksRun），回归包 <b>window.__r30Check()</b>。<b>【A 项 · 经营复盘（REVIEW30）】</b>：抽屉「经营复盘」节——区间三档（当日 / 近 7 天 / 近 30 天），汇算只读既有数据源：当日 = dayrepDelta() 实时做差，近 N 天 = DAYREP.history 带 data 归档求和。为此 archiveDayData 新增两字段（promoYuan 让利、down 停机六桶，与当日做差同源落盘）；R30 前旧归档缺字段的条目不计入该项、文中标注覆盖数（如「让利覆盖 3/5 天」）。核心指标六项（产量 / 利润 / 现金净流量 / 满意度均值（归档 satAvg 均值，当日走 SAT 采样均值）/ 罚金 + 促销让利 / 碳排（esgFromDelta 同源，归档读 carbonKg）+ 废水）。<b>自动归因五项、每条带源数字</b>：停机 = 六桶最大项（桶名/分钟/占停机 %/运行时长）；告警 = ALERTC.day 当日最长未确认 + 触发/已确认/当前未确认（跨日不累计、文中标明当日口径）；满意度主因 = 区间首尾 satAvg 变化 + SAT.day 四路 Δ（逾期/抽检/罚金/按时）取负向最大者点名；库龄 = ageSummary().oldest（产品/货位/天数/保质期耗 %/临期滞销托数）；瓶颈 = 码垛运力比 palUtilization23 / 货架占用 / 暂存占用三候选取最大并给处置分档（≥1 硬约束 / ≥0.85 预警）。归档不足区间在标题行如实标注实际天数。全文可下载（Blob 文本、「经营复盘-&lt;区间&gt;-day&lt;N&gt;.txt」，与抽屉全文同源）。<b>【B 项 · 新手任务链（TASKS30）】</b>：调度台顶部小卡，10 个循序目标，<b>判定全部挂既有事件点、不另设轮询计数</b>——完成第一单（satOnOrderSettled）/ 跑满一个班次（SHIFT.changes 交接）/ 排空换型（startChangeover 的 drained 分支，与 CO_STATS.drained 同点）/ 确认告警（ackAlert24 成功路径）/ 完成保养（pmOnMaintDone）/ 发出波次（WAVES++ 同点）/ 导出存档（saveExport）/ 打开大屏（enterBigScreen）/ 完成投资（completeExpansion / completeLine4 / completePalUp 三完工点任一）/ 归档日报（archiveDay）。taskMark30 幂等只记首次：完成时刻 = 事件仿真分钟、写生产日志（带进度 n/10）、卡上打勾带「第 X 天 HH:MM」；全清置 celebrated + 祝贺日志与卡内祝贺行。隐藏两路：卡上 ✕ 与抽屉设置区开关（taskToggleBtn）共用 TASKS30.hidden，隐藏不弹回、进度保留。存档 payload 加 tasks30（done/hidden/celebrated 纯数据，旧存档无此字段保持当前态）；重置 tasksReset30 清 done/celebrated、保留 hidden（与 UIPREFS 同口径）。渲染走 renderKpis 节奏 + 签名早退（renderTasks30）。<b>【C 项 · 例行回归】</b>：沿 R29 清单 + 现金账/季节抽测 + 存档往返含任务进度，逐项数字写交付汇报。全部计时走仿真分钟（总表第 31 项）。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致</div></div>
+      <div class="dcell wide"><div class="l">R31 PDCA 打包轮（复盘环比 + 唤回钮可达性 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R30 复盘只有绝对数、看不出「比上期好还是差」；同时审计连续两轮点名两颗面板唤回钮（显示调度台 / 显示控制台）在 opacity 隐藏态下被判不可操作。参数在 <b>CONFIG.r31</b>，读数口 <b>window.__r31()</b>，探针口 <b>window.__r31Probe.momRun</b>，回归包 <b>window.__r31Check()</b>。<b>【A 项 · 复盘环比（REVIEW31）】</b>：reviewBuild 新增上一周期汇算——当日 → 最近 1 个归档日；近 7/30 天 → 紧邻的上一个同长归档窗（reviewAggFromArchives 加 skip 参数、同源求和，旧调用不变）。全文在核心指标行后多一行「环比」：产量 / 利润 / 现金净流量 / 罚金 / 碳排逐项给本期值 + 环比百分比（分母取上期绝对值；上期为 0 的项标注「不计增幅」）；无上一周期归档时整行如实写「尚无上一周期归档可比」并给下一步提示，绝不拿 0 冒充上期。prev 随 REVIEW30.lastData 落盘、下载文本同源。<b>【B 项 · 唤回钮可达性】</b>：.panel-show 由 opacity:0 + visibility:hidden 改为 <b>display:none ↔ inline-flex 硬切换</b>——未激活时彻底退出渲染与无障碍树（不再被判「不可操作控件」、不在 webview 里占位拦截），激活时是真实可点按钮；44px 热区、--bottom-lift 手势安全区抬升、两钮独立显隐（各唤各的）全部不变，代价是唤回钮出现时不再有淡入动画。<b>【C 项 · 例行回归】</b>：沿 R30 清单 + momRun 环比对账 + navGate 常驻门 + 双态 DrawCall，逐项数字写交付汇报。全部计时走仿真分钟（总表第 32 项）。</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1099,6 +1109,9 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R28 作业态 DrawCall + 防撞常驻：window.__r28Probe.workRun()——workCalls ≤800 且 idleCalls ≤650（同法：四线满配生产 + restoreQuality 后实渲一帧读 renderer.info）、__r28Post.merge 第 4 条线 before 330 → after ≤120、audit.cut ≥50、farCull 候选较建场 +≥30；卡车装车中 __r28().truckLoadInstanced = true 且装载箱随 loadCases 前缀显形（count 同步）；window.__r28Probe.navGate() pass = true（两段四类最小值 ≥0、四类 neg 全 0、exempt.crewWork 单列计数在返回值内）——此门自 R28 起为每轮常驻回归项，改路点/车队/人员路径的轮次必须附 navGate 数字；window.__r28Check() 全绿、回归 16 项数字齐全、时间基准总表已续第 29 项</li>
       <li>R29 现金/贷款 + 季节：window.__r29Probe.cashRun() ok = true（放款到账差 = 本金、计提利息 >0、区间恒等 |Δ余额 −（Δ利润+Δ净借款+Δ应付利息）| ≤¥0.5、到期自动结清、逾期路径 status=overdue 且告警中心有「贷款逾期」、恢复下限后自动补还结清）；调度台选档点「申请贷款」只弹确认（金额/期限/年化/预计利息/到期应还/还款下限与逾期处置全明示），确认后 __r29().cash.loans +1 笔且余额同额上升；压低余额（大额投资连开）触发告警中心「资金紧张/现金为负」；window.__r29Probe.seasonRun() ok = true（夏/冬到达率比与需求因子比相对误差 <5%）；调度台显示当前季节与需求/价格因子、客户单日志带季节因子、抽屉资金区有最近一单四路因子明细；存档往返（带未偿贷款）后 __r29().cash 的 balance/outstanding 与存档前一致；window.__r29Check() 全绿、回归逐项数字齐全、时间基准总表已续第 30 项</li>
       <li>R30 复盘 + 任务链：抽屉「经营复盘」三档各生成一次——window.__r30Probe.reviewRun() ok = true（当日对 dayrepDelta、区间对归档 data 独立重算，产量/利润/现金/罚金/让利/碳排差全 <¥0.011；归因恰 5 条且每条带数字；归档不足时标题行带「实际归档 N 天」）；下载文本与抽屉全文同源；调度台任务卡 10 项初始全「待完成」——真实触发订单结算/交接班/排空换型/告警确认/保养完成/波次/导出/大屏/投资完工/日报归档后逐项打勾带完成时刻且生产日志有「🎯 新手任务完成」行，全清出祝贺行；window.__r30Probe.tasksRun() ok = true（大屏/导出/归档三项由真实函数直触打勾、隐藏后卡片 display:none、存档往返后 done 计数与 hidden 不丢）；卡上 ✕ 与抽屉设置开关都能隐藏且不弹回；重置后进度清零、hidden 保留；window.__r30Check() 全绿、回归逐项数字齐全、时间基准总表已续第 31 项</li>
+      <li>R31 环比 + 唤回钮：window.__r31Probe.momRun() ok = true（连归三天后当日/近 7 天复盘的 prev 与独立重算差全 &lt;¥0.011、全文带「环比」行；无归档新会话生成当日复盘时 prev = null 且文中带「尚无上一周期归档可比」）；隐藏调度台后「📋 调度台」唤回钮真实可见可点（computed display = inline-flex）、点击只唤回调度台且控制台状态不变，隐藏控制台同理；window.__r31Check() 全绿、navGate 与双态 DrawCall 不回退、时间基准总表已续第 32 项</li>
+      <li>R31 移动专项 + 导览：window.__r31Probe.cssRun() ok = true（≤900px 媒体块 .btn/.hbtn/.seg button/.prod/.dispatch-hide 五处 min-height ≥40 声明在位、贴底五选择器全引用 var(--bottom-lift)、调度台/控制台高度上限 46vh/42vh 在位、唤回钮 display 硬切换在位）；手机视口实点——顶栏「数据」钮、产品钮、分段钮热区可点无误触，调度台展开不顶满屏（46vh 内滚），大屏模式点屏幕任意处（含 KPI 带）可退出；window.__r31Probe.tourRun() ok = true（站数 13 = CONFIG.r31.tourStops、wp 1..13 连续、__tourStopUs 严格递增、新三站齐全、过时词零命中）；巡游实跑新三站字幕与机位对位（码垛枢纽看码垛机与暂存位、扩容投资看货架排、驾驶舱回俯瞰）；移动视口 __r31().mobile.perfTier = "mobileLow"、桌面口径参数未被移动调整污染</li>
+      <li>R31 移动专项 + 导览：window.__r31Probe.cssRun() ok = true（≤900px 媒体块 .btn/.hbtn/.seg button/.prod/.dispatch-hide 五处 min-height ≥40 声明在位、贴底五选择器全引用 var(--bottom-lift)、调度台/控制台高度上限 46vh/42vh 在位、唤回钮 display 硬切换在位）；手机视口实点——顶栏「数据」钮、产品钮、分段钮热区可点无误触，调度台展开不顶满屏（46vh 内滚），大屏模式点屏幕任意处（含 KPI 带）可退出；window.__r31Probe.tourRun() ok = true（站数 13 = CONFIG.r31.tourStops、wp 1..13 连续、__tourStopUs 严格递增、新三站齐全、过时词零命中）；巡游实跑新三站字幕与机位对位（码垛枢纽看码垛机与暂存位、扩容投资看货架排、驾驶舱回俯瞰）；移动视口 __r31().mobile.perfTier = "mobileLow"、桌面口径参数未被移动调整污染</li>
     </ul>
   </div>
 </aside>
@@ -1710,6 +1723,18 @@ var CONFIG = {
    * 任务链判定全挂既有事件点（TASK_DEFS30.src 注明），不另设计数。 */
   r30: {
     reviewDays7: 7, reviewDays30: 30
+  },
+  /* ---- R31：移动端专项 + 导览扩容 + 复盘环比 + 唤回钮 display 硬切换 ----
+   * 环比口径：当日 → 最近 1 个归档日；近 N 天 → 紧邻的上一个 N 天归档窗，
+   * 全部读 DAYREP.history 的 data 字段同源求和，不新造数据源。
+   * 移动总规矩（与 R11 安全区合并）：贴底元素一律走 --bottom-lift；
+   * ≤900px 下全部可点元素热区 ≥ touchMinPx（40）。导览站数以 tourStops 为准，
+   * TOUR_STOPS 长度与 UI/读数口计数都读它校验，不再各写一份。 */
+  r31: {
+    momMetrics: ["finished", "profit", "cashFlow", "fine", "carbonKg"],
+    touchMinPx: 40,
+    tourStops: 13,
+    dispatchMaxVh: 46, controlMaxVh: 42
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -8840,12 +8865,15 @@ var TOUR_STOPS = [
   { wp:2, u:0.20, dwell:3.4, title:"调配区", text:"调配罐群各有分工：溶糖罐以约 80℃ 热水化糖，糖浆暂存、浓缩液、水处理缓冲各就其位，按配方顺序汇入主调配罐（点任一调配罐可看批次卡：当前第几步、每料投没投、搅拌还剩几分钟）。罐数在调度台可调——罐太少，这里就是全厂第一个瓶颈。" },
   { wp:3, u:0.30, dwell:3.4, title:"杀菌 UHT 区", text:"半成品在这里依次经预热、均质、管式杀菌与冷却，再进成排大型无菌罐无菌暂存后送灌装（「杀菌无菌区」机位可看整排大罐）。各段管路随料流逐段亮起料色，UHT 牌与均质牌显示随运行/待机变化的温度、保持时间与均质压力（点无菌罐区看信息卡，含当前在制批次与无菌库存）；无菌罐存量被灌装耗空时产线会饥饿待料，不会无料空转。开启 CIP 后它会周期性停机清洗，全线一起等料，北侧 CIP 站同步供酸、碱与热水。" },
   { wp:4, u:0.40, dwell:3.4, title:"灌装车间", text:"全厂的心脏：多条灌装线并行（线数由 CONFIG.lineCount 决定），旋转灌装、封盖、贴标一气呵成。点任意一条线可以单独停用或抢修，故障只停单线。" },
-  { wp:5, u:0.50, dwell:3.2, title:"包装区", text:"灌装好的瓶子在这里膜包、装箱，再汇集到线末的龙门码垛机：整箱经输送带上成层台，抓手整层夹起、逐层码上托盘（12 瓶/箱 × 5 箱/层 × 5 层 = 一托 300 瓶），满托才滑到下线暂存位等无人车取走。码垛额定 460 箱/分，高于三线包装下线峰值，不会成为瓶颈。" },
-  { wp:6, u:0.60, dwell:3.2, title:"立体仓库", text:"3 排 3 层货架存放成品，箱数随累计产量增长。仓库里只走无人驾驶托盘车：沿黄色专用车道按逐个货位存放成品：包装下线的托盘先在下线暂存位码好，无人托盘车叉起、沿黄色车道送进具体货位，库存才增加；出库永远取批次最老的那一托（颜色越深批次越老，取货时货位会亮橙色框），送到月台内侧交接位给叉车装车。叉车不再进仓库。数据抽屉有两台车的实时任务播报。" },
+  { wp:5, u:0.50, dwell:3.2, title:"包装区", text:"灌装好的瓶子在这里膜包、装箱，再汇集到线末的龙门码垛机：整箱经输送带上成层台，抓手整层夹起、逐层码上托盘（12 瓶/箱 × 5 箱/层 × 5 层 = 一托 300 瓶），满托才滑到下线暂存位等无人车取走。码垛额定 460 箱/分（可投资改造到 640），与包装下线峰值的运力比在数据抽屉和告警中心有实时口径——产线全开时它会成为瓶颈，下一站就停在它跟前看。" },
+  { wp:6, u:0.60, dwell:3.2, title:"立体仓库", text:"货架逐货位存放成品（初始 3 排 99 个货位，可投资扩容、最多 165 位），库存随产销增减。仓库里只走无人驾驶托盘车：沿黄色专用车道按逐个货位存放成品：包装下线的托盘先在下线暂存位码好，无人托盘车叉起、沿黄色车道送进具体货位，库存才增加；出库永远取批次最老的那一托（颜色越深批次越老，取货时货位会亮橙色框），送到月台内侧交接位给叉车装车。叉车不再进仓库。数据抽屉有各台 AGV 的实时任务播报。" },
   { wp:7, u:0.65, dwell:3.2, title:"智慧物流", text:"把镜头停在仓库与包装线之间看一会儿：成品先经码垛机整层码成托、滑到下线暂存位（黄框），入库 AGV 开过来叉起、沿专用车道送进货架的具体货位——货架上多一托，必然对应码垛机码了一托、车跑了一趟；发货波次到了，出库 AGV 进巷道取走最老批次那托，送到交接位，月台叉车只在外侧取货装车。暂存位积压 = AGV 运力瓶颈，和真实工厂一样摆在明面上（「物流特写」机位就是停在这里）。" },
-  { wp:8, u:0.70, dwell:3.2, title:"装卸月台", text:"成品从这里装车出厂：托盘车把货放到月台内侧交接位就离开，叉车只在月台台面与外场活动、从交接位取货装车，卡车倒车进位、停留装货、再驶离循环——车辆分区行驶，不再有车钻进车间撞设备。顶部一条状态只保留产量、产能、瓶颈和利润，其余数字都在数据抽屉。" },
-  { wp:9, u:0.82, dwell:3.4, title:"公用工程区", text:"厂房北带：水处理、空压站、锅炉蒸汽站与冷库。水、电、蒸汽在账本里分开计量计价（数据抽屉有三行明细），锅炉蒸汽主要供 UHT 杀菌。" },
-  { wp:10, u:0.92, dwell:3.4, title:"质检实验室", text:"理化与微生物检测在这里完成，取样台、培养箱、试剂柜一应俱全。良品率按产品计入账本——实验室不直接产瓶，但决定多少瓶算合格品。" }
+  { wp:8, u:0.68, dwell:3.4, title:"码垛与物流枢纽", text:"贴近看这台龙门码垛机：整箱在成层台攒满一层（5 箱），抓手整层夹起、逐层码上托盘，5 层 25 箱成一托；基础额定 460 箱/分，调度台花 ¥68,000 改造后到 640 箱/分。满托沿出托辊道滑到下线暂存位（6 个位），入库 AGV 随到随取；出库侧 AGV 从货架取最老批次、送交接位给月台叉车。暂存位长期钉满从来不是码垛机慢——是车辆往返节拍跟不上，物流播报里码垛速率、暂存占用和每台车的任务都对得上账。" },
+  { wp:9, u:0.70, dwell:3.2, title:"装卸月台", text:"成品从这里装车出厂：托盘车把货放到月台内侧交接位就离开，叉车只在月台台面与外场活动、从交接位取货装车，卡车倒车进位、停留装货、再驶离循环——车辆分区行驶，不再有车钻进车间撞设备。顶部一条状态只保留产量、产能、瓶颈和利润，其余数字都在数据抽屉。" },
+  { wp:10, u:0.76, dwell:3.4, title:"扩容与投资", text:"这一片是花钱买来的产能：仓库可再扩两排货架（每排 +33 货位 · ¥48,000，初始 99 位、上限 165 位），南侧可新建第 4 条灌装线（¥120,000，建成后全厂峰值随之抬升），码垛机可改造提速（¥68,000）。每笔投资都先弹确认、明示费用与工期，走施工期、完工才投产，支出进成本台账与现金账。先看复盘的瓶颈归因再决定投哪儿——瓶颈不在这儿，钱就白花。" },
+  { wp:11, u:0.82, dwell:3.4, title:"公用工程区", text:"厂房北带：水处理、空压站、锅炉蒸汽站与冷库。水、电、蒸汽在账本里分开计量计价（数据抽屉有三行明细），锅炉蒸汽主要供 UHT 杀菌。" },
+  { wp:12, u:0.92, dwell:3.4, title:"质检实验室", text:"理化与微生物检测在这里完成，取样台、培养箱、试剂柜一应俱全。良品率按产品计入账本——实验室不直接产瓶，但决定多少瓶算合格品。" },
+  { wp:13, u:0.97, dwell:3.6, title:"经营驾驶舱", text:"最后一站回到全厂俯瞰。经营这间厂的仪表都在右上「📊 数据」抽屉里：账本与班次日报同源、经营复盘带自动归因与环比、现金账与贷款、ESG 碳排与废水、批次谱系从调配到出库车辆全链可查；控制台「🖥 大屏模式」把核心 KPI 挂上墙、沿这条巡游轨迹自动环视。产量、利润、满意度、现金四个数一起看，才算真懂这间厂——巡游到此结束，点「▶ 开始生产」接管它。" }
 ];
 var tourDwell = 0, tourPrevT = 0, tourStopIdx = -1;
 function showTourCaption(stop){
@@ -8856,12 +8884,12 @@ function showTourCaption(stop){
 function hideTourCaption(){ $("tourCap").classList.remove("show"); }
 function buildTour(){
   /* route stays over the main aisles with generous clearance above equipment；
-   * 路点顺序与 TOUR_STOPS 一一对应：俯瞰→罐区→调配→UHT→灌装→包装→仓库→智慧物流→月台→公用工程→实验室→回俯瞰 */
+   * 路点顺序与 TOUR_STOPS 一一对应（R31 扩至 13 站）：俯瞰→罐区→调配→UHT→灌装→包装→仓库→智慧物流→码垛枢纽→月台→扩容投资→公用工程→实验室→经营驾驶舱→回俯瞰 */
   var pts = [
-    [-205,155,260],[-76,40,80],[-40,32,64],[-18,28,52],[8,26,62],[54,27,66],[88,36,76],[58,22,44],[46,32,142],[-28,30,6],[32,26,6]
+    [-205,155,260],[-76,40,80],[-40,32,64],[-18,28,52],[8,26,62],[54,27,66],[88,36,76],[58,22,44],[50,17,16],[46,32,142],[126,36,92],[-28,30,6],[32,26,6],[-150,120,215]
   ].map(function(a){ return new THREE.Vector3(a[0],a[1],a[2]); });
   var tgts = [
-    [0,0,2],[-86,5,0],[-44,4,4],[-20,5,-8],[24,2,0],[54,2,4],[100,4,0],[84,3,-4],[38,3,42],[-40,3,-54],[36,3,-52]
+    [0,0,2],[-86,5,0],[-44,4,4],[-20,5,-8],[24,2,0],[54,2,4],[100,4,0],[84,3,-4],[68,3,-12],[38,3,42],[102,3,8],[-40,3,-54],[36,3,-52],[0,0,0]
   ].map(function(a){ return new THREE.Vector3(a[0],a[1],a[2]); });
   tourCurvePos = new THREE.CatmullRomCurve3(pts, true, "catmullrom", 0.3);
   tourCurveTgt = new THREE.CatmullRomCurve3(tgts, true, "catmullrom", 0.3);
@@ -9030,7 +9058,7 @@ function updateCamera(dt){
       var curv = _tourP1.lengthSq() > 0 && _tourP2.lengthSq() > 0 ? _tourP1.angleTo(_tourP2) : 0;
       var speedF = THREE.MathUtils.clamp(1.15 - curv*2.4, 0.38, 1.1);
       tourPrevT = tourT;
-      tourT = (tourT + dt/72*speedF) % 1;
+      tourT = (tourT + dt/84*speedF) % 1;   /* R31：站数 10 → 13，全程行程 72 → 84 秒，保持每站行程节奏（停留 dwell 独立不变） */
       tourCurvePos.getPointAt(tourT, desiredPos);
       tourCurveTgt.getPointAt(tourT, desiredTgt);
       /* 解说点触发：本帧跨过某个 stop.u（处理曲线回绕）且不是正在显示的那个 → 停留 + 上字幕 */
@@ -9694,7 +9722,7 @@ $("tourBtn").addEventListener("click", function(){
   this.classList.add("live"); this.textContent = "⏹ 停止巡游";
   document.querySelectorAll("#viewSeg button").forEach(function(b){ b.classList.remove("on"); });
   tourStopIdx = -1; tourDwell = 0;
-  log("自动巡游开始：沿罐区 → 调配 → UHT → 灌装 → 包装 → 仓库 → 月台 → 公用工程 → 实验室环厂一周，各区会停留并给出解说字幕（可跳过）。拖动画面可随时接管。");
+  log("自动巡游开始：沿罐区 → 调配 → UHT → 灌装 → 包装 → 仓库 → 智慧物流 → 码垛枢纽 → 月台 → 扩容投资 → 公用工程 → 实验室 → 经营驾驶舱环厂一周（共 " + TOUR_STOPS.length + " 站），各站会停留并给出解说字幕（可跳过）。拖动画面可随时接管。");
 });
 function setLines(n){
   n = Math.max(1, Math.min(n, lines.length)); // 钳制到实际产线数，场景预设写超了也不会越界
@@ -12050,8 +12078,8 @@ window.__r28Check = function(){
  * 事件点被调用、不另设轮询计数；完成时刻 = 事件发生的仿真分钟、写生产日志。
  * 进度与隐藏偏好进存档 payload（tasks30）；重置清进度、保留隐藏偏好。 */
 var REVIEW30 = { range: "today", lastText: "", lastData: null };
-function reviewAggFromArchives(days){
-  var es = DAYREP.history.filter(function(h){ return !!h.data; }).slice(0, days);
+function reviewAggFromArchives(days, skip){
+  var es = DAYREP.history.filter(function(h){ return !!h.data; }).slice(skip || 0, (skip || 0) + days);
   var a = { days: es.length, want: days, finished: 0, profit: 0, cashFlow: 0, fine: 0, carbonKg: 0, wasteM3: 0,
             promoYuan: 0, promoCover: 0, satSum: 0, satAvg: null, satFirst: null, satLast: null, down: null, downCover: 0 };
   es.forEach(function(h){
@@ -12097,16 +12125,39 @@ function reviewAttribution(a){
   L.push("瓶颈运力（当前）：三候选最紧的是「" + tight[0] + "」" + tight[1].toFixed(2) + "（码垛运力比 " + bc[0][1].toFixed(2) + " · 货架占用 " + bc[1][1].toFixed(2) + " · 暂存占用 " + bc[2][1].toFixed(2) + "）；" + (tight[1] >= 1 ? "已 ≥1、是当前硬约束。" : tight[1] >= 0.85 ? "接近 1、需提前扩容评估。" : "尚有余量。"));
   return L;
 }
+/* R31：环比百分比——分母取上期绝对值，上期为 0 时返回 null（文中标注不可比） */
+function momPct31(cur, prev){
+  if(prev == null || Math.abs(prev) < 1e-9) return null;
+  return (cur - prev) / Math.abs(prev) * 100;
+}
+function momSeg31(name, cur, prev, fmtFn){
+  var p = momPct31(cur, prev);
+  return name + " " + fmtFn(cur) + "（" + (p == null ? "上期为 0、不计增幅" : "环比 " + (p >= 0 ? "+" : "") + p.toFixed(1) + "%") + "）";
+}
 function reviewBuild(rangeKey){
   var a = rangeKey === "today" ? reviewAggToday() : reviewAggFromArchives(rangeKey === "d7" ? CONFIG.r30.reviewDays7 : CONFIG.r30.reviewDays30);
   var label = rangeKey === "today" ? "当日" : (rangeKey === "d7" ? "近 7 天" : "近 30 天");
+  /* R31：上一周期——当日对最近 1 个归档日；近 N 天对紧邻的上一个 N 天归档窗（同源求和） */
+  var want31 = rangeKey === "today" ? 1 : (rangeKey === "d7" ? CONFIG.r30.reviewDays7 : CONFIG.r30.reviewDays30);
+  var prevRaw = reviewAggFromArchives(want31, rangeKey === "today" ? 0 : want31);
+  var prev = prevRaw.days > 0 ? prevRaw : null;
   var lines = [];
   lines.push("经营复盘 · " + label + (rangeKey === "today" ? "（未归档 · 实时做差）" : "（基于日报归档 · 实际归档 " + a.days + " 天" + (a.days < a.want ? "，不足 " + a.want + " 天、按实际天数汇算" : "") + "）") + " · 生成于第 " + (Math.floor(S.simMin / 1440) + 1) + " 天 " + fmtSimClock(S.simMin));
   if(rangeKey !== "today" && !a.days) lines.push("尚无带结构化数据的日报归档——先点「新的一天」归档至少一天，或看「当日」复盘（实时做差）。");
   lines.push("产量 " + fmt(a.finished) + " 瓶 · 利润 " + fmtMoney(a.profit) + " · 现金净流量 " + fmtMoney(a.cashFlow) + " · 满意度均值 " + (a.satAvg == null ? "—（无归档样本）" : a.satAvg.toFixed(1)) + " · 罚金 " + fmtMoney(a.fine) + " · 促销让利 " + fmtMoney(a.promoYuan) + (rangeKey !== "today" && a.days > 0 && a.promoCover < a.days ? "（让利覆盖 " + a.promoCover + "/" + a.days + " 天归档，余为 R30 前旧归档无此字段）" : "") + " · 碳排 " + a.carbonKg.toFixed(1) + " kg · 废水 " + a.wasteM3.toFixed(2) + " m³");
+  if(prev){
+    lines.push("环比（上一周期 · 实际归档 " + prev.days + " 天，同源归档求和）："
+      + momSeg31("产量", a.finished, prev.finished, function(v){ return fmt(v) + " 瓶"; }) + " · "
+      + momSeg31("利润", a.profit, prev.profit, fmtMoney) + " · "
+      + momSeg31("现金净流量", a.cashFlow, prev.cashFlow, fmtMoney) + " · "
+      + momSeg31("罚金", a.fine, prev.fine, fmtMoney) + " · "
+      + momSeg31("碳排", a.carbonKg, prev.carbonKg, function(v){ return v.toFixed(1) + " kg"; }));
+  } else {
+    lines.push("环比：尚无上一周期归档可比——" + (rangeKey === "today" ? "先点「新的一天」归档至少一天日报，下一份当日复盘就会带环比。" : "归档天数不足两个周期（当前窗 " + a.days + " 天、上一个同长周期无归档），继续归档后自动出现。"));
+  }
   lines.push("自动归因（每条与源数据同源做差）：");
   reviewAttribution(a).forEach(function(s){ lines.push("· " + s); });
-  return { range: rangeKey, label: label, agg: a, text: lines.join("\n") };
+  return { range: rangeKey, label: label, agg: a, prev: prev, text: lines.join("\n") };
 }
 function reviewGenerate(){
   var r = reviewBuild(REVIEW30.range);
@@ -12321,6 +12372,110 @@ window.__r30Check = function(){
   var c29 = window.__r29Check();
   var out = {}; Object.keys(c29).forEach(function(k){ out[k] = c29[k]; });
   out.r30 = window.__r30();
+  return out;
+};
+
+/* ================= R31 · 复盘环比（REVIEW31）+ 唤回钮可达性 =================
+ * __r31()：最近一次复盘的上一周期汇算（prev）+ 配置。
+ * __r31Probe.momRun()：连归三天后生成当日 / 近 7 天复盘，逐项独立重算上一
+ *   周期（当日 = 最近 1 个归档日；近 7 天 = 第 8–14 个归档日窗）验差 <¥0.011，
+ *   且全文带「环比」行；归档不足两周期时 prev 须为 null 且文中如实标注。
+ * __r31Check() = R30 全家桶 + r31 读数。唤回钮为纯 CSS 显隐、无读数口，
+ *   由审计 unreachable_controls 与探针实点（隐藏面板 → 唤回钮可见可点 → 面板回来）验。 */
+window.__r31 = function(){
+  var ld = REVIEW30.lastData;
+  return { prev: ld ? (ld.prev ? { days: ld.prev.days, finished: ld.prev.finished, profit: Math.round(ld.prev.profit * 100) / 100, cashFlow: Math.round(ld.prev.cashFlow * 100) / 100, fine: Math.round(ld.prev.fine * 100) / 100, carbonKg: Math.round(ld.prev.carbonKg * 100) / 100 } : null) : null,
+           range: ld ? ld.range : null,
+           tour: { stops: TOUR_STOPS.length, expected: CONFIG.r31.tourStops, us: (window.__tourStopUs || []).slice(), titles: TOUR_STOPS.map(function(s){ return s.title; }) },
+           mobile: { perfTier: window.__perfTier || null, mobileLow: CONFIG.perf.mobileLow, touchMinPx: CONFIG.r31.touchMinPx },
+           cfg: CONFIG.r31 };
+};
+window.__r31Probe = {
+  momRun: function(){
+    if(!S.running){ S.running = true; var pb = $("playBtn"); if(pb) pb.textContent = "⏸ 暂停"; }
+    for(var k = 0; k < 3; k++){ for(var j = 0; j < 4; j++) window.__pumpSim(120); archiveDay(); }
+    var out = { archivedDays: DAYREP.history.filter(function(h){ return !!h.data; }).length };
+    [["today", 1, 0], ["d7", CONFIG.r30.reviewDays7, CONFIG.r30.reviewDays7]].forEach(function(spec){
+      var rk = spec[0], want = spec[1], skip = spec[2];
+      REVIEW30.range = rk;
+      var r = reviewGenerate();
+      var es = DAYREP.history.filter(function(h){ return !!h.data; }).slice(skip, skip + want);
+      var s = { finished: 0, profit: 0, cashFlow: 0, fine: 0, carbonKg: 0 };
+      es.forEach(function(h){ s.finished += h.data.finished || 0; s.profit += h.data.profit || 0; s.cashFlow += h.data.cashFlow || 0; s.fine += h.data.fine || 0; s.carbonKg += h.data.carbonKg || 0; });
+      var diffs = {};
+      if(r.prev){ Object.keys(s).forEach(function(k2){ diffs[k2] = Math.abs(r.prev[k2] - s[k2]); }); }
+      out[rk] = { prevDays: r.prev ? r.prev.days : 0, expectPrevDays: es.length, diffs: diffs,
+                  momLine: r.text.indexOf("环比") >= 0,
+                  prevNullOk: es.length === 0 ? (r.prev === null && r.text.indexOf("尚无上一周期归档可比") >= 0) : true };
+    });
+    out.ok = ["today", "d7"].every(function(rk){ var o = out[rk]; return o.momLine && o.prevNullOk && o.prevDays === o.expectPrevDays && Object.keys(o.diffs).every(function(k2){ return o.diffs[k2] < 0.011; }); });
+    return out;
+  },
+  /* R31 A 项断言：扫全部样式表——≤900px 媒体块内关键可点选择器须声明
+   * min-height ≥ CONFIG.r31.touchMinPx；贴底选择器（.control-bar/.show-stack/
+   * .hint-chip/.info-card/.tour-cap）定位须引用 var(--bottom-lift)；
+   * .panel-show 须为 display 硬切换（默认 none、激活 inline-flex）。
+   * 与 R11/R17 的 CSS 安全区断言同族，口径 = 源码规则而非某一视口的渲染态。 */
+  cssRun: function(){
+    var minPx = CONFIG.r31.touchMinPx, mediaCss = "", allCss = "";
+    function walk(rules, inMobile){
+      for(var i = 0; i < rules.length; i++){
+        var r = rules[i];
+        if(r.type === 4){ if(/max-width:\s*900px/.test(r.conditionText || "")) walk(r.cssRules, true); }
+        else if(r.styleSheet){ try { walk(r.styleSheet.cssRules, inMobile); } catch(e){} }
+        else if(r.selectorText){ allCss += r.cssText + "\n"; if(inMobile) mediaCss += r.cssText + "\n"; }
+      }
+    }
+    for(var s = 0; s < document.styleSheets.length; s++){ try { walk(document.styleSheets[s].cssRules, false); } catch(e){} }
+    function mediaHas(sel, propRe){
+      var esc = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      var m = mediaCss.match(new RegExp(esc + "\\s*\\{[^}]*\\}", "g")) || [];
+      return m.some(function(b){ return propRe.test(b); });
+    }
+    var mh = new RegExp("min-height:\\s*" + minPx + "px");
+    var checks = {
+      btnMinH: mediaHas(".btn", mh),
+      hbtnMinH: mediaHas(".hbtn", mh),
+      segMinH: mediaHas(".seg button", mh),
+      prodMinH: mediaHas(".prod", mh),
+      dispatchHideMinH: mediaHas(".dispatch-hide", mh),
+      rangeH: mediaHas("input[type=range]", /height:\s*32px/),
+      panelShowNone: /\.panel-show\{[^}]*display:\s*none/.test(allCss),
+      panelShowFlex: /body\.dispatch-hidden \.panel-show\.dispatch-show\{[^}]*display:\s*inline-flex/.test(allCss) && /body\.control-hidden \.panel-show\.console-show\{[^}]*display:\s*inline-flex/.test(allCss),
+      bottomLift: [".control-bar", ".show-stack", ".hint-chip", ".info-card", ".tour-cap"].every(function(sel){
+        var esc = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        var m = allCss.match(new RegExp(esc + "\\{[^}]*\\}", "g")) || [];
+        return m.some(function(b){ return /var\(--bottom-lift\)/.test(b); });
+      }),
+      dispatchCap: mediaHas(".dispatch", new RegExp("max-height:\\s*" + CONFIG.r31.dispatchMaxVh + "vh")),
+      controlCap: mediaHas(".control-bar", new RegExp("max-height:\\s*" + CONFIG.r31.controlMaxVh + "vh"))
+    };
+    checks.ok = Object.keys(checks).every(function(k){ return checks[k] === true; });
+    return checks;
+  },
+  /* R31 B 项断言：站数 = CONFIG.r31.tourStops、wp 恰为 1..N 连续、弧长对齐后
+   * u 严格递增（讲解与停留同步的几何前提）、每站标题/解说非空且 dwell ≥3、
+   * 过时表述扫描（写死线数/货位数/车数）零命中。 */
+  tourRun: function(){
+    var stale = ["三线包装下线峰值", "3 排 3 层", "两台车", "高于三线"];
+    var out = { stops: TOUR_STOPS.length, expected: CONFIG.r31.tourStops,
+      wpSeq: TOUR_STOPS.map(function(s){ return s.wp; }),
+      titles: TOUR_STOPS.map(function(s){ return s.title; }),
+      us: (window.__tourStopUs || []).slice(),
+      staleHits: [] };
+    TOUR_STOPS.forEach(function(s){ stale.forEach(function(w){ if((s.text || "").indexOf(w) >= 0) out.staleHits.push(s.title + ":" + w); }); });
+    out.wpOk = out.wpSeq.every(function(w, i){ return w === i + 1; });
+    out.uMono = out.us.length === out.stops && out.us.every(function(u, i){ return i === 0 ? u > 0 : u > out.us[i - 1]; });
+    out.textOk = TOUR_STOPS.every(function(s){ return s.title && s.text && s.text.length >= 40 && s.dwell >= 3; });
+    out.newStops = ["码垛与物流枢纽", "扩容与投资", "经营驾驶舱"].every(function(t){ return out.titles.indexOf(t) >= 0; });
+    out.ok = !!(out.stops === out.expected && out.wpOk && out.uMono && out.textOk && out.newStops && !out.staleHits.length);
+    return out;
+  }
+};
+window.__r31Check = function(){
+  var c30 = window.__r30Check();
+  var out = {}; Object.keys(c30).forEach(function(k){ out[k] = c30[k]; });
+  out.r31 = window.__r31();
   return out;
 };
 
