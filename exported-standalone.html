@@ -844,6 +844,11 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
     </div>
     <div id="traceChips" style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap"></div>
     <div id="traceResult" style="margin-top:10px"><div class="qempty">尚无批次谱系 · 开工并完成一轮调配出料后，这里会出现可查的批次。</div></div>
+    <div id="traceAuditLine34" class="qempty" style="margin-top:8px">谱系完整性自检（R34 · 与防撞 navGate 同级常驻）：尚未运行 · 点下方按钮或由回归包 __r34Check 触发，结论与最近自检时刻记在这里。</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
+      <button class="btn" id="traceAuditBtn34">🧬 跑谱系完整性自检</button>
+    </div>
+    <div id="traceAuditTable34" style="margin-top:8px"></div>
 
     <h3>批次召回演练（R33 · 谱系实战应用）</h3>
     <p class="hint">选一个已成托下线的批次发起召回（先弹确认、明示影响）：系统按谱系 + 货位实存自动定位该批次全部托盘——在库的当刻转「隔离」（货架品红红牌、FIFO 永不选中、AGV 不取出库），随后由 AGV 逐托送到仓库北侧隔离垛位封存；已发货的生成「已流出」清单（托号 / 波次 / 车次）；在途（暂存 / 交接 / 车载）的如实列出待人工拦截。召回成本 = 在库托 × ¥180 物流 + 已流出瓶数 × ¥1.2 赔付，进该产品台账单列「召回损失」并从利润扣除；满意度走召回事件项（每次 −6 点、24 仿真小时窗内拖累）。判定误召回可「解除召回」：隔离托恢复正常、封存托由 AGV 送回货位（损失为沉没成本不回滚）。同一时刻只许一批在召回中。</p>
@@ -853,6 +858,15 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <button class="btn" id="recallReleaseBtn33">↩ 解除召回（误召回）</button>
     </div>
     <div id="recallStatus33" style="margin-top:10px"><div class="qempty">尚无召回事件 · 批次成托下线后可在此发起演练。</div></div>
+
+    <h3>原料批次召回（R34 · 上游召回）</h3>
+    <p class="hint">召回从成品端延伸到原料端：罐区原料按罐车到场车次分批建账（FIFO 领料、逐批记录消耗时段），选一个原料批次发起召回后，系统按用料谱系反查受影响的全部调配/成品批次并自动分三档处置——<b>在制批次</b>（调配中 / 无菌库存中）当刻冻结待检：批次时钟挂起、无菌料不进灌装、领料停注，进生产日志与告警中心；<b>已下线成品批次</b>走 R33 成品召回同流程（在库隔离 + AGV 送隔离区封存 + 已流出清单，损失同口径进台账「召回损失」）；<b>未用完的该批罐存</b>整批隔离：罐区标记、配方领料自动跳过该批（先用其他批次）、后续罐车补料按新车次另立批次不混批。损失分两段列账：成品段（R33 口径）与上游段（冻结批检费 ¥350/批 + 罐存隔离处置费 ¥0.15/瓶当量，进台账新列「上游召回损失」），日报分别做差。解除后三档按原状态恢复：冻结批次续跑、成品托返架恢复 FIFO、罐存解隔恢复领料（两段损失均为沉没成本不回滚）。同一时刻只许一个原料批次在召回中。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select class="trace-input" id="rawRecallSel34" aria-label="选择要召回的原料批次" style="min-height:40px"></select>
+      <button class="btn" id="rawRecallBtn34">🧫 发起原料召回</button>
+      <button class="btn" id="rawRecallReleaseBtn34">↩ 解除原料召回</button>
+    </div>
+    <div id="rawRecallStatus34" style="margin-top:10px"><div class="qempty">尚无原料召回事件 · 罐车到场建批后可在此发起上游召回。</div></div>
 
     <h3>当前订单</h3>
     <div class="orderbar">
@@ -1074,7 +1088,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R32 PDCA 打包轮（码垛旁堆积定案：分段埋点 + 瓶账/队列全量可视化 + 假垛清除 + 暂存满位增援）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户实拍复报「码垛机用起来了吗？旁边看到还在堆积货物」——R18/R21 已证码垛机本体与车辆时钟不是瓶颈，本轮逐段埋点定案「堆」到底在哪一段、是真节拍还是画面与账本不同步。新参数全在 <b>CONFIG.r32</b>，读数口 <b>window.__r32()</b>，探针口 <b>window.__r32Probe.stage60</b>，回归包 <b>window.__r32Check()</b>。<b>① 分段埋点</b>：PAL 新增 bankPeak（瓶账峰值，进 stepPalletizer 与 queuePeak 同点）、fullCount / fullWaitMin（满托待取次数与停留分钟，进入 full 在 palletizerReleaseLayer 计数、停留随仿真步累计）；__palletizer().seg32 一口读六段 now/peak（瓶账 / 进料队列 / 成层台 / 当前托 / 满托等待 / 下线暂存）+ 画面侧回写计数 vis（PAL.segVis，updatePalletizerVisual 每帧写）。<b>② 定案一 · 账上有、画面没有（真同步缺陷）</b>：进料队列画面旧上限只有输送带 10 箱（实例容量 40 = 托 25 + 成层 5 + 带 10），caseQueue 第 11–60 箱无处可画；瓶账 bottleBank 则完全没有任何画面——暂存一满，成品瓶只进瓶账、越积越多而画面纹丝不动，正是「旁边还在堆积」又说不清堆在哪的观感来源。修：包装单元内输送带西侧新建<b>进料缓冲架</b>（palBufPos32 网格 2 列 × 8 行 × 6 层），箱实例扩容至 90、队列超出输送带的部分全量上架；瓶账折箱（ceil(瓶/12)）走独立蓝灰实例同架续排（蓝灰 = 未成箱瓶料，铭牌/播报/信息卡三处文案明示），绘制数逐帧回写 segVis 供探针断言。<b>③ 定案二 · 画面有、账上没有（假垛）</b>：两处静态/伪造货物清除——缠膜机上常驻的「待缠托盘 + 3 箱」正坐码垛单元内、与暂存 0 号位同 z，永不被任何车辆取走（只留缠膜机设备件）；各产线出瓶端 dyn.stack 18 箱按 floor(l.done/36)%13 循环显隐、与任何账本无关且正压 AGV 西道（货物本体删除、只留空托盘板，dyn.stack 恒空、__r32().lineStackGoods 应恒 0）。自此码垛机旁每一垛可见货物都有账。<b>④ 定案三 · 节拍增援（既有口径内）</b>：暂存钉满时 assignAgv 解除 R18 出库互援限流（第二台出库车可增援入库先清满托），未满时限流原样保留防四车互让环；未新造计时/车辆/第二套物流。<b>⑤ 探针 stage60</b>：1× 默认负荷泵 60 仿真分钟，逐片采样六段峰值与满托等待增量、逐片断言画面 = 账本（队列绘制 = caseQueue、瓶账绘制 + 溢出 = 瓶账折箱且与内核折箱数一致、暂存垛可见数 = 账面非滑行托数），结论数字写交付汇报不在本节预填。全部计时走仿真分钟（总表第 33 项）。</div></div>
       <div class="dcell wide"><div class="l">R32 PDCA 打包轮（经营挑战第二季 + 全局命令面板 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：同轮先行段已把码垛旁堆积定案（上节），本段补经营纵深与全局入口。阈值全在 <b>CONFIG.r32</b>（chal* / cmdkMax），读数口 <b>window.__r32()</b> 扩 challenges/cmdk，探针口 <b>window.__r32Probe</b>（chalRun / cmdkRun / saveGoalsRun），回归包 <b>window.__r32Check()</b>。<b>【A 项 · 经营挑战第二季（CHAL32）】</b>：调度台新手链下方独立卡（独立隐藏 chalHideBtn / 抽屉 chalToggleBtn、完成度各自计），7 条硬目标：单日 OEE ≥85% / 连续 7 天零逾期 / 满意度 ≥90 保持 3 天 / 单瓶碳排 ≤25 g/瓶 / 现金 ≥¥800,000 且无逾期贷款 / 四线满产连续 720 分 / 连续 7 天零 P0。判定全部只读既有数据源现算（chalEval32）：OEE 取归档 data.oee 与当前 oee() 之高；零逾期/满意度/零 P0 = 日报归档 data 的连续达标段（fine / satAvg / alertsBad）；碳排取归档 perCarbonG 与当日 ESG 派生之低；现金 = cashBalance29() 派生 + CASH.loans 无逾期；满产 = EXP4 建成 + 4 线全开无故障/保养 + 运行中，渲染节奏按仿真分钟差累计、条件破即清零。每条带进度条（当前值/目标值）与口径注记；完成在 renderChal32 内判定留痕（日志 + 经营复盘 reviewBuild 附加「经营挑战」行同源读 done）。为零 P0 判定补同源数据：ALERTC.day.badTrig 在 alertCenterTick24 的 bad 级跳变点同点累计（判定零改动），archiveDayData 新增 alertsBad 字段在翻页清零前定版——R32 前旧归档无此字段、连续段到此为止并在注记标覆盖数（与 R30 让利覆盖同口径）。阈值可达性：碳排线 25 g/瓶由同栈实测基线定（ECO 关 ≈28.1 达不到 / ECO 开 ≈24.2 可达，是经营取舍不是死目标）；探针 chalRun 以脚本化经营实完 ≥2 条并给全条基线（cash 走真实 takeLoan29 最大档、oee 走故障清零满速清净泵、sat90 走采样置高 + 真实 archiveDay 连归三天，手法与还原都在探针返回值里如实标注）。进度进存档 payload（chal32，满产计时基准恢复时重置防跨档跳算）；重置 chalReset32 清完成态保留隐藏。<b>【B 项 · 全局命令面板（CMDK32）】</b>：顶栏「🔍 搜功能」钮 + Ctrl/⌘K 开关（手机只有钮）；索引每次打开现场生成（cmdkBuildIndex32）、零手写清单——按钮动作 = DOM 全部带 id 的 button（标签读 textContent），面板区 = 抽屉 h3 节标题 + 调度台 .sec-label，机位 = #viewSeg data-view 钮，导览站 = TOUR_STOPS，产品 = PRODUCTS，批次 = TRACE.records（持续增长自动进索引）。模糊匹配子串优先、子序列兜底打分，上限 CONFIG.r32.cmdkMax=12；直达语义：按钮 → 先唤回其所在面板/抽屉（body 隐藏类/openDrawer 既有机制）再 click 并高亮；面板区 → 开抽屉/唤回后滚动 + .cmdk-flash 高亮；机位 → goPreset；导览站 → flyTo 巡游曲线该站位点 + showTourCaption；产品 → 唤回调度台滚动高亮其钮（点选与否用户决定，与 R26 采纳同口径）；批次 → openDrawer + openTrace 直开谱系卡。无结果如实提示并说明索引同源。手机端 ≤900px 为底部弹出层（bottom: var(--bottom-lift)、条目 min-height 44px、输入 16px 防缩放），走 R31 触控总规矩。探针 cmdkRun 验索引计数/四路查询/点选关闭。<b>【C 项 · 例行回归】</b>：沿全家桶 + 存档往返两组目标进度（saveGoalsRun：篡改现场 done 后 saveRestore 须逐字还原 tasks30/chal32 与两组隐藏态），逐项数字写交付汇报。同轮顺修 stage60 首次实跑逼出的暂存垛一帧残影：D.stageStacks 可见性同步原在 updatePalletAgvs 函数头（AGV 相位处理之前），loadXfer 在同调用内摘除 stage 条目后垛多显一帧、泵边界采样 2/22 片「画面 1 / 账本 0」（账本彼时已空）——同步点后置到相位处理之后（函数尾），复跑 sync.bad = 0，画面 = 账本在任一采样瞬间成立。同轮回归还逼出先行段满位增援的一个真死锁：暂存钉满放行第二台出库车增援后，两台入库车会因暂存托全被预订反向接出库任务，四车在单宽巷道相向成环（lineRun 隔离窗实测 inCases 330 仿真分钟零增长）——已补<b>跨向互援互斥</b>（assignAgv：任一方向的跨援进行中，另一方向不启；单向互援与满位增援保留）。互斥后复跑又逼出更深一层：暂存角 (71.6~74.3, 29~31.4) 四车两两间距 2.2~3.5 全在守卫阈值内、各自下一路点恰被另一台车占据，常规靠边（避开最近车横移）反而扎进结里——对照实测<b>旧版 v0.32.0 同编排同冻结</b>（lineRun 连跑两次 inDelta 同为 0），定案为既有集群结、非本轮引入；本轮顺手收口一半：新增<b>结内后退脱困</b>（CONFIG.r27.stallEscapes / retreatSteps）——同一行驶段内逃逸插入达 3 次仍无进展（驶过普通路点或位移 &gt;3 均清零计数）改沿车头反向后退（距离候选 7/5/3.5 依次过 asidePointClear），后退与前方阻挡者必然分离——暂存角配置实测可解（lineRun 复跑通过一次、其后车流持续流动）。<b>未收口（如实挂账）</b>：单宽巷道内的双向单列结仍可形成（实测 C 巷 x=111.5 四车单列间距 1.7~2.6、领队被身后队列反堵、且 toHome 返程车不经过靠边逃逸段）——新旧两版同概率（本环境 lineRun 通过率旧版 1/3、新版 1/3，失败形态同为货架饱和 + 巷道结、inCases 窗口零增长），属既有车辆编排的结构性弱点，须专项一轮（巷道单向化或预订制 + 返程车逃逸覆盖），不在本打包轮仓促动刀；守卫硬地板与 navGate 口径一字未动，本轮 navGate 复跑仍全绿（数字见交付汇报）。全部计时走仿真分钟（总表第 34 项）。</div></div>
       <div class="dcell wide"><div class="l">R33 PDCA 打包轮（批次召回演练 + 峰谷电价 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：谱系系统（R15）此前只「可查」、分时电价缺位——本轮让谱系实战一次、让电费按发生时刻计价。新参数全在 <b>CONFIG.r33</b>，读数口 <b>window.__r33()</b>，探针口 <b>window.__r33Probe</b>（recallRun / touRun），回归包 <b>window.__r33Check()</b>。<b>【A 项 · 批次召回演练（RECALL）】</b>：抽屉「批次追溯」下方独立节——选已成托批次先弹确认弹窗（在库/流出/在途托数与损失公式逐项明示）→ <b>recallStart33</b> 按谱系 + 货位实存两源定位（recallClassify：在库 = SLOTS taken 且 batchKey 命中、已流出 = 谱系 trip 非空、在途 = 已成托未入位未发货）：在库托当刻置 <b>slot.quar = 批次键</b>——货架渲染品红红牌（压过库龄配色）、oldestTakenSlot 恒跳过（FIFO 不可选）、出库派单永不命中；随后 AGV 以新任务类型 <b>quar</b>（共用既有 toPick/pickXfer 相位机、pickXfer 完成点分流 toQuar、dropXfer 完成点分流进 RECALL.quar）逐托送仓库北侧<b>隔离垛位</b>（CONFIG.r33.quarPos 5 位 × 每位叠 4 托、红框红带垛体 syncQuarVisual33 与封存账同源；位置在北横道以北净空带、与质检实验室同在厂区北区，AGV 沿巷道纵线北上直达——质检实验室本体在产线北侧、无车道可达，故隔离区取车道网可达的北侧仓区并在铭牌明示「质检隔离垛位」）。已流出托生成清单（托号/波次/车次，与谱系记录同源 0 差）；在途托如实列「待人工拦截」，不假装能隔空扣住。<b>顺修 R15 谱系断链（本轮探针逼出）</b>：出库派单 tryOut 的托盘快照自 R8 形状起漏带 batchKey，装车点 traceOnShip 恒因缺键空转——已发托的波次/车次从未落进谱系、召回流出分类亦永远为 0（recallRun 三跑 prep 皆空、逐层定位至此）；快照补 batchKey 后谱系去向与召回流出清单同源恢复，谱系抽查口径不变。<b>成本</b> = 在库托 × ¥180 物流 + 已流出托 × 300 瓶 × ¥1.2 赔付，进该产品台账新字段 <b>recall</b>（ledgerCost 并入、利润同源扣减、日报/归档/下载三处带当日做差）；满意度走 <b>satEvent("recall")</b> 召回事件项——SAT.recall24 事件窗（24 仿真小时、每次 −6 点、封顶 15 点，与罚金拖累并列第三项），当日归因进 satDayText；全程进生产日志、告警中心（alerts23 新增 bad 级召回行、走既有聚合/确认闭环）与日报；谱系卡挂「已召回 / 已解除」状态横幅（renderGenealogy 读 RECALL.events）。<b>解除召回（误召回）</b>：recallRelease33——未转运的当刻撤标记恢复 FIFO、已封存的标 returning 由 AGV 以 <b>quarBack</b> 任务（toQuarPick/quarPickXfer → 既有 toSlot/putXfer）逐托送回空货位；损失为沉没成本不回滚、满意度拖累随窗滑出恢复。库存恒等式：隔离区封存托与隔离在途托由 syncWhStock 新增计数承接（仍是在厂未出库库存），putXfer 对 quarBack 不计 inCases（未出库过的托不算新入库）——__whCheck 全程 ok。同一时刻只许一批在召回中、一批只召回一次（演练口径，确认弹窗与发起函数双重校验）。存档：RECALL 纯数据进 payload（recall33）+ slots.quar 随货位，往返不丢。<b>【B 项 · 峰谷电价（TOU）】</b>：档位按仿真钟点（touTierAt：峰 08–11/18–22 时 ×1.6、谷 00–06 时 ×0.55、余平 ×1，基准 = CONFIG.utilities.power.pricePerKwh ¥0.72）——<b>计价点仍是唯一入口 chargeUtilities</b>：每次入账按当前 S.simMin 的档位价把电费累计进产品台账新字段 powerCost / powerKwhPriced，utilCost 电费 = powerCost + 未定价电量 × 平价（旧存档电量不回溯重计价、历史归档原样）；电量（kWh）口径一字未动。抽屉用电行显当前档位与档位价、金额改读 totalPowerCostYuan（台账同源）；日报快照/做差/归档新增 powerFee——当日电费 = 分时累计做差，与逐时计价累计构造上 0 差（探针 touRun 重算验之）。<b>调度提示（只提示）</b>：touHint33——峰段时把下一次 CIP（cipEvent 9 kWh）与换产清洗/灭菌预热（changeoverEvent 25 kWh）按「台账事件电量 × 峰谷价差」估「谷段执行可省约 ¥X」，不自动排程、不改任何既有触发条件。<b>与碳账分清</b>：ESG 碳排 = 电量 × 电网因子 + 蒸汽量 × 因子（R26 口径），<b>只认电量不认电价</b>——峰段用电涨价不涨碳、谷段省钱不减碳；ECO 省电同时省钱省碳（省的是电量），高速补偿附加电耗同理按电量进碳账、按发生时刻电价进电费账，两本账各走各的量纲。<b>【C 项 · 例行回归】</b>：沿全家桶逐项数字写交付汇报；新增 touRun（峰谷价差 = 电量 × 价差、误差 &lt;1%、日报 0 差）与 recallRun（__pumpSim 同步泵造跨在库/已发货批次 → 隔离 100% + FIFO 跳过 + 损失 0 差 → 按隔离容量封存、超容余量在架保持隔离 → 解除全返架）。全部计时走仿真分钟（总表第 35 项）。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致</div></div>
+      <div class="dcell wide"><div class="l">R34 PDCA 打包轮（谱系完整性审计与常驻自检 + 原料批次上游召回 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R33 探针实证的谱系断链（出库快照漏 batchKey、已发托波次/车次静默空转 18 轮）不能只靠修一行收口——本轮做全字段完整性审计并把自检常驻化，再把召回从成品端延伸到原料端。新参数全在 <b>CONFIG.r34</b>，读数口 <b>window.__r34()</b>，探针口 <b>window.__r34Probe</b>（auditRun / rawRun），自检口 <b>window.__traceAudit()</b>，回归包 <b>window.__r34Check()</b>。<b>【A 项 · 谱系完整性审计与常驻自检（TRACEAUDIT）】</b>：<b>traceAudit34</b> 逐项审计谱系 10 字段，每项给出来源事件点 + 静默空转风险 + 实测填充率（分母 = 应有该字段的群体，不稀释）：配方快照（traceEnsure ← recipeOf）/ 原料批次（traceOnDischarge ← rawLotsForDischarge34；R34 前只有 traceEnsure 的文本车次、无结构化反查——这是本轮审计发现的第二个静默缺口，已补 rec.rawLotIds 收口）/ 灭菌实测（traceOnDischarge ← STER_DYN）/ 灌装线集合与时段（traceAttribute ← step 良品结算）/ 抽检（traceTickQC ← stepQC 增量；应检分母 = 调配窗口覆盖抽检时刻的批次，抽检时刻表 TRACE.qcTimes 与 traceTickQC 同点写、随存档往返）/ 成托编号（traceOnPallet ← logiStagePush）/ 货位（traceOnSlot ← putXfer；另与 SLOTS 实存逐托比对）/ 波次车次（traceOnShip ← 装车点；风险评级「高（已实证）」）/ 召回状态（recallEventOf ← RECALL.events）。<b>常驻自检与 navGate 同级</b>：三类硬断言——已发货托波次/车次非空、在库托货位与实存一致、应检批次抽检非空率 100%，任一不过自检结论为 ✘；结论 + 最近自检时刻进抽屉「批次追溯」区一行（#traceAuditLine34）+ 逐字段表（#traceAuditTable34），抽屉有手动触发钮，__r34Check 每轮必跑并把结果放 r34pack。其余字段的填充率如实给数不设硬门（如原料批次填充率的分母是已出料批次——R34 前出料的老批次 rawLotIds 为空、填充率会如实偏低，随新批次出料自然爬升，不回溯伪造）。<b>【B 项 · 原料批次上游召回（RAWLOTS / RAWREC）】</b>：罐区原料按批建账——期初罐存 = 批 #0、每车卸料完成点（stepR2 与 buysLog 同点）<b>rawLotOnUnload34</b> 另立一批（批号 = 到场车次），领料在 RAW.level 扣减同点 <b>rawLotDrain34</b> 按 FIFO 逐批扣减（隔离批整批跳过），供应封顶改按未隔离批可用量 rawAvailQty34；液位被定点改写/存档恢复时 rawLotResync34 以最新未隔离批承接差额（Σ批账 ≡ 罐存、容差 25）。<b>探针首跑逼出的对账顺序 bug（已修）</b>：rawLotOnUnload34 / rawLotDrain34 原先「先 resync 后立批/扣减」——到货量先被 resync 记到旧批、纠偏再从末尾新批扣减，新批被吃到 0（rawRun stage=lot 失败）；领料同理双重扣减。已改「先立批/先 FIFO 扣减、后 resync 收敛残差」，复跑以 rawRun 全绿为准（数字见当轮交付汇报）。用料归属在出料点定版（pending = 自上批出料以来被领料消耗到的批 + 正在领的批）。<b>rawRecallStart34(批号)</b> 按 rawLotIds 反查分三档：在制批（当前批 / STER_FEED 批，含已成托仍在灌者）置 RAWREC34.frozen——step 三闸冻结（advanceBlendBatch 跳过 = 批次时钟挂起、supMove=0 停注、feedFrozen 时封盖拉料/灌装进料/无菌拉料全断 = 无菌料绝不进灌装），谱系卡挂橙色冻结横幅，进日志与告警中心（bad 级原料召回行）；已下线成品批逐批走 R33 同流程（货位 quar 同键标记——assignAgv 的 tryQuar 已改认标记本身、R33 单批与 R34 多批共用转运链；recallClassify / recallLossFor 同源、事件进 RECALL.events 带 viaRawLot、损失进台账 recall）；该批罐存余量整批 quar（领料跳过、后续罐车另立新批不混批、罐区状态在抽屉原料召回节与 __r34().lots 标记）。<b>损失两段分别列账</b>：成品段 = Σ R33 口径进 recall；上游段 = 冻结批数 × ¥350 批检费（按各冻结批产品入账）+ 罐存隔离量 × ¥0.15/瓶当量（入当前产品），进台账新字段 <b>rawRecall</b>（两处建账 + ledgerCost 并入 + 日报快照/做差/归档/下载四处带当日段），事件 ev.lossFinished / lossUpstream 与两台账增量逐分对账（探针 finDiff / upDiff &lt; ¥0.01）。满意度与 R33 同走 satEvent 召回事件项（一次原料召回计一次）。<b>解除 rawRecallRelease34</b> 三档按原状态恢复：成品段逐批撤标记 + 封存托 quarBack 返架（按事件 id 精确回滚本轮事件）、在制解冻续跑、罐存解隔；两段损失沉没不回滚。与 R33 成品召回互斥、同时只许一个原料批在召回中。存档：raw34（批账/召回/冻结/自检结论）+ trace.qcTimes 进 payload 往返，旧存档无字段保持当前态。<b>【C 项 · 例行回归】</b>：沿全家桶逐项数字写交付汇报；新增 auditRun（泵出已发货+在库样本后自检硬断言全过、10 字段填充率有数）与 rawRun（压罐存订新车构造三态横跨 → 三档计数与反查集合 0 差 + 隔离标记数 = 成品段在库合计 + 罐存可用量恰扣该批 + 冻结观察窗内 feed 批 bottles/成托数与 BP 批次号零增长 + 两段对账 0 差 → 解除全返架）。全部计时走仿真分钟（总表第 36 项）。</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检为读数时对 TRACE/SLOTS 现算（与第 31 项同类）—— ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1165,6 +1180,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R32 码垛旁堆积定案：window.__r32Probe.stage60() ok = true（1× 默认负荷泵 60 仿真分钟：六段 segments 逐段 now/peakDuring 齐全、full.countDuring 与 waitMinDuring 有数、delivered.inboundPutDuring &gt; 0、sync.samples ≥ 20 且 sync.bad = 0——队列绘制 = caseQueue、瓶账绘制 + 溢出 = 瓶账折箱且与内核折箱数一致、暂存垛可见数 = 账面非滑行托数、whOk = true）；window.__r32().lineStackGoods = 0（产线假垛已删净）；码垛机点选卡带瓶账行（绘制数与 __palletizer().seg32.vis 一致）、缠膜机上不再有常驻货物垛；暂存钉满时两台出库车均可增援入库（assignAgv R32 分支）、未满时 R18 限流不变；window.__r32Check() 全绿、navGate 与双态 DrawCall 不回退、时间基准总表已续第 33 项</li>
       <li>R32 打包轮（挑战第二季 + 命令面板）：window.__r32Probe.chalRun() ok = true（七条基线 curTxt/tgtTxt 齐全、completedNow ≥ 2 条且手法如实标注、doneCountAfter 与 __r32().chalDoneCount 一致）；调度台「经营挑战」卡 7 条各带进度条与当前值/目标值、与新手链完成度分开计，chalHideBtn / 抽屉 chalToggleBtn 两路隐藏进度保留，任一挑战完成时生产日志有 🏆 留痕且经营复盘全文含「经营挑战」行；window.__r32Probe.cmdkRun() ok = true（indexed > 40 且 byKind 五类常备齐全、批次类随 TRACE.records 在册出现（新鲜页 0 条属实）、搜「码垛」「贷款」有果、搜无果串返回 0 条且面板显示如实空态、点选后关闭并执行）；Ctrl/⌘K 开关面板、Esc 关闭、↑↓ 选条、回车直达；批次号搜中直开谱系卡（openTrace）；手机宽下面板为底部弹出层（bottom = var(--bottom-lift)、条目热区 ≥44px）；window.__r32Probe.saveGoalsRun() ok = true（存档往返后 tasks30.done 与 chal32.done 逐字一致、两组 hidden 不丢、wh.ok）；window.__r32Check() 全绿、时间基准总表已续第 34 项</li>
       <li>R33 打包轮（批次召回 + 峰谷电价）：window.__r33Probe.recallRun() ok = true（__pumpSim 同步泵造出跨在库/已发货批次——车辆节拍类探针一律走本泵，R18 定案：marked = 在库数（100% 隔离）、fifoSkip = true、lossDiff = 0（单价×数量同源）、satDragAfterStart &gt; 0、sealed = min(在库数, 隔离容量 20) 且 stillMarked = 在库数 − sealed（超容余量留在货架保持隔离）、outTaskOnBatch = 0、解除后 backAll = true（全托可交代：在库+已发+在途 = 成托数、隔离区清空、flagsLeft = 0、已发数不减——解除后该批恢复 FIFO 会被波次继续发走，不按回位数验）、wh.ok = true）；抽屉「批次召回」节：发起前确认弹窗逐项明示影响、已流出清单托号/波次/车次与谱系同源、谱系卡带召回状态横幅、告警中心有 bad 级召回行；隔离托货架品红红牌、隔离区红框垛位在仓库北侧（北横道以北、质检实验室同北区）；window.__r33Probe.touRun() ok = true（档位 h9/h20 = peak、h3 = valley、h14/h23 = flat；峰/谷 100 kWh 电费差与电量×价差误差 &lt;1%；日报电费 dayDiff = 0）；抽屉用电行带当前档位与档位价、峰段有「谷段执行可省约 ¥X」提示（只提示）；碳账按电量与电价无关（文档 R33 节明示）；window.__r33Check() 全绿、时间基准总表已续第 35 项</li>
+      <li>R34 打包轮（谱系完整性自检 + 原料上游召回）：window.__traceAudit() / __r34Probe.auditRun() ok = true（10 字段逐项带来源事件点与风险评级、实测填充率分母为应有群体；硬断言三项全过——已发货托波次/车次非空、在库货位与 SLOTS 实存一致、应检批次抽检非空率 100%）；抽屉「批次追溯」区有自检结论行（最近自检时刻 + 三项计数）与逐字段表、手动触发钮；window.__r34Probe.rawRun() ok = true（构造原料批横跨在制+成品+罐存三态：finSetOk / frozenSetOk 与谱系反查集合 0 差、marked = 成品段在库合计、tankQuar = true 且可用量恰扣除该批（tankExcluded）、冻结观察窗内 feed 批 bottles/成托零增长（frozenHeld）且当前批批次号不前进（bpHeld）、两段损失 finDiff / upDiff &lt; ¥0.01、解除后封存托全返架 + 冻结清零 + 罐存解隔（backOk）、wh.ok = true）；抽屉「原料批次召回」节：批账列表（罐存余量/涉及批次/隔离标记）、发起/解除两钮、进行中三档明细与两段损失；谱系卡有原料批归属行与冻结横幅、告警中心有 bad 级原料召回行；台账 rawRecall 与成品段 recall 分别列账、日报/下载带上游段当日行；window.__r34Check() 全绿（r34pack.auditOk = true、lotTankDiff ≤ 容差）、时间基准总表已续第 36 项</li>
     </ul>
   </div>
 </aside>
@@ -1855,6 +1871,18 @@ var CONFIG = {
     touValleyHours: [[0, 6]],
     touPeakMult: 1.6,
     touValleyMult: 0.55
+  },
+  /* ---- R34 打包轮：谱系完整性审计与常驻自检 + 原料批次上游召回 ----
+   * A 项自检口径：字段填充率的分母一律取「应有该字段的群体」（见 traceAudit34
+   * 各字段 population 定义），不拿全体批次稀释；已发货批次的波次/车次、在库批次
+   * 的货位一致性为硬断言（须 100%），抽检率以「生产窗口覆盖抽检时刻的应检批次」
+   * 为分母。B 项上游损失两段分别列账：成品段走 R33 同口径进台账 recall 字段；
+   * 上游段（在制冻结批检费 + 罐存隔离处置费）进台账新字段 rawRecall，
+   * ledgerCost 并入、日报做差单列——两段之和与事件记录逐分对账。 */
+  r34: {
+    rawInspectFeePerBatch: 350,      /* 在制冻结批次批检费 ¥/批（上游段损失之一） */
+    rawTankHandlePerBottle: 0.15,    /* 罐存隔离处置费 ¥/瓶当量（上游段损失之二，按发起时该批罐存余量计） */
+    auditFieldCount: 10              /* 谱系完整性审计字段数（配方/原料批/灭菌实测/灌装线/灌装时段/抽检/成托号/货位/波次车次/召回状态） */
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -2690,6 +2718,7 @@ function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
     RAW.useRate = RAW.useRate > 0 ? RAW.useRate + (instRate - RAW.useRate) * R13R.forecastSmoothing : instRate;
   }
   if(supMoveVal > 0) RAW.level = Math.max(0, RAW.level - supMoveVal / R.rawTankBottlesPerFull);
+  if(supMoveVal > 0) rawLotDrain34(supMoveVal);   /* R34：领料按 FIFO 逐批扣减原料批账（隔离批跳过），与 RAW.level 同点同量 */
   if(RAW.level < RAW.minLevel) RAW.minLevel = RAW.level;
   RAW.etaMin = RAW.useRate > 1 ? (RAW.level * R.rawTankBottlesPerFull) / RAW.useRate : Infinity;
   if(RAW.level <= R13R.emptyFrac && RAW.tanker !== "unloading"){
@@ -2740,6 +2769,7 @@ function stepR2(dtMin, produced, sterMoveVal, supMoveVal){
         MARKET.buyQty += gotQty; MARKET.buySpent += buyCost; MARKET.buyCount++;
         MARKET.lastBuy = { t: S.simMin, qty: Math.round(gotQty), spent: Math.round(buyCost * 100) / 100, idx: Math.round(MARKET.idx * 1000) / 1000, mode: RAW.orderMode, productId: product.id };
         MARKET.buysLog.push({ t: S.simMin, qty: gotQty, base: rawCostPerBottle(product), idx: MARKET.idx, spent: buyCost, productId: product.id, mode: RAW.orderMode });   /* R17：逐笔精确留痕（不舍入），供 marketAudit 重算对账 */
+        rawLotOnUnload34(RAW.arrivals, gotQty);   /* R34：本车原料另立一批（批号 = 到场车次），不与罐存余批混批——上游召回的反查与罐存隔离都以此为界 */
       }
       RAW.tanker = "departed"; RAW.tankerLeft = 4;
       RAW.fillTarget = null; RAW.unloadStartLevel = null;
@@ -2804,7 +2834,7 @@ var CO_MINUTES = CONFIG.changeoverMinutes, CO_FEE = CONFIG.changeoverFee;
  * finished/revenue/varCost/水电蒸汽三项用量（waterM3/powerKwh/steamKg）/fixedCost/coCost，
  * 总利润 = 各产品利润之和。三项用量各自按 CONFIG.utilities 的单价计价（见 ledgerCost）。 */
 var ledger = {};
-PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0, procure:0, promo:0, recall:0, powerCost:0, powerKwhPriced:0 }; });
+PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0, procure:0, promo:0, recall:0, rawRecall:0, powerCost:0, powerKwhPriced:0 }; });   /* R34：rawRecall = 上游原料召回损失段（与 R33 成品段 recall 分别列账） */
 function curL(){ return ledger[product.id]; }
 /* R33 峰谷分时电价：档位按仿真钟点判定（峰/平/谷），价格 = 基准价 × 档位倍率。
  * 台账电费 = 已按发生时刻档位价累计的 powerCost + 未定价部分（旧存档电量，
@@ -2823,7 +2853,7 @@ function totalRecallLoss(){ return PRODUCTS.reduce(function(a, p){ return a + (l
 function utilCost(L){ var u = CONFIG.utilities; return L.waterM3*u.water.pricePerM3 + ledgerPowerCost(L) + L.steamKg*u.steam.pricePerKg; }   /* R33：电费改分时累计口径（原 powerKwh × 平价仅作未定价部分兜底） */
 /* R12：fine = 订单延误罚金、spare = 备件补货 + 紧急采购费，均并入成本——总利润
  * totalProfit() 仍为各产品台账利润之和，罚金/备件费从同一本账扣，不另立第二套账。 */
-function ledgerCost(L){ return L.varCost + utilCost(L) + L.fixedCost + L.coCost + (L.fine||0) + (L.spare||0) + (L.procure||0) + (L.recall||0); }   /* R16：procure = 原料采购计价（按到货量×当期价格指数），与 fine/spare 同口径并入成本；R33：recall = 批次召回损失（物流+流出赔付），同口径并入 */
+function ledgerCost(L){ return L.varCost + utilCost(L) + L.fixedCost + L.coCost + (L.fine||0) + (L.spare||0) + (L.procure||0) + (L.recall||0) + (L.rawRecall||0); }   /* R34：rawRecall 上游召回段并入成本（与 R33 recall 成品段分别列账、合计扣利润） */   /* R16：procure = 原料采购计价（按到货量×当期价格指数），与 fine/spare 同口径并入成本；R33：recall = 批次召回损失（物流+流出赔付），同口径并入 */
 function totalFine(){ return PRODUCTS.reduce(function(a,p){ return a + (ledger[p.id].fine||0); }, 0); }
 function totalSpareCost(){ return PRODUCTS.reduce(function(a,p){ return a + (ledger[p.id].spare||0); }, 0); }
 /* 公用工程入账：同时累加全厂总量 S 与指定产品账本 L（L 可为 null=只记全厂）。
@@ -3136,7 +3166,8 @@ function dayrepSnapshot(){
     perProdProfit: PRODUCTS.map(function(p){ return ledgerProfit(ledger[p.id]); }),   /* R26：分产品利润快照（组合建议的近 N 天单瓶毛利做差来源） */
     waste: (typeof ESG !== "undefined") ? ESG.wasteM3 : 0,   /* R26：废水子账快照（当日废水做差） */
     cashBal: (typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0, cashInt: (typeof CASH !== "undefined" && CASH) ? CASH.interestExpensed : 0,   /* R29：现金余额/累计计提利息快照（当日净现金流做差） */
-    powerFee: (typeof totalPowerCostYuan === "function") ? totalPowerCostYuan() : 0, recallLoss: (typeof totalRecallLoss === "function") ? totalRecallLoss() : 0   /* R33：分时电费累计/召回损失累计快照（当日做差 = 逐时计价累计/当日召回损失，0 差同源） */
+    powerFee: (typeof totalPowerCostYuan === "function") ? totalPowerCostYuan() : 0, recallLoss: (typeof totalRecallLoss === "function") ? totalRecallLoss() : 0,   /* R33：分时电费累计/召回损失累计快照（当日做差 = 逐时计价累计/当日召回损失，0 差同源） */
+    rawRecallLoss: (typeof totalRawRecallLoss34 === "function") ? totalRawRecallLoss34() : 0   /* R34：上游召回损失段累计快照（当日做差与成品段分开列账） */
   };
 }
 function downDelta23(b){   /* R23：停机归因当日做差（base 无 down 快照时按全量计） */
@@ -3167,6 +3198,7 @@ function dayrepDelta(){
     waste: ((typeof ESG !== "undefined") ? ESG.wasteM3 : 0) - (b.waste || 0),   /* R26：当日废水（旧 base 无此字段按 0） */
     powerFee: ((typeof totalPowerCostYuan === "function") ? totalPowerCostYuan() : 0) - (b.powerFee || 0),   /* R33：当日电费 = 分时累计做差（与逐时计价累计同源 0 差；旧 base 无字段按全量计） */
     recall: ((typeof totalRecallLoss === "function") ? totalRecallLoss() : 0) - (b.recallLoss || 0),   /* R33：当日召回损失做差 */
+    rawRecall: ((typeof totalRawRecallLoss34 === "function") ? totalRawRecallLoss34() : 0) - (b.rawRecallLoss || 0),   /* R34：当日上游召回损失段做差（与成品段分开） */
     cashFlow: ((typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0) - (b.cashBal == null ? ((typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0) : b.cashBal),   /* R29：当日净现金流 = 期末余额 − 日初快照（旧 base 无字段时按 0 计） */
     cashIntDay: ((typeof CASH !== "undefined" && CASH) ? CASH.interestExpensed : 0) - (b.cashInt || 0),   /* R29：当日计提利息 */
     cashBal: (typeof CASH !== "undefined" && CASH) ? cashBalance29() : 0   /* R29：期末现金余额（归档/资金行同源） */
@@ -3316,7 +3348,7 @@ window.__qcState = function(){ return { samples:QC.samples, fails:QC.fails, marg
  *    traceOnSlot 记货位；装车：叉车 pick 暂存托盘、truck 装车点 traceOnShip 记波次/车次。
  * 归档：records 留最近 CONFIG.r15.traceArchiveCap 批（换型不清、重置才清）；
  * 期初种子库存 26 托无 batchKey，谱系如实显示「期初库存（建账前）」。 */
-var TRACE = { epoch: 0, records: [], byKey: {}, yieldByKey: {}, lastQcSamples: 0, viewKey: null };
+var TRACE = { epoch: 0, records: [], byKey: {}, yieldByKey: {}, lastQcSamples: 0, viewKey: null, qcTimes: [] };   /* R34：qcTimes = 全部抽检事件时刻（完整性自检「应检批次」分母的判定源，与 traceTickQC 同点写） */
 function traceKey(pid, num, epoch){ return pid + "@" + (epoch == null ? TRACE.epoch : epoch) + "#" + num; }
 function traceFeedKey(){ var e = (typeof STER_FEED !== "undefined" && STER_FEED.epoch != null) ? STER_FEED.epoch : TRACE.epoch; return traceKey(STER_FEED.productId, STER_FEED.num, e); }
 function traceCurrentKey(){ return traceKey(product.id, BP.batch, TRACE.epoch); }
@@ -3329,6 +3361,7 @@ function traceEnsure(key, pid, num){
     recipeName: rc ? rc.name : "—", batchL: rc ? rc.batchL : 0,
     ingredients: rc ? rc.ingredients.map(function(ing){ return { name: ing.name, amount: ing.amount, unit: ing.unit, from: ing.from }; }) : [],
     rawLot: (typeof RAW !== "undefined" && RAW.arrivals > 0) ? "罐区来料第 " + (RAW.arrivals + 1) + " 车次" : "期初罐存",
+    rawLotIds: [],   /* R34：结构化原料批归属（出料点由 rawLotsForDischarge34 按 FIFO 消耗归属写定；此前 rawLot 仅文本车次、无反查能力） */
     bornMin: S.simMin, dischargeMin: null,
     ster: null,
     fillStart: null, fillEnd: null, lines: [], bottles: 0,
@@ -3342,6 +3375,7 @@ function traceOnDischarge(num, p){
   var key = traceKey(p.id, num, TRACE.epoch);
   var rec = traceEnsure(key, p.id, num);
   rec.dischargeMin = S.simMin;
+  rec.rawLotIds = rawLotsForDischarge34();   /* R34：本批用料的原料批集合在此定版（自上批出料以来被领料消耗到的全部原料批，FIFO 归属） */
   var sp = sterProcOf(p);
   rec.ster = { tempC: Math.round(STER_DYN.tempC), preheatC: Math.round(STER_DYN.preheatC), coolOutC: Math.round(STER_DYN.coolOutC),
                homogP1: Math.round(STER_DYN.homogP1), homogP2: Math.round(STER_DYN.homogP2), holdSec: sp.holdSec,
@@ -3361,6 +3395,7 @@ function traceAttribute(good){
 function traceTickQC(){
   if(QC.samples <= TRACE.lastQcSamples) return;
   TRACE.lastQcSamples = QC.samples;
+  TRACE.qcTimes.push(S.simMin);   /* R34：抽检事件时刻留痕（自检判定「应检批次」= 生产窗口覆盖任一抽检时刻的批次） */
   var rec = traceEnsure(traceCurrentKey(), product.id, BP.batch);
   rec.qc = { result: QC.lastResult, atMin: QC.lastAt, sampleNo: QC.samples };
   rec.qcCount++;
@@ -3382,7 +3417,7 @@ function traceOnShip(pallet, wave, trip){
   var e = tracePalletEntry(rec, pallet.seq); e.wave = wave; e.trip = trip;
 }
 function traceReset(){
-  TRACE.records = []; TRACE.byKey = {}; TRACE.yieldByKey = {}; TRACE.lastQcSamples = 0; TRACE.viewKey = null; TRACE.epoch = 0;
+  TRACE.records = []; TRACE.byKey = {}; TRACE.yieldByKey = {}; TRACE.lastQcSamples = 0; TRACE.viewKey = null; TRACE.epoch = 0; TRACE.qcTimes = [];
   var tr = $("traceResult"); if(tr) tr.innerHTML = '<div class="qempty">尚无批次谱系 · 开工并完成一轮调配出料后，这里会出现可查的批次。</div>';
 }
 
@@ -3547,6 +3582,323 @@ function touHint33(){
   var dP = tier.price - valleyPrice;
   return "⚠ 当前峰段 ¥" + tier.price.toFixed(3) + "/kWh：下一次 CIP（" + U.cipEvent.powerKwh + " kWh · 台账事件口径）若可延后到谷段执行，约省 ¥" + (U.cipEvent.powerKwh * dP).toFixed(2) + "；换产清洗 / 灭菌预热（" + U.changeoverEvent.powerKwh + " kWh）同理约省 ¥" + (U.changeoverEvent.powerKwh * dP).toFixed(2) + "（事件电量 × 峰谷价差，只提示、不自动排程）。碳排按电量算，与电价无关。";
 }
+/* ================= [M1] R34 · 原料批次账 RAWLOTS + 原料召回 RAWREC + 谱系完整性自检 =================
+ * 【原料批次账】罐区原料自 R34 起按批建账：期初罐存 = 批 #0，此后每车罐车卸料
+ * 完成点（stepR2 与 MARKET.buysLog 同点）另立一批（批号 = 到场车次 RAW.arrivals），
+ * 不与罐存余批混批。领料消耗在 stepR2 的 RAW.level 扣减同点按 FIFO 逐批扣减
+ * （rawLotDrain34，隔离批整批跳过）；供应流量封顶改按未隔离批可用量
+ * （rawAvailQty34）——「配方领料自动跳过该批」由此落地。批次归属：自上批出料
+ * 以来被领料消耗到的原料批集合（pending）在 traceOnDischarge 定版写进
+ * rec.rawLotIds，这就是上游反查的谱系边（R34 前 traceEnsure 只有文本车次，
+ * 无结构化反查能力——A 项审计的「原料批次」行即指此静默缺口）。
+ * 液位被定点改写（探针 setRawLevel / 存档恢复）时 rawLotResync34 以最新未隔离
+ * 批承接差额，使 Σ批账 ≡ 罐存瓶当量（容差 25 瓶当量内不动作）。
+ * 【原料召回 RAWREC】rawRecallStart34(批号)：按 rawLotIds 反查受影响批次并分
+ * 三档——已下线成品批（pallets 非空）逐批走 R33 同流程（货位 quar 标记同键、
+ * recallClassify / recallLossFor 同源、损失进台账 recall、事件进 RECALL.events
+ * 带 viaRawLot 标记，谱系卡横幅与「一批只召回一次」口径与 R33 一致）；在制批
+ * （调配中 = 当前批 / 无菌库存中 = STER_FEED 批，含已成托但仍在灌的批）置
+ * RAWREC34.frozen——step 内三闸冻结（批次时钟停进 / 领料停注 / 无菌料不进
+ * 灌装），进日志与告警中心；该批罐存余量整批 quar——领料跳过、新车另立批。
+ * 损失两段分别列账：成品段 = Σ R33 口径（台账 recall）；上游段 = 冻结批数 ×
+ * rawInspectFeePerBatch + 罐存隔离量 × rawTankHandlePerBottle（台账新字段
+ * rawRecall，ledgerCost 并入、日报做差单列）。满意度与 R33 同走 satEvent
+ * 召回事件项（一次原料召回计一次事件）。解除 rawRecallRelease34 三档按原
+ * 状态恢复（成品段逐批同 R33 解除：撤标记 + 封存托 quarBack 返架；在制解冻
+ * 续跑；罐存解隔），两段损失沉没不回滚。同一时刻只许一个原料批在召回中，
+ * 且与 R33 成品召回互斥（隔离转运链共用）。计时全走仿真分钟（总表第 36 项）。 */
+var RAWLOTS34 = { lots: [], pending: [] };
+var RAWREC34 = { active: null, events: [], frozen: {}, nextId: 1, selLot: null };
+var TRACEAUDIT34 = { atMin: null, ok: null, fields: [], checks: null };
+function lotLabel34(lot){ return lot === 0 ? "期初罐存" : "罐区来料第 " + lot + " 车次"; }
+function rawLotById34(lot){ for(var i = 0; i < RAWLOTS34.lots.length; i++) if(RAWLOTS34.lots[i].lot === lot) return RAWLOTS34.lots[i]; return null; }
+function rawLotInit34(){
+  if(RAWLOTS34.lots.length) return;
+  var qty = (typeof RAW !== "undefined") ? RAW.level * CONFIG.r2.rawTankBottlesPerFull : 0;
+  RAWLOTS34.lots.push({ lot: 0, qty: qty, quar: false, arrivedMin: 0, startMin: null, endMin: null });
+}
+function rawLotResync34(){
+  rawLotInit34();
+  var target = RAW.level * CONFIG.r2.rawTankBottlesPerFull, tot = 0;
+  RAWLOTS34.lots.forEach(function(L){ tot += L.qty; });
+  var diff = target - tot;
+  if(Math.abs(diff) <= 25) return;
+  if(diff > 0){
+    var cand = null;
+    for(var i = RAWLOTS34.lots.length - 1; i >= 0; i--){ if(!RAWLOTS34.lots[i].quar){ cand = RAWLOTS34.lots[i]; break; } }
+    if(!cand){ cand = { lot: RAW.arrivals, qty: 0, quar: false, arrivedMin: S.simMin, startMin: null, endMin: null }; RAWLOTS34.lots.push(cand); }
+    cand.qty += diff;
+  } else {
+    var left = -diff;
+    for(var j = RAWLOTS34.lots.length - 1; j >= 0 && left > 0; j--){
+      var L2 = RAWLOTS34.lots[j]; if(L2.quar) continue;
+      var take = Math.min(L2.qty, left); L2.qty -= take; left -= take;
+      if(L2.qty <= 0.001){ L2.qty = 0; if(L2.startMin !== null && L2.endMin === null) L2.endMin = S.simMin; }
+    }
+  }
+}
+function rawLotDrain34(qty){
+  if(!(qty > 0)) return;
+  /* 先按 FIFO 扣减、后 resync 收敛残差——若先 resync，它会把「液位已扣、批账未扣」
+   * 的差额从末尾新批头上削掉，再叠加本次 FIFO 扣减 = 双重扣减、归属错位
+   * （R34 探针 rawRun 首跑实证：新批被吃到 0）。外部改液位的偏差由扣后 resync 承接。 */
+  var left = qty;
+  for(var i = 0; i < RAWLOTS34.lots.length && left > 0; i++){
+    var L = RAWLOTS34.lots[i];
+    if(L.quar || L.qty <= 0) continue;   /* 隔离批整批跳过：领料自动绕行 */
+    if(L.startMin === null) L.startMin = S.simMin;
+    var take = Math.min(L.qty, left);
+    L.qty -= take; left -= take;
+    if(RAWLOTS34.pending.indexOf(L.lot) < 0) RAWLOTS34.pending.push(L.lot);
+    if(L.qty <= 0.001){ L.qty = 0; if(L.endMin === null) L.endMin = S.simMin; }
+  }
+  rawLotResync34();
+}
+function rawLotOnUnload34(lot, qty){
+  /* 先立批、后对账——若先 resync，到货量会被记到旧批头上，随后纠偏又从末尾
+   * （刚立的新批）扣减，新批归零（R34 探针 rawRun 首跑实证并已修）。 */
+  var e = rawLotById34(lot);
+  if(e) e.qty += qty;
+  else RAWLOTS34.lots.push({ lot: lot, qty: qty, quar: false, arrivedMin: S.simMin, startMin: null, endMin: null });
+  rawLotResync34();
+}
+function rawAvailQty34(){
+  if(!RAWLOTS34.lots.length) return RAW.level * CONFIG.r2.rawTankBottlesPerFull;
+  rawLotResync34();   /* 每步对账一次：液位被定点改写/重置后批账随之收敛，Σ批账 ≡ 罐存 */
+  var t = 0; RAWLOTS34.lots.forEach(function(L){ if(!L.quar) t += L.qty; });
+  return t;
+}
+function rawCurrentLot34(){
+  rawLotInit34();
+  for(var i = 0; i < RAWLOTS34.lots.length; i++){ var L = RAWLOTS34.lots[i]; if(!L.quar && L.qty > 0) return L; }
+  return null;
+}
+function rawLotsForDischarge34(){
+  var out = RAWLOTS34.pending.slice();
+  var cur = rawCurrentLot34();
+  if(cur && out.indexOf(cur.lot) < 0) out.push(cur.lot);
+  RAWLOTS34.pending = [];
+  return out;
+}
+function traceRawLotsLive34(){   /* 在制当前批的实时用料归属（pending + 正在领的批），与出料定版同口径 */
+  var out = RAWLOTS34.pending.slice();
+  var cur = rawCurrentLot34();
+  if(cur && out.indexOf(cur.lot) < 0) out.push(cur.lot);
+  return out;
+}
+function rawFrozen34(key){ return !!(key && RAWREC34.frozen[key]); }
+function totalRawRecallLoss34(){ return PRODUCTS.reduce(function(a, p){ return a + (ledger[p.id].rawRecall || 0); }, 0); }   /* R34：上游段损失三方口径（台账 Σ rawRecall） */
+function rawAffected34(lot){
+  var finished = [], inproc = [], seen = {};
+  TRACE.records.forEach(function(r){
+    if((r.rawLotIds || []).indexOf(lot) < 0) return;
+    seen[r.key] = true;
+    if(r.pallets.length > 0) finished.push(r); else inproc.push(r);
+  });
+  var curK = traceCurrentKey(), feedK = (typeof STER_FEED !== "undefined") ? traceFeedKey() : null;
+  if(curK && !seen[curK] && traceRawLotsLive34().indexOf(lot) >= 0){
+    var rc = traceEnsure(curK, product.id, BP.batch); seen[curK] = true;
+    if(rc.pallets.length > 0) finished.push(rc); else inproc.push(rc);
+  }
+  if(feedK && !seen[feedK]){
+    var rf = TRACE.byKey[feedK];
+    if(rf && (rf.rawLotIds || []).indexOf(lot) >= 0){ seen[feedK] = true; if(rf.pallets.length > 0) finished.push(rf); else inproc.push(rf); }
+  }
+  var lotE = rawLotById34(lot);
+  return { finished: finished, inproc: inproc, tankQty: lotE ? lotE.qty : 0, lotEntry: lotE };
+}
+function rawRecallStart34(lot){
+  if(RAWREC34.active) return { ok: false, err: "已有一个原料批次在召回中（原料批 #" + RAWREC34.active.lot + "），先解除再发起下一批" };
+  if(RECALL.active) return { ok: false, err: "成品批次召回进行中，先解除再发起原料召回（隔离转运链共用）" };
+  var lotE = rawLotById34(lot);
+  if(!lotE) return { ok: false, err: "原料批次不存在（罐区尚无该批建账）" };
+  if(lotE.quar) return { ok: false, err: "该原料批次已在隔离中" };
+  var aff = rawAffected34(lot), C = CONFIG.r34;
+  var feedK = (typeof STER_FEED !== "undefined") ? traceFeedKey() : null, curK = traceCurrentKey();
+  /* 成品段：逐批走 R33 同流程（同键隔离标记 / 同口径损失 / 事件进 RECALL.events） */
+  var finLoss = 0, finDetail = [];
+  aff.finished.forEach(function(rec){
+    if(recallEventOf(rec.key) && recallEventOf(rec.key).status === "active") return;   /* 已在 R33 召回中的批不重复处置 */
+    var cl = recallClassify(rec.key); if(!cl) return;
+    cl.inStock.forEach(function(p){
+      var s = recallSlotsOf(rec.key).filter(function(x){ return x.seq === p.seq; })[0];
+      if(s) s.quar = rec.key;
+    });
+    var loss = recallLossFor(cl.inStock.length, cl.shipped.length);
+    ledger[rec.productId].recall = (ledger[rec.productId].recall || 0) + loss;
+    finLoss += loss;
+    var ev = { id: RECALL.nextId++, key: rec.key, num: rec.num, productId: rec.productId, productName: rec.productName,
+               startMin: S.simMin, releasedMin: null, status: "active", viaRawLot: lot,
+               inStockSeqs: cl.inStock.map(function(p){ return p.seq; }),
+               shipped: cl.shipped.map(function(p){ return { seq: p.seq, wave: p.wave, trip: p.trip }; }),
+               transitSeqs: cl.transit.map(function(p){ return p.seq; }), loss: loss };
+    RECALL.events.push(ev);
+    finDetail.push({ key: rec.key, num: rec.num, productId: rec.productId, evId: ev.id, inStock: cl.inStock.length, shipped: cl.shipped.length, transit: cl.transit.length, loss: loss });
+  });
+  /* 在制段：冻结待检（含已成托但仍是当前/在制批的——防冻结期继续灌出新托） */
+  var frozenKeys = [];
+  function freeze(rec){ if(rec && !RAWREC34.frozen[rec.key]){ RAWREC34.frozen[rec.key] = lot; frozenKeys.push(rec.key); } }
+  aff.inproc.forEach(freeze);
+  aff.finished.forEach(function(rec){ if(rec.key === feedK || rec.key === curK) freeze(rec); });
+  /* 罐存段：整批隔离（领料跳过、补料另立新批不混批） */
+  lotE.quar = true;
+  var tankQty = lotE.qty;
+  /* 上游段损失入账：批检费按冻结批各自产品入 rawRecall、罐存处置费入当前产品 rawRecall */
+  var feeSum = 0;
+  frozenKeys.forEach(function(k){
+    var rec = TRACE.byKey[k]; if(!rec) return;
+    ledger[rec.productId].rawRecall = (ledger[rec.productId].rawRecall || 0) + C.rawInspectFeePerBatch;
+    feeSum += C.rawInspectFeePerBatch;
+  });
+  var tankFee = tankQty * C.rawTankHandlePerBottle;
+  if(tankFee > 0) ledger[product.id].rawRecall = (ledger[product.id].rawRecall || 0) + tankFee;
+  var evR = { id: RAWREC34.nextId++, lot: lot, startMin: S.simMin, releasedMin: null, status: "active",
+              finishedKeys: finDetail.map(function(d){ return d.key; }), finishedDetail: finDetail,
+              frozenKeys: frozenKeys, tankQty: tankQty,
+              lossFinished: finLoss, lossUpstream: feeSum + tankFee };
+  RAWREC34.active = evR; RAWREC34.events.push(evR);
+  satEvent("recall", function(){ SAT.recall24.push({ t: S.simMin, pts: CONFIG.r33.recallSatPoints }); });   /* R34：满意度与 R33 同走召回事件项（一次原料召回计一次） */
+  LOGI.rackDirty = true; syncWhStock();
+  log("🧫 原料批次召回已发起：原料批 #" + lot + "（" + lotLabel34(lot) + "）——按用料谱系反查受影响 " + (finDetail.length + frozenKeys.length) + " 个批次：成品段 " + finDetail.length + " 批走成品召回同流程（在库当刻隔离、AGV 送隔离区封存、已流出列清单，损失 " + fmtMoney(finLoss) + " 进台账「召回损失」）；在制段 " + frozenKeys.length + " 批冻结待检（批次时钟挂起、无菌料不进灌装、领料停注）；罐存段余量 " + fmt(Math.round(tankQty)) + " 瓶当量整批隔离（领料自动跳过、补料另立新批）。上游段损失 " + fmtMoney(evR.lossUpstream) + "（批检费 ¥" + C.rawInspectFeePerBatch + "/冻结批 + 罐存处置 ¥" + C.rawTankHandlePerBottle + "/瓶当量）已单列进台账「上游召回损失」，与成品段分别列账。", "bad");
+  renderRawRecall34();
+  return { ok: true, ev: evR };
+}
+function rawRecallRelease34(){
+  var ev = RAWREC34.active;
+  if(!ev) return { ok: false, err: "当前没有进行中的原料召回" };
+  var uniso = 0, backN = 0;
+  ev.finishedDetail.forEach(function(d){
+    SLOTS.forEach(function(s){ if(s.quar === d.key){ s.quar = null; uniso++; } });
+    for(var i = 0; i < RECALL.events.length; i++) if(RECALL.events[i].id === d.evId){ RECALL.events[i].status = "released"; RECALL.events[i].releasedMin = S.simMin; }
+  });
+  RECALL.quar.forEach(function(q){ if(ev.finishedKeys.indexOf(q.pallet.batchKey) >= 0){ q.returning = true; q.rsv = false; backN++; } });
+  ev.frozenKeys.forEach(function(k){ delete RAWREC34.frozen[k]; });
+  var lotE = rawLotById34(ev.lot); if(lotE) lotE.quar = false;
+  ev.status = "released"; ev.releasedMin = S.simMin;
+  RAWREC34.active = null;
+  LOGI.rackDirty = true; syncWhStock();
+  log("↩ 原料批次召回已解除：原料批 #" + ev.lot + "（" + lotLabel34(ev.lot) + "）——成品段 " + ev.finishedKeys.length + " 批隔离标记已撤 " + uniso + " 托、封存 " + backN + " 托由 AGV 送回货位恢复 FIFO；在制 " + ev.frozenKeys.length + " 批解冻续跑；罐存余量解隔恢复领料。两段损失合计 " + fmtMoney(ev.lossFinished + ev.lossUpstream) + "（成品段 " + fmtMoney(ev.lossFinished) + " + 上游段 " + fmtMoney(ev.lossUpstream) + "）已实际发生、不回滚。", "good");
+  renderRawRecall34();
+  return { ok: true, uniso: uniso, backN: backN };
+}
+function rawRecallReset34(){
+  RAWREC34.active = null; RAWREC34.events = []; RAWREC34.frozen = {}; RAWREC34.nextId = 1; RAWREC34.selLot = null;
+  RAWLOTS34.lots = []; RAWLOTS34.pending = [];
+  rawLotInit34();
+  __rawRecallSig34 = "";
+}
+/* 原料召回面板渲染（签名守卫，同 renderRecall33 口径） */
+var __rawRecallSig34 = "";
+function renderRawRecall34(){
+  var sel = $("rawRecallSel34"), box = $("rawRecallStatus34");
+  if(!sel || !box) return;
+  rawLotInit34();
+  var sig = RAWLOTS34.lots.length + "|" + RAWREC34.events.length + "|" + (RAWREC34.active ? RAWREC34.active.lot : "-") + "|" + Object.keys(RAWREC34.frozen).length + "|" + TRACE.records.length;
+  if(sig === __rawRecallSig34) return;
+  __rawRecallSig34 = sig;
+  var cur = RAWREC34.selLot;
+  sel.innerHTML = RAWLOTS34.lots.map(function(L){
+    var aff = rawAffected34(L.lot);
+    var used = aff.finished.length + aff.inproc.length;
+    if(L.qty <= 0 && !used && !L.quar) return "";
+    return '<option value="' + L.lot + '"' + (L.lot === cur ? " selected" : "") + (RAWREC34.active && RAWREC34.active.lot === L.lot ? " disabled" : "") + '>原料批 #' + L.lot + "（" + lotLabel34(L.lot) + "）· 罐存余 " + fmt(Math.round(L.qty)) + " 瓶当量 · 涉及批次 " + used + "（成品 " + aff.finished.length + " / 在制 " + aff.inproc.length + "）" + (L.quar ? " · 隔离中" : "") + "</option>";
+  }).join("") || '<option value="">（暂无原料批次）</option>';
+  if(RAWREC34.active){
+    var ev2 = RAWREC34.active;
+    box.innerHTML = '<div class="gene"><h4>🧫 原料召回进行中 · 原料批 #' + ev2.lot + "（" + lotLabel34(ev2.lot) + "）</h4>"
+      + "发起时刻 " + fmtSimClock(ev2.startMin) + " · 成品段 " + ev2.finishedKeys.length + " 批（损失 " + fmtMoney(ev2.lossFinished) + " · 台账「召回损失」）· 在制冻结 " + ev2.frozenKeys.length + " 批 · 罐存隔离 " + fmt(Math.round(ev2.tankQty)) + " 瓶当量 · 上游段损失 " + fmtMoney(ev2.lossUpstream) + "（台账「上游召回损失」）<br>"
+      + '<span class="sub">成品段批次：' + (ev2.finishedDetail.map(function(d){ var r = TRACE.byKey[d.key]; return (r ? r.productName : d.key) + " #" + d.num + "（在库隔离 " + d.inStock + " · 已流出 " + d.shipped + "）"; }).join("；") || "无") + "<br>冻结在制批次：" + (ev2.frozenKeys.map(function(k){ var r = TRACE.byKey[k]; return r ? r.productName + " #" + r.num : k; }).join("；") || "无") + "</span></div>";
+  } else if(RAWREC34.events.length){
+    var last = RAWREC34.events[RAWREC34.events.length - 1];
+    box.innerHTML = '<div class="qempty">最近一次原料召回：原料批 #' + last.lot + " · " + (last.status === "released" ? "已解除" : last.status) + " · 成品段 " + last.finishedKeys.length + " 批（" + fmtMoney(last.lossFinished) + "）· 冻结 " + last.frozenKeys.length + " 批 · 罐存隔离 " + fmt(Math.round(last.tankQty)) + " 瓶当量 · 上游段 " + fmtMoney(last.lossUpstream) + " · 累计上游段损失 " + fmtMoney(totalRawRecallLoss34()) + "（台账同源）</div>";
+  } else {
+    box.innerHTML = '<div class="qempty">尚无原料召回事件 · 罐车到场建批、批次出料归属后可在此发起上游召回。</div>';
+  }
+}
+$("rawRecallBtn34").addEventListener("click", function(){
+  var sel = $("rawRecallSel34");
+  var lot = sel && sel.value !== "" && sel.value != null ? Number(sel.value) : RAWREC34.selLot;
+  if(lot == null || isNaN(lot)){ log("原料召回：暂无可召回的原料批次（需先有罐车到场建批）。", "bad"); return; }
+  RAWREC34.selLot = lot;
+  var r = rawRecallStart34(lot);
+  if(!r.ok) log("原料召回未发起：" + r.err, "bad");
+});
+$("rawRecallReleaseBtn34").addEventListener("click", function(){
+  var r = rawRecallRelease34();
+  if(!r.ok) log("解除原料召回未执行：" + r.err, "bad");
+});
+$("rawRecallSel34").addEventListener("change", function(){ RAWREC34.selLot = Number(this.value); __rawRecallSig34 = ""; renderRawRecall34(); });
+/* ================= [M1] R34 · 谱系完整性审计与常驻自检（TRACEAUDIT） =================
+ * A 项收口：R33 探针实证「出库快照漏 batchKey」这类静默空转能潜伏 18 轮——本自检
+ * 与 navGate 同级常驻：traceAudit34() 逐字段给出来源事件点 / 静默空转风险 / 实测
+ * 填充率（分母 = 应有该字段的群体，不稀释），并对三类硬断言判定：在库货位与
+ * 实存一致、已发货托波次/车次非空、应检批次抽检非空率 100%。读数口
+ * window.__traceAudit()，结论与最近自检时刻进抽屉追溯区一行（renderTraceAudit34），
+ * 每轮回归 __r34Check 必跑。自检为纯读数（除渲染外不改任何状态）。 */
+function traceAudit34(){
+  var recs = TRACE.records;
+  function rate(n, d){ return d > 0 ? Math.round(n / d * 1000) / 10 : null; }
+  var discharged = recs.filter(function(r){ return r.dischargeMin !== null; });
+  var produced = recs.filter(function(r){ return r.bottles > 0; });
+  var palletized = recs.filter(function(r){ return r.pallets.length > 0; });
+  var curK = traceCurrentKey();
+  var qcDue = recs.filter(function(r){   /* 应检 = 调配窗口 [bornMin, 出料或当前时刻] 覆盖任一抽检事件时刻的批次（抽检同点记给在调批，见 traceTickQC） */
+    var end = r.dischargeMin !== null ? r.dischargeMin : (r.key === curK ? S.simMin : r.bornMin);
+    return TRACE.qcTimes.some(function(t){ return t >= r.bornMin - 0.001 && t <= end + 0.001; });
+  });
+  var slotBySeq = {};
+  SLOTS.forEach(function(s){ if(s.taken) slotBySeq[s.seq] = s; });
+  var palSlotPop = 0, palSlotOk = 0, shipPop = 0, shipOk = 0, slotMismatch = [];
+  recs.forEach(function(r){
+    r.pallets.forEach(function(p){
+      if(p.trip != null){ shipPop++; if(p.wave != null && p.trip != null) shipOk++; }
+      var sl = slotBySeq[p.seq];
+      if(sl && sl.batchKey === r.key){ palSlotPop++; if(p.slotLabel === slotLabel(sl)) palSlotOk++; else slotMismatch.push(p.seq); }
+    });
+  });
+  var fields = [
+    { field: "配方快照", source: "traceEnsure ← recipeOf（批次首引用点）", risk: "低：配方为静态配置快照，无事件链可空转", pop: recs.length, ok: recs.filter(function(r){ return r.recipeName && r.recipeName !== "—" && r.ingredients.length > 0; }).length },
+    { field: "原料批次", source: "traceOnDischarge ← rawLotsForDischarge34（FIFO 领料归属定版）；文本车次 traceEnsure ← RAW.arrivals", risk: "中：R34 前只有文本车次、无结构化批号——反查类功能会静默无源（本轮已补 rawLotIds 收口）", pop: discharged.length, ok: discharged.filter(function(r){ return (r.rawLotIds || []).length > 0; }).length },
+    { field: "灭菌实测", source: "traceOnDischarge ← STER_DYN 快照（出料完成点）", risk: "低：与出料同点写；未出料批次天然为空、不计分母", pop: discharged.length, ok: discharged.filter(function(r){ return !!r.ster; }).length },
+    { field: "灌装线集合", source: "traceAttribute ← step 良品结算点（当刻在灌线）", risk: "中：产量按 STER_FEED 单指针归属，混批时段线集合为近似（模型既有口径、非空转）", pop: produced.length, ok: produced.filter(function(r){ return r.lines.length > 0; }).length },
+    { field: "灌装时段", source: "traceAttribute 同点（fillStart / fillEnd）", risk: "低：与产量同点写，有产量必有时间", pop: produced.length, ok: produced.filter(function(r){ return r.fillStart !== null && r.fillEnd !== null; }).length },
+    { field: "抽检结果", source: "traceTickQC ← stepQC 样品增量（记当刻在调批）", risk: "中：抽检记在调批而非在灌批，跨批错位为既有口径；无抽检覆盖的批次不计应检分母", pop: qcDue.length, ok: qcDue.filter(function(r){ return !!r.qc; }).length },
+    { field: "成托编号", source: "traceOnPallet ← logiStagePush（码垛满托点，以当刻 feed 批打 batchKey）", risk: "中：打键依赖 feed 指针；R33 前下游快照漏键的教训表明成托后的每次转手都要带键", pop: palletized.length, ok: palletized.filter(function(r){ return r.pallets.every(function(p){ return p.seq > 0; }); }).length },
+    { field: "货位", source: "traceOnSlot ← putXfer 完成点（slotLabel）", risk: "低：与货位实存同点写；另由硬断言逐托比对实存（见 checks.slotConsistency）", pop: palSlotPop, ok: palSlotOk },
+    { field: "波次 / 车次", source: "traceOnShip ← 叉车装车点（WAVES 波次 / SHIP.trips+1 车次）", risk: "高（已实证）：R33 前出库派单快照漏带 batchKey，traceOnShip 恒无键可记、静默空转 18 轮——已修，本自检以硬断言常驻守住", pop: shipPop, ok: shipOk },
+    { field: "召回状态", source: "recallEventOf ← RECALL.events（R33 发起/解除 + R34 原料召回成品段同表）", risk: "低：无事件即「未召回」为完整信息，按构造恒满", pop: recs.length, ok: recs.length }
+  ];
+  fields.forEach(function(f){ f.fillRate = rate(f.ok, f.pop); });
+  var qcOkN = qcDue.filter(function(r){ return !!r.qc; }).length;
+  var checks = {
+    shippedWaveTrip: { pop: shipPop, ok: shipOk, pass: shipOk === shipPop },
+    slotConsistency: { pop: palSlotPop, ok: palSlotOk, mismatches: slotMismatch, pass: palSlotOk === palSlotPop },
+    qcFill: { pop: qcDue.length, ok: qcOkN, pass: qcOkN === qcDue.length }
+  };
+  TRACEAUDIT34 = { atMin: S.simMin, ok: checks.shippedWaveTrip.pass && checks.slotConsistency.pass && checks.qcFill.pass, fields: fields, checks: checks };
+  renderTraceAudit34();
+  return TRACEAUDIT34;
+}
+window.__traceAudit = traceAudit34;
+var __auditSig34 = "";
+function renderTraceAudit34(){
+  var line = $("traceAuditLine34"); if(!line) return;
+  var A = TRACEAUDIT34;
+  var sig = A.atMin === null ? "none" : A.atMin + "|" + A.ok + "|" + A.fields.map(function(f){ return f.fillRate; }).join(",");
+  if(sig === __auditSig34) return;
+  __auditSig34 = sig;
+  if(A.atMin === null){ line.innerHTML = "谱系完整性自检（R34 · 与防撞 navGate 同级常驻）：尚未运行 · 点下方按钮或由回归包 __r34Check 触发，结论与最近自检时刻记在这里。"; return; }
+  line.innerHTML = "谱系完整性自检（R34 · 常驻）：最近自检 " + fmtSimClock(A.atMin) + " · 结论 <b>" + (A.ok ? "✔ 硬断言全过" : "✘ 有断言未过（见下表）") + "</b> · 已发货波次/车次 " + A.checks.shippedWaveTrip.ok + "/" + A.checks.shippedWaveTrip.pop + " · 在库货位一致 " + A.checks.slotConsistency.ok + "/" + A.checks.slotConsistency.pop + " · 应检抽检填充 " + A.checks.qcFill.ok + "/" + A.checks.qcFill.pop;
+  var tb = $("traceAuditTable34");
+  if(tb) tb.innerHTML = '<table class="ledger"><thead><tr><th>谱系字段</th><th>数据来源事件点 · 静默空转风险</th><th>实测填充率</th></tr></thead><tbody>'
+    + A.fields.map(function(f){ return "<tr><td>" + f.field + "</td><td style=" + '"text-align:left;white-space:normal"' + ">" + f.source + '<br><span style="color:var(--faint)">风险：' + f.risk + "</span></td><td>" + (f.fillRate === null ? "—（无样本）" : f.fillRate + "%（" + f.ok + "/" + f.pop + "）") + "</td></tr>"; }).join("")
+    + "</tbody></table>";
+}
+$("traceAuditBtn34").addEventListener("click", function(){
+  var A = traceAudit34();
+  log("🧬 谱系完整性自检（R34）：" + (A.ok ? "硬断言全过" : "有断言未过") + "——已发货波次/车次 " + A.checks.shippedWaveTrip.ok + "/" + A.checks.shippedWaveTrip.pop + " · 在库货位一致 " + A.checks.slotConsistency.ok + "/" + A.checks.slotConsistency.pop + " · 应检抽检 " + A.checks.qcFill.ok + "/" + A.checks.qcFill.pop + " · 逐字段填充率见抽屉「批次追溯」自检表。", A.ok ? "good" : "bad");
+});
+
 window.__trace = function(){ return TRACE; };
 /* ================= [M1] R15 · 预测性维护 PM（健康度劣化模型） =================
  * 关键设备 = 3 工位 + 3 灌装线，各带 health（0~100）：stepPM 在 step 内推进——
@@ -3848,6 +4200,7 @@ $("reportDlBtn").addEventListener("click", function(){
     "当日水/电/汽总耗：水 " + dd.water.toFixed(1) + " m³ · 电 " + fmt(dd.power) + " kWh · 蒸汽 " + fmt(dd.steam) + " kg",
     "当日电费（分时计价 · R33）：" + fmtMoney(dd.powerFee || 0) + "（峰 ×" + CONFIG.r33.touPeakMult + "（08–11 / 18–22 时）· 谷 ×" + CONFIG.r33.touValleyMult + "（00–06 时）· 平 ×1，基准 ¥" + CONFIG.utilities.power.pricePerKwh + "/kWh；按每次入账的发生时刻档位价累计，与台账 powerCost 做差 0 差；历史归档不回溯）",
     "批次召回（当日 · R33）：损失 " + fmtMoney(dd.recall || 0) + "（台账 recall 单列）" + (RECALL.active ? " · 进行中：「" + RECALL.active.productName + "」批次 #" + RECALL.active.num + "（在库隔离 " + RECALL.active.inStockSeqs.length + " 托 · 已流出 " + RECALL.active.shipped.length + " 托 · 隔离区封存 " + RECALL.quar.length + " 托）" : " · 当前无进行中召回") + " · 累计召回损失 " + fmtMoney(totalRecallLoss()),
+    "原料召回（当日 · R34 上游段）：损失 " + fmtMoney(dd.rawRecall || 0) + "（台账 rawRecall 单列，与成品段分开列账）" + ((typeof RAWREC34 !== "undefined" && RAWREC34.active) ? " · 进行中：原料批 #" + RAWREC34.active.lot + "（冻结在制 " + RAWREC34.active.frozenKeys.length + " 批 · 成品段批次 " + RAWREC34.active.finishedKeys.length + " 批 · 罐存隔离 " + fmt(Math.round(RAWREC34.active.tankQty)) + " 瓶当量）" : " · 当前无进行中原料召回") + " · 累计上游段损失 " + fmtMoney(totalRawRecallLoss34()),
     dd.finished > 0 ? "当日单瓶耗（每千瓶）：水 " + (dd.water / dd.finished * 1000 * 1000).toFixed(0) + " L · 电 " + (dd.power / dd.finished * 1000).toFixed(1) + " kWh · 汽 " + (dd.steam / dd.finished * 1000).toFixed(1) + " kg" : "当日单瓶耗：尚无产出",
     "环境（当日 · ESG · R26）：碳排 " + fmt(Math.round(esgFromDelta(dd).carbonKg)) + " kg CO₂ · 单瓶碳排 " + (esgFromDelta(dd).perBottleG == null ? "—" : esgFromDelta(dd).perBottleG.toFixed(1) + " g/瓶") + " · 废水 " + esgFromDelta(dd).wasteM3.toFixed(2) + " m³ · 单瓶废水 " + (esgFromDelta(dd).wastePerBottleL == null ? "—" : esgFromDelta(dd).wastePerBottleL.toFixed(2) + " L/瓶") + "（因子：电 " + CONFIG.r26.esg.gridKgPerKwh + " kg CO₂/kWh · 汽 " + CONFIG.r26.esg.steamKgPerKg + " kg CO₂/kg；废水 = CIP/换产清洗水 × " + CONFIG.r26.esg.wasteFactor + "）",
     "当日换型：立即 " + dd.coI + " 次 · 排空 " + dd.coD + " 次",
@@ -4378,6 +4731,7 @@ function alerts23(){
   if(WH.stockCases >= SLOTS.length) out.push({ cls: "bad", txt: "🔴 货架已满：" + WH.stockCases + " / " + SLOTS.length + " 托——无空位时入库受阻，可扩容或加速出库" });
   if(typeof STRESS !== "undefined" && STRESS.active) out.push({ cls: "warn", txt: "🧪 压力测试进行中：「" + STRESS.active.name + "」已 " + Math.round(S.simMin - STRESS.active.triggerMin) + " 分（恢复后自动记入日报）" });
   if(typeof RECALL !== "undefined" && RECALL.active) out.push({ cls: "bad", txt: "🧫 批次召回进行中：「" + RECALL.active.productName + "」批次 #" + RECALL.active.num + " · 在库隔离 " + RECALL.active.inStockSeqs.length + " 托 · 已流出 " + RECALL.active.shipped.length + " 托 · 损失 " + fmtMoney(RECALL.active.loss) + "——隔离托已冻结出库，详抽屉「批次召回」" });   /* R33 */
+  if(typeof RAWREC34 !== "undefined" && RAWREC34.active) out.push({ cls: "bad", txt: "🧫 原料召回进行中：原料批 #" + RAWREC34.active.lot + "（" + lotLabel34(RAWREC34.active.lot) + "）· 成品段 " + RAWREC34.active.finishedKeys.length + " 批隔离中 · 在制冻结 " + RAWREC34.active.frozenKeys.length + " 批待检 · 罐存隔离 " + fmt(Math.round(RAWREC34.active.tankQty)) + " 瓶当量——两段损失 " + fmtMoney(RAWREC34.active.lossFinished + RAWREC34.active.lossUpstream) + "，详抽屉「原料批次召回」" });   /* R34 */
   if(typeof EXP4 !== "undefined" && EXP4.building) out.push({ cls: "warn", txt: "🏗 第 4 条灌装线施工中：剩 " + Math.ceil(EXP4.building.leftMin) + " 仿真分钟（新线位不可用，既有三线已重排让位）" });
   if(typeof EXP4 !== "undefined" && EXP4.built && palUtilization23() > 1) out.push({ cls: "warn", txt: "⚠ 码垛机成峰值瓶颈：四线包装下线峰值 " + Math.round(palPeakCasesPerMin()) + " 箱/分 > 码垛额定 " + CONFIG.r14.rateCasesPerMin + " 箱/分（运力比 " + palUtilization23().toFixed(2) + "）——满负荷时货先攒在码垛进料缓冲，暂存钉满会随之而来" });
   /* R24 两路（既有信号：PALUP 施工状态与 PAL 进料积压，均非新造判定）：改造施工中 + 进料缓冲积压 */
@@ -4845,7 +5199,7 @@ function archiveDayData(d){
            perProd: PRODUCTS.map(function(p, i){ return { fin: d.perProd[i] || 0, profit: Math.round(((d.perProdProfit || [])[i] || 0) * 100) / 100 }; }),
            cashEnd: Math.round((d.cashBal || 0) * 100) / 100, cashFlow: Math.round((d.cashFlow || 0) * 100) / 100, cashInt: Math.round((d.cashIntDay || 0) * 100) / 100,   /* R29：归档带期末现金/当日净现金流/当日计提利息（与资金行同源做差） */
            promoYuan: Math.round((d.promoYuan || 0) * 100) / 100,   /* R30：复盘让利口径（R30 前旧归档无此字段、复盘按覆盖数标注） */
-           powerFee: Math.round((d.powerFee || 0) * 100) / 100, recallLossDay: Math.round((d.recall || 0) * 100) / 100,   /* R33：当日分时电费/召回损失（与当日做差同源定版） */
+           powerFee: Math.round((d.powerFee || 0) * 100) / 100, recallLossDay: Math.round((d.recall || 0) * 100) / 100, rawRecallLossDay: Math.round((d.rawRecall || 0) * 100) / 100,   /* R33：当日分时电费/召回损失（与当日做差同源定版）；R34：上游召回段当日做差同源定版 */
            alertsBad: (typeof ALERTC !== "undefined" && ALERTC.day) ? (ALERTC.day.badTrig || 0) : 0,   /* R32：当日 P0（bad 级）告警触发数——归档一刻与 ALERTC.day 同源定版（翻页清零点在 archiveDay 之后）；R32 前旧归档无此字段、挑战判定按覆盖数标注 */
            down: { fault: Math.round((d.down ? d.down.fault : 0) * 10) / 10, cip: Math.round((d.down ? d.down.cip : 0) * 10) / 10, changeover: Math.round((d.down ? d.down.changeover : 0) * 10) / 10, maint: Math.round((d.down ? d.down.maint : 0) * 10) / 10, outage: Math.round((d.down ? d.down.outage : 0) * 10) / 10, starved: Math.round((d.down ? d.down.starved : 0) * 10) / 10, runMin: Math.round((d.down ? d.down.runMin : 0) * 10) / 10 } };   /* R30：复盘停机六桶口径（与当日做差同源） */
 }
@@ -4965,7 +5319,8 @@ function step(dtMin){
 
   var ster = stations[2];
   var draining = !!S.reservation;   /* R6 排空预约中：停新料、冻批次时钟、顺流排空（见 reserveChangeover 口径） */
-  if(!draining) advanceBlendBatch(dtMin);   /* 调配批次时钟与生产同步推进（换型/排空预约时冻结：不开新批，当前批随队列顺流成瓶） */
+  var frozenCur34 = (typeof rawFrozen34 === "function") && rawFrozen34(traceCurrentKey());   /* R34：原料召回冻结——在制调配批次待检挂起，批次时钟与领料同点冻结（与排空预约同级闸门） */
+  if(!draining && !frozenCur34) advanceBlendBatch(dtMin);   /* 调配批次时钟与生产同步推进（换型/排空预约时冻结：不开新批，当前批随队列顺流成瓶） */
   var dtRep22 = dtMin * staffRepairFactor();   /* R22：维修/保养作业速度随当前班排班档位（精简 0.6 慢、加强 1.5 快） */
   stations.forEach(function(st){
     if(st.faultLeft>0){ st.faultLeft = Math.max(0, st.faultLeft-dtRep22); if(st.faultMeta && st.faultMeta.waitLeft>0) st.faultMeta.waitLeft = Math.max(0, st.faultMeta.waitLeft-dtRep22); if(st.faultLeft===0) faultCleared(st); }   /* R12：等待备件期同步递减、修好记 MTTR */
@@ -4996,14 +5351,15 @@ function step(dtMin){
   }
 
   /* flow: pack/cap pull -> filler -> sterilize split -> blend -> supply */
+  var feedFrozen34 = (typeof rawFrozen34 === "function") && rawFrozen34(traceFeedKey());   /* R34：无菌库存中的批次被冻结待检时，其料绝不进灌装——封盖拉料/灌装进料/无菌拉料三处同闸（探针断言冻结期该批 bottles/pallets 零增长） */
   var produced = 0;
   lines.forEach(function(l){
-    var mv = Math.min(l.capQ, PACK_RATE*dtMin);
+    var mv = feedFrozen34 ? 0 : Math.min(l.capQ, PACK_RATE*dtMin);
     l.capQ -= mv; produced += mv; l.done += mv;
   });
   /* cap stage pulls from filler queue via a virtual: filler output goes to capQ */
   lines.forEach(function(l){
-    var down = !l.on || l.faultLeft>0 || (l.maintLeft||0)>0;   /* R15：保养停机与故障同口径断流 */
+    var down = feedFrozen34 || !l.on || l.faultLeft>0 || (l.maintLeft||0)>0;   /* R15：保养停机与故障同口径断流；R34：冻结批同口径断流 */
     var cap = down ? 0 : l.fillRate() * rampF22();   /* R22：复电爬坡期灌装产能系数 */
     var move = Math.min(l.queue, cap*dtMin, Math.max(0, LINE_Q_CAP - l.capQ + PACK_RATE*dtMin));
     l.queue -= move; l.capQ += move; l.lastMove = move; l.lastCap = cap; l.lastDt = dtMin;
@@ -5020,7 +5376,7 @@ function step(dtMin){
   ster.lastMove = sterMove; ster.lastCap = sterCap; ster.lastDt = dtMin;
   ASEPTIC.lastSterMove = sterMove;
   var feedMove = 0;
-  if(feed.length && ASEPTIC.stock > 0){
+  if(feed.length && ASEPTIC.stock > 0 && !feedFrozen34){
     var room = feed.reduce(function(a,l){ return a + Math.max(0, LINE_Q_CAP - l.queue); }, 0);
     var feedDemand = feed.reduce(function(a,l){ return a + l.fillRate(); }, 0) * dtMin * 1.25; /* 供料泵能力略高于灌装总需求，有库存就能跟上 */
     feedMove = Math.min(ASEPTIC.stock, room, Math.max(feedDemand, sterMove));
@@ -5040,7 +5396,7 @@ function step(dtMin){
   blend.lastMove = blendMove; blend.lastCap = blendCap; blend.lastDt = dtMin;
   /* supply -> blend queue */
   var supCap = (supply.faultLeft>0 || (supply.maintLeft||0)>0) ? 0 : supply.rateFn() * rampF22();   /* R15：供应保养停机；R22：爬坡系数 */
-  var supMove = draining ? 0 : Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue), RAW.level * CONFIG.r2.rawTankBottlesPerFull);   /* R6：排空期停注新料；R13：供应流量按原料罐实物库存封顶——罐存见底即 supMove=0 真断料，不再有无源之水 */
+  var supMove = (draining || frozenCur34) ? 0 : Math.min(supCap*dtMin, Math.max(0, QUEUE_CAP*CONFIG.upstreamBufferFactor - blend.queue), rawAvailQty34());   /* R6：排空期停注新料；R13：供应流量按原料罐实物库存封顶——罐存见底即 supMove=0 真断料，不再有无源之水；R34：封顶改按「未隔离原料批可用量」（隔离批领料自动跳过，余批照常供料） */
   blend.queue += supMove;
   supply.lastMove = supMove; supply.lastCap = supCap; supply.lastDt = dtMin;
   supply.done += supMove; blend.done += blendMove; ster.done += sterMove;
@@ -5414,6 +5770,8 @@ function renderKpis(){
     if(typeof renderTraceChips === "function") renderTraceChips();
     if(TRACE.viewKey && TRACE.byKey[TRACE.viewKey]) renderGenealogy(TRACE.viewKey);
     if(typeof renderRecall33 === "function") renderRecall33();   /* R33：召回面板随抽屉节奏刷新（签名守卫，状态不变零重建） */
+    if(typeof renderRawRecall34 === "function") renderRawRecall34();   /* R34：原料召回面板同节奏刷新（签名守卫） */
+    if(typeof renderTraceAudit34 === "function") renderTraceAudit34();   /* R34：谱系自检读数行同节奏刷新（签名守卫，未跑时只显一行） */
     var spOut = $("spareOut");
     if(spOut) spOut.textContent = SPARES.stock + " 件" + (SPARES.stock === 0 ? "（缺货）" : "") + " · 已领用 " + SPARES.used + " 件";
     /* R13：调度台原料预警行 + 精益看板原料行（与 rawAlertState 同源同节奏刷新） */
@@ -8147,9 +8505,8 @@ function assignAgv(a){
    * 返架（quarBack）次之。两类任务都是「货位 ↔ 隔离区」的单向搬运，与既有 pick/put
    * 相位机共用（toPick/pickXfer/toSlot/putXfer），不另立第二套车辆系统。 */
   function tryQuar(){
-    if(!RECALL.active) return false;
     var s = null;
-    SLOTS.forEach(function(x){ if(x.taken && x.quar === RECALL.active.key && !x.reserved && (!s || x.seq < s.seq)) s = x; });
+    SLOTS.forEach(function(x){ if(x.taken && x.quar && !x.reserved && (!s || x.seq < s.seq)) s = x; });   /* R34：隔离转运认货位 quar 标记本身（R33 单批召回与 R34 原料召回多批成品段共用同一转运链；标记由各自发起方置、解除方清） */
     if(!s) return false;
     var qi = recallQuarFreeIdx(); if(qi < 0) return false;   /* 隔离区满：托留在货位保持隔离标记，待有空位再转运 */
     s.reserved = true;
@@ -9765,8 +10122,10 @@ function renderGenealogy(key){
       ? '<div style="background:#d92c2c;color:#fff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-weight:700">🧫 本批次已召回（' + clk(rcEv33.startMin) + ' 发起）· 在库隔离 ' + rcEv33.inStockSeqs.length + ' 托（已封存隔离区 ' + rcQuarN33 + ' 托）· 已流出 ' + rcEv33.shipped.length + ' 托 · 召回损失 ' + fmtMoney(rcEv33.loss) + ' —— 隔离托不可出库，详抽屉「批次召回」</div>'
       : '<div style="background:#5b6470;color:#fff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-weight:700">↩ 本批次召回已解除（误召回 · ' + clk(rcEv33.releasedMin) + '）· 隔离托已恢复正常可出库 · 召回损失 ' + fmtMoney(rcEv33.loss) + ' 为沉没成本不回滚</div>';
   }
-  box.innerHTML = rcBanner33 + '<div class="gene"><h4>' + rec.productName + ' · 调配批次 #' + rec.num + ' 谱系卡</h4>'
-    + geneNode(clk(rec.bornMin), "调配开批 · " + rec.recipeName, "批量 " + fmt(rec.batchL) + " L/批 · 原料批次：" + rec.rawLot + '<br><span class="sub">' + ing + '</span>')
+  var fzBanner34 = (typeof RAWREC34 !== "undefined" && rawFrozen34(key))
+    ? '<div style="background:#b45309;color:#fff;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-weight:700">🧊 本批次因原料批 #' + RAWREC34.frozen[key] + ' 召回冻结待检中（批次时钟挂起 · 无菌料不进灌装）——解除原料召回后按原状态续跑，详抽屉「原料批次召回」</div>' : "";   /* R34：冻结状态横幅（与 RAWREC34.frozen 同源） */
+  box.innerHTML = rcBanner33 + fzBanner34 + '<div class="gene"><h4>' + rec.productName + ' · 调配批次 #' + rec.num + ' 谱系卡</h4>'
+    + geneNode(clk(rec.bornMin), "调配开批 · " + rec.recipeName, "批量 " + fmt(rec.batchL) + " L/批 · 原料批次：" + rec.rawLot + '<br><span class="sub">原料批归属（R34 结构化 · 上游反查源）：' + ((rec.rawLotIds && rec.rawLotIds.length) ? rec.rawLotIds.map(function(l){ return "原料批 #" + l + "（" + lotLabel34(l) + "）"; }).join("、") : "—（出料定版后写入）") + '</span><br><span class="sub">' + ing + '</span>')
     + geneNode(rec.dischargeMin !== null ? clk(rec.dischargeMin) : "—", "灭菌（UHT）", ster)
     + geneNode(rec.fillStart !== null ? clk(rec.fillStart) : "—", "灌装", fill)
     + geneNode(rec.qc ? clk(rec.qc.atMin) : "—", "质检抽检", qc)
@@ -10387,7 +10746,7 @@ $("resetBtn").addEventListener("click", function(){
   FAULTLOG.events = 0; FAULTLOG.repaired = 0; FAULTLOG.repairSumMin = 0; FAULTLOG.runMin = 0;
   renderOrderQueue();
   $("coModal").classList.remove("show");
-  PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0, procure:0, promo:0, recall:0, powerCost:0, powerKwhPriced:0 }; });   /* R33：与建账口径一致（recall/powerCost/powerKwhPriced） */
+  PRODUCTS.forEach(function(p){ ledger[p.id] = { finished:0, rejected:0, revenue:0, varCost:0, waterM3:0, powerKwh:0, steamKg:0, fixedCost:0, coCost:0, fine:0, spare:0, procure:0, promo:0, recall:0, rawRecall:0, powerCost:0, powerKwhPriced:0 }; });   /* R33：与建账口径一致（recall/powerCost/powerKwhPriced）；R34：rawRecall 上游召回段同口径 */
   history=[]; sampleAcc=0; sampleCount=0;
   stations.forEach(function(st){ st.queue=0; st.done=0; st.faults=0; st.faultLeft=0; st.maintLeft=0; st.faultMeta=null; st.faultStartMin=null; st.lastMove=0; st.lastCap=0; if(st.cipLeft!==undefined){ st.cipLeft=0; st.sinceCip=0; } });
   lines.forEach(function(l){ l.queue=0; l.capQ=0; l.done=0; l.faults=0; l.faultLeft=0; l.maintLeft=0; l.faultMeta=null; l.faultStartMin=null; l.lastMove=0; });
@@ -10408,6 +10767,8 @@ $("resetBtn").addEventListener("click", function(){
   /* R18：满意度与车辆补偿全量复位（滚动窗回先验、到达节拍与车辆电耗清零） */
   SAT.orderOutcomes = CONFIG.r18.sat.priorOnTime.slice(); SAT.qcOutcomes = CONFIG.r18.sat.priorQc.slice(); SAT.fine24 = []; SAT.recall24 = []; SAT.arrivals = []; SAT.nextArrivalMin = null; satRecompute(); satDayReset();   /* R33：召回事件窗随重置清零 */
   recallReset33(); __recallSig33 = "";   /* R33：召回全清（事件/封存/隔离标记/面板签名） */
+  rawRecallReset34();   /* R34：原料召回/原料批账/冻结全清（批账按重置后液位重建期初批） */
+  TRACEAUDIT34 = { atMin: null, ok: null, fields: [], checks: null }; __auditSig34 = ""; renderTraceAudit34();   /* R34：自检结论随新工厂清零 */
   cashReset29();   /* R29：现金/贷款全量复位（余额为派生值，贷款清零即回到期初现金口径；季节为 simMin 纯派生随之归位） */
   tasksReset30();   /* R30：任务进度复位（完成态清空、隐藏偏好保留，与 UIPREFS 同口径） */
   chalReset32();   /* R32：经营挑战进度复位（与新手链同口径：清完成态、保留隐藏偏好） */
@@ -12107,7 +12468,7 @@ function saveCapture(){
     lines: lines.map(function(l){ return pick25(l, ["on", "queue", "capQ", "done", "faults", "faultLeft", "maintLeft", "lastMove"]); }),
     health: HEALTH.map(function(e){ return { name: e.name, health: e.health, warned: e.warned }; }),
     pm: PM,
-    trace: { epoch: TRACE.epoch, records: TRACE.records, yieldByKey: TRACE.yieldByKey, lastQcSamples: TRACE.lastQcSamples },
+    trace: { epoch: TRACE.epoch, records: TRACE.records, yieldByKey: TRACE.yieldByKey, lastQcSamples: TRACE.lastQcSamples, qcTimes: TRACE.qcTimes },   /* R34：qcTimes 抽检时刻表随档（自检应检分母不丢） */
     slots: SLOTS.map(function(s){ return pick25(s, ["taken", "reserved", "seq", "productId", "batchKey", "inAtMin", "quar"]); }),   /* R33：quar = 召回隔离标记（批次键或 null） */
     logi: { nextSeq: LOGI.nextSeq, stage: LOGI.stage, handover: LOGI.handover },
     carried: carried,
@@ -12125,7 +12486,8 @@ function saveCapture(){
     cash29: clone25(CASH),   /* R29：现金/贷款状态（贷款为纯数据；余额是派生值，恢复后按公式与未偿自动一致；旧存档无此字段时保持重置态） */
     tasks30: clone25(TASKS30),   /* R30：新手任务进度与隐藏偏好（纯数据；旧存档无此字段时保持当前态） */
     chal32: clone25(CHAL32),   /* R32：经营挑战进度/隐藏/满产计时（纯数据；旧存档无此字段时保持当前态） */
-    recall33: clone25(RECALL)   /* R33：召回事件/隔离封存（纯数据；旧存档无此字段时保持当前态——隔离标记在 slots.quar 里随货位走） */
+    recall33: clone25(RECALL),   /* R33：召回事件/隔离封存（纯数据；旧存档无此字段时保持当前态——隔离标记在 slots.quar 里随货位走） */
+    raw34: { lots: clone25(RAWLOTS34), rec: clone25(RAWREC34), audit: { atMin: TRACEAUDIT34.atMin, ok: TRACEAUDIT34.ok } }   /* R34：原料批账/原料召回/冻结/自检结论随档往返（旧存档无此字段时保持当前态、批账由 resync 收敛） */
   };
 }
 function saveBuildEnvelope(){
@@ -12185,7 +12547,7 @@ function saveRestore(p){
   });
   assignInto25(PM, clone25(p.pm));
   TRACE.epoch = p.trace.epoch || 0; TRACE.records = clone25(p.trace.records) || [];
-  TRACE.yieldByKey = clone25(p.trace.yieldByKey) || {}; TRACE.lastQcSamples = p.trace.lastQcSamples || 0;
+  TRACE.yieldByKey = clone25(p.trace.yieldByKey) || {}; TRACE.lastQcSamples = p.trace.lastQcSamples || 0; TRACE.qcTimes = clone25(p.trace.qcTimes) || [];   /* R34 */
   TRACE.byKey = {}; TRACE.records.forEach(function(r){ TRACE.byKey[r.key] = r; });
   p.slots.forEach(function(ss, i){
     var s = SLOTS[i]; if(!s) return;
@@ -12194,6 +12556,7 @@ function saveRestore(p){
     s.quar = ss.quar || null;   /* R33：隔离标记随货位恢复（旧存档无此字段 = 未隔离） */
   });
   if(p.recall33){ RECALL.active = clone25(p.recall33.active) || null; RECALL.events = clone25(p.recall33.events) || []; RECALL.quar = clone25(p.recall33.quar) || []; RECALL.nextId = p.recall33.nextId || 1; RECALL.selKey = p.recall33.selKey || null; syncQuarVisual33(); __recallSig33 = ""; }   /* R33：召回状态回填（封存垛显隐随之同源对齐） */
+  if(p.raw34){ RAWLOTS34.lots = clone25(p.raw34.lots.lots) || []; RAWLOTS34.pending = clone25(p.raw34.lots.pending) || []; RAWREC34.active = clone25(p.raw34.rec.active) || null; RAWREC34.events = clone25(p.raw34.rec.events) || []; RAWREC34.frozen = clone25(p.raw34.rec.frozen) || {}; RAWREC34.nextId = p.raw34.rec.nextId || 1; RAWREC34.selLot = (p.raw34.rec.selLot === undefined ? null : p.raw34.rec.selLot); if(p.raw34.audit){ TRACEAUDIT34.atMin = p.raw34.audit.atMin; TRACEAUDIT34.ok = p.raw34.audit.ok; } __rawRecallSig34 = ""; __auditSig34 = ""; rawLotResync34(); }   /* R34：原料批账/召回/冻结回填（批账与液位由 resync 收敛对账） */
   LOGI.nextSeq = p.logi.nextSeq || LOGI.nextSeq;
   LOGI.stage = clone25(p.logi.stage) || [];
   (p.logi.handover || []).forEach(function(h, i){ LOGI.handover[i] = h ? clone25(h) : null; LOGI.handoverRsv[i] = false; });
@@ -13530,6 +13893,134 @@ window.__r33Check = function(){
   var out = {}; Object.keys(c32).forEach(function(k){ out[k] = c32[k]; });
   out.r33 = window.__r33();
   out.r33pack = { recallEvents: RECALL.events.length, touTierNow: touTierAt(S.simMin).key, whOk: window.__whCheck().ok };
+  return out;
+};
+
+/* ================= R34 读数口 / 探针 / 回归链 ================= */
+window.__r34 = function(){
+  var lotSum = 0, avail = 0;
+  RAWLOTS34.lots.forEach(function(L){ lotSum += L.qty; if(!L.quar) avail += L.qty; });
+  return {
+    lots: RAWLOTS34.lots.map(function(L){ return { lot: L.lot, label: lotLabel34(L.lot), qty: Math.round(L.qty), quar: L.quar, arrivedMin: L.arrivedMin, startMin: L.startMin, endMin: L.endMin }; }),
+    lotSum: Math.round(lotSum), tankBottleEquiv: Math.round(RAW.level * CONFIG.r2.rawTankBottlesPerFull),
+    lotTankDiff: Math.round(Math.abs(lotSum - RAW.level * CONFIG.r2.rawTankBottlesPerFull)),
+    availQty: Math.round(avail), pendingLots: RAWLOTS34.pending.slice(),
+    rawRecall: { active: RAWREC34.active ? { lot: RAWREC34.active.lot, finished: RAWREC34.active.finishedKeys.length, frozen: RAWREC34.active.frozenKeys.length, tankQty: Math.round(RAWREC34.active.tankQty), lossFinished: Math.round(RAWREC34.active.lossFinished * 100) / 100, lossUpstream: Math.round(RAWREC34.active.lossUpstream * 100) / 100 } : null,
+                 events: RAWREC34.events.length, frozenKeys: Object.keys(RAWREC34.frozen),
+                 totalUpstreamLoss: Math.round(totalRawRecallLoss34() * 100) / 100,
+                 dayUpstreamLoss: Math.round((dayrepDelta().rawRecall || 0) * 100) / 100 },
+    audit: TRACEAUDIT34.atMin === null ? null : { atMin: Math.round(TRACEAUDIT34.atMin), ok: TRACEAUDIT34.ok,
+             fields: TRACEAUDIT34.fields.map(function(f){ return { field: f.field, fillRate: f.fillRate, ok: f.ok, pop: f.pop }; }),
+             checks: TRACEAUDIT34.checks }
+  };
+};
+window.__r34Probe = {
+  /* A 项探针：先泵出已发货 + 在库并存的谱系样本，再跑常驻自检——硬断言三项
+   * （已发货波次/车次、在库货位一致、应检抽检）须全过且逐字段填充率有数；
+   * 样本不足时如实返回（不硬造谱系）。 */
+  auditRun: function(){
+    var wasRunning = S.running, wasSpeed = S.speed;
+    S.running = true; S.everRan = true; S.speed = 2;
+    function hasSample(){
+      var ship = false, slot = false;
+      TRACE.records.forEach(function(r){ r.pallets.forEach(function(p){ if(p.trip != null) ship = true; if(p.slotLabel) slot = true; }); });
+      return ship && slot;
+    }
+    var chunks = 0;
+    while(chunks++ < 40 && !hasSample()) window.__pumpSim(45);
+    var A = traceAudit34();
+    S.speed = wasSpeed; if(!wasRunning) S.running = false;
+    return { fields: A.fields.map(function(f){ return { field: f.field, fillRate: f.fillRate, ok: f.ok, pop: f.pop, source: f.source, risk: f.risk }; }),
+             checks: A.checks, atMin: Math.round(A.atMin), sampled: hasSample(),
+             ok: A.ok && A.fields.length === CONFIG.r34.auditFieldCount };
+  },
+  /* B 项探针：构造一个原料批横跨三态——压低罐存后订一车新料（新批成为罐存
+   * 主体），泵生产至「该批已有成托成品批 + 在制批归属含该批 + 罐存仍有余量」，
+   * 发起原料召回后逐项断言：三档处置计数与谱系反查集合 0 差、在库隔离标记数
+   * = 成品段在库合计、罐存整批隔离且可用量恰扣除该批、冻结批在解除前 bottles /
+   * 成托数 / 批次号零增长（绝不进灌装）、两段损失与台账增量 0 差；解除后泵至
+   * 封存托全返架、冻结清零、罐存解隔。全程走 rawRecallStart34 / rawRecallRelease34
+   * / 既有 AGV 转运链，不构造假托盘。 */
+  rawRun: function(){
+    var wasRunning = S.running, wasSpeed = S.speed;
+    S.running = true; S.everRan = true; S.speed = 2;
+    function pump(sec){ window.__pumpSim(sec); }
+    function restore(){ S.speed = wasSpeed; if(!wasRunning) S.running = false; }
+    if(RAWREC34.active){ restore(); return { ok: false, stage: "busy", note: "已有原料召回进行中，探针不叠加" }; }
+    if(window.__r13Probe && window.__r13Probe.setRawLevel) window.__r13Probe.setRawLevel(0.04);
+    rawLotResync34();
+    var arr0 = RAW.arrivals, chunks = 0;
+    while(chunks++ < 60 && RAW.tanker !== "idle") pump(20);
+    if(RAW.tanker === "idle") orderRawNow("manual");
+    chunks = 0;
+    while(chunks++ < 120 && RAW.arrivals <= arr0) pump(20);
+    chunks = 0;
+    while(chunks++ < 120 && RAW.tanker === "unloading") pump(20);
+    var lot = RAW.arrivals, lotE = rawLotById34(lot);
+    if(!lotE || lotE.qty <= 0){ restore(); return { ok: false, stage: "lot", lot: lot, note: "新料车次未形成原料批建账，如实返回" }; }
+    function spanning(){
+      var fin = TRACE.records.some(function(r){ return (r.rawLotIds || []).indexOf(lot) >= 0 && r.pallets.length > 0; });
+      var feedRec = TRACE.byKey[traceFeedKey()];
+      var inproc = traceRawLotsLive34().indexOf(lot) >= 0 || (feedRec && (feedRec.rawLotIds || []).indexOf(lot) >= 0);
+      var tank = (rawLotById34(lot) || { qty: 0 }).qty > 100;
+      return fin && inproc && tank;
+    }
+    chunks = 0;
+    while(chunks++ < 90 && !spanning()) pump(45);
+    if(!spanning()){ restore(); return { ok: false, stage: "span", lot: lot, lotQty: Math.round(lotE.qty), note: "泵产后该批未横跨成品+在制+罐存三态，未硬造数据，如实返回" }; }
+    var aff0 = rawAffected34(lot);
+    var expFinKeys = aff0.finished.map(function(r){ return r.key; });
+    var expFrozen = {};
+    aff0.inproc.forEach(function(r){ expFrozen[r.key] = true; });
+    aff0.finished.forEach(function(r){ if(r.key === traceFeedKey() || r.key === traceCurrentKey()) expFrozen[r.key] = true; });
+    var expMarked = aff0.finished.reduce(function(a, r){ return a + recallClassify(r.key).inStock.length; }, 0);
+    var tankQty0 = rawLotById34(lot).qty, avail0 = rawAvailQty34();
+    var recallLoss0 = totalRecallLoss(), rawLoss0 = totalRawRecallLoss34();
+    var feedKey0 = traceFeedKey(), feedRec0 = TRACE.byKey[feedKey0];
+    var feedBottles0 = feedRec0 ? feedRec0.bottles : 0, feedPallets0 = feedRec0 ? feedRec0.pallets.length : 0, bpBatch0 = BP.batch;
+    var r = rawRecallStart34(lot);
+    if(!r.ok){ restore(); return { ok: false, stage: "start", err: r.err }; }
+    var marked = SLOTS.filter(function(s){ return s.taken && s.quar && expFinKeys.indexOf(s.batchKey) >= 0; }).length;
+    var tankQuar = rawLotById34(lot).quar === true;
+    var availDrop = avail0 - rawAvailQty34();
+    var tankExcluded = Math.abs(availDrop - tankQty0) < 1.5;
+    var frozenSetOk = r.ev.frozenKeys.slice().sort().join(",") === Object.keys(expFrozen).sort().join(",");
+    var finSetOk = r.ev.finishedKeys.slice().sort().join(",") === expFinKeys.slice().sort().join(",");
+    pump(25);   /* 冻结观察窗（≈27 仿真分钟）：冻结批绝不进灌装 */
+    var feedRec1 = TRACE.byKey[feedKey0];
+    var frozenHeld = RAWREC34.frozen[feedKey0] ? (feedRec1 && feedRec1.bottles === feedBottles0 && feedRec1.pallets.length === feedPallets0) : null;
+    var bpHeld = expFrozen[traceCurrentKey()] ? (BP.batch === bpBatch0) : null;
+    var finDiff = Math.abs((totalRecallLoss() - recallLoss0) - r.ev.lossFinished);
+    var upDiff = Math.abs((totalRawRecallLoss34() - rawLoss0) - r.ev.lossUpstream);
+    var rel = rawRecallRelease34();
+    chunks = 0;
+    while(chunks++ < 160){
+      pump(30);
+      if(RECALL.quar.filter(function(q){ return expFinKeys.indexOf(q.pallet.batchKey) >= 0; }).length === 0
+        && !SLOTS.some(function(s){ return s.quar && expFinKeys.indexOf(s.batchKey) >= 0; })) break;
+    }
+    var backOk = RECALL.quar.filter(function(q){ return expFinKeys.indexOf(q.pallet.batchKey) >= 0; }).length === 0
+      && Object.keys(RAWREC34.frozen).length === 0 && rawLotById34(lot).quar === false;
+    var wh = window.__whCheck();
+    restore();
+    return { lot: lot, finishedBatches: expFinKeys.length, frozenBatches: r.ev.frozenKeys.length, tankQty: Math.round(tankQty0),
+             finSetOk: finSetOk, frozenSetOk: frozenSetOk, marked: marked, expMarked: expMarked, markedOk: marked === expMarked,
+             tankQuar: tankQuar, tankExcluded: tankExcluded, frozenHeld: frozenHeld, bpHeld: bpHeld,
+             lossFinished: Math.round(r.ev.lossFinished * 100) / 100, lossUpstream: Math.round(r.ev.lossUpstream * 100) / 100,
+             finDiff: Math.round(finDiff * 100) / 100, upDiff: Math.round(upDiff * 100) / 100,
+             released: rel.ok, backOk: backOk, whOk: wh.ok, wh: wh,
+             ok: finSetOk && frozenSetOk && marked === expMarked && tankQuar && tankExcluded
+                 && frozenHeld !== false && bpHeld !== false && finDiff < 0.01 && upDiff < 0.01
+                 && rel.ok && backOk && wh.ok };
+  }
+};
+window.__r34Check = function(){
+  var c33 = window.__r33Check();
+  var out = {}; Object.keys(c33).forEach(function(k){ out[k] = c33[k]; });
+  var A = traceAudit34();   /* R34：谱系自检进每轮回归包（与 navGate 同级常驻） */
+  out.r34 = window.__r34();
+  out.r34pack = { auditOk: A.ok, auditFields: A.fields.length, auditChecks: A.checks,
+                  lotTankDiff: out.r34.lotTankDiff, rawRecallEvents: RAWREC34.events.length, whOk: window.__whCheck().ok };
   return out;
 };
 
