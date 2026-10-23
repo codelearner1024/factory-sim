@@ -285,6 +285,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:22px;margin:0}
 .onboard p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.65}
 .onboard ol{margin:0 0 14px;padding-left:20px;font-size:13.5px;line-height:1.8}
 .onboard .ob-btns{display:flex;gap:8px;flex-wrap:wrap}
+.onboard .ob-resume{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(47,191,143,.13);border:1px solid rgba(47,191,143,.45);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.5}
 .onboard .ob-close{position:absolute;top:10px;right:12px;border:0;background:transparent;color:var(--muted);font-size:18px}
 .done-banner.show{display:block}
 .settle-note{display:none;margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.5}
@@ -565,6 +566,10 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>在右侧<b>调度台</b>换产品（可选排空后换型，不报废在制）、调速度、排订单队列；</li>
       <li>点右上<b>「📊 数据」</b>看账本、班次日报、质检抽检、物流播报与真机性能。</li>
     </ol>
+    <div class="ob-resume" id="obResume59" style="display:none">
+      <span id="obResumeTxt59">检测到可续用的存档</span>
+      <button class="btn primary" id="obResumeBtn59">↺ 继续上次进度</button>
+    </div>
     <div class="ob-btns">
       <button class="btn primary" id="obStart">▶ 直接开工</button>
       <button class="btn" id="obTour">🎬 先巡游一圈</button>
@@ -1300,7 +1305,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
 <div class="dcell wide"><div class="l">R56 PDCA 打包轮（分级报警管理 + 事件时间轴回放）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R23/R24 的告警中心能看、能确认，但没有 ISA-18.2 式的<b>分级与全生命周期管理</b>（搁置、自动恢复留痕、未确认紧急计数）；生产日志只有最近 16 条 DOM 行，关键事件事后无从按时间轴回放定位。参数全在 <b>CONFIG.r56</b>（shelveMin 120 / keepRecovered 40 / evKeep 600 / evShowMax 120 / sterQueueInfoBottles 4000 / cipDueInfoMin 240），读数口 <b>window.__r56()</b>，探针口 <b>window.__r56Probe</b>（alarmRun / replayRun），回归包 <b>window.__r56Check()</b>。<b>【A 项 · 分级报警管理（本轮招牌）】</b>：almTick56 在 step 内与 alertCenterTick24 同点同步 almSources56()——alerts23() 既有信号全量（设备故障/健康预警/原料低水位/订单迟交/质检/备件/库龄/召回/现金，判定零改动，来源名由 almSourceOf56 按文本归类）+ 既有状态派生三路：无菌罐断供风险（任一在产线 lineEta37 ≤ CONFIG.r37 断供阈值 12 分 → 警告级）、灭菌队列偏长（stations[2].queue ≥ 4,000 瓶 → 提示级）、CIP 待执行（距下次 CIP ≤ 240 分且未在清洗 → 提示级）。<b>分级映射节内明示</b>：alerts23 的 bad → 紧急（红）、warn → 警告（黄）、派生提示源 → 提示（灰）。生命周期：新出现 → 未确认（记 raisedMin/来源/count）；确认 almAck56 记 ackMin；搁置 almShelve56 记 shelveUntilMin = 现时 + 120 分，到期且条件仍在自动回未确认；来源消失 → 已恢复（recoveredMin + recovered 留痕，上限 40 条）；恢复后复现 = 新一次发生。抽屉新增「报警管理」节（#alm56List 当前报警按级别/状态排序 + #alm56Rec 已恢复留痕），未确认紧急数经 almBadge56 进顶栏时钟行红徽标。<b>只做管理层</b>：确认/搁置只写 ALM56 + 一条日志，不动任何生产状态（探针以 maintFp54 指纹自证）；与 R24 分工——R24 管当日处置计数，本节管分级与生命周期，两边判定同源 alerts23 不另立第二套。<b>【B 项 · 事件时间轴回放】</b>：EV56.stream 在 log() 落账同点由 ev56OnLog 按 ev56Classify 关键词分类（召回/交接班/CIP/换型/维修保养完成/故障/订单迟交/开工八类，确认/搁置留痕行显式跳过防内嵌文本误分类）记 {seq/min/day/type/msg/linkKey/snap}——snap 为事件当刻读数（产量/利润/原料液位/当前产品/订单进度），事件点落账不事后回算；linkKey 由 ev56Link 按消息中设备名映射 R44 联动注册表键（供应/调配/杀菌工位、产线号、码垛、无菌罐、CIP、仓库；无设备关联为 null 只展示快照）。抽屉新增「事件回放」节（#ev56Filter 类型过滤 + #ev56List 当日时间轴 + #ev56Snap 快照格），点事件 ev56Focus → focusEquip44 飞镜头 + 脉冲高亮 + 展示快照，只读零副作用。探针 replayRun：时间轴条数与当日事件流独立重数对账差 = 0、抽 3 条与源流逐项比对（linkKey/snap/msg）、聚焦指纹纯度；当日事件不足时经 log() 同一落账口构造探针事件并在返回值标注。<b>存档</b>：payload 新增 alm56（在册项/活跃集/恢复留痕）与 ev56（事件流 + seq），旧档无字段保持当前态；重置 almReset56/evReset56 清零。<b>【C 项 · 例行回归】</b>：全家桶独立页口径数字见自检清单 R56 行与交付汇报。本轮新增计时见总表第 54 项。</div></div>
 <div class="dcell wide"><div class="l">R57 PDCA 打包轮（今日驾驶舱 + 导览/任务链补新）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R44–R56 十二轮攒出的分析节散在抽屉各处，新用户要翻很久才拼得出「今天这厂怎么样」；导览自 R31 起 13 站未扩、新功能没有循序入口。参数在 <b>CONFIG.r57</b>（tourStops57 24），读数口 <b>window.__r57()</b>，探针口 <b>window.__r57Probe</b>（dashRun / tourRun57 / tasksRun57），回归包 <b>window.__r57Check()</b>。<b>【A 项 · 今日驾驶舱（本轮招牌，聚合不造数）】</b>：抽屉顶部（KPI 带之后）新增「今日驾驶舱」聚合卡八格，cockpit57() 只搬运既有源读数、聚合层零重算——当日产量/完成单/迟交单/罚金/当日利润 = dayrepDelta()（生产日报同源做差）、双线 OEE = oee52Agg("day") + oee52Rates（与 R52 节 renderOee52 同路）、现金余额 = cashBalance29()（资金节同源派生）、未确认紧急数 = almCritUnacked56()（R56 同源）、原料覆盖天数 = cover54()（R54 同源；本厂原料为单一罐区池，格内明示池口径、无第二项可取最低）、下一日需求预测 = fc55Forecast()（R55 同源，明示预测值非承诺）、当前班次与下一交接 = currentShift() + 本班 remain（R49 班次表同源，交接时刻 = 现时 + 剩余，带交接待确认提示）。每格可点直达源节：cockpitJump57 按节标题前缀找 h3 → openDrawer → cmdkFlash32 滚动高亮（与 R32 命令面板同路），落点即源节本身。渲染 renderCockpit57 与 renderKpis 同节奏、签名守卫；聚合与渲染纯只读（探针以 maintFp54 指纹自证）。探针 dashRun：十一项差逐项对源（产量/完成/迟交/罚金/利润对 dayrepDelta 现读、现金对 cashBalance29 现读、报警/覆盖/预测对各源函数现读、双线 OEE 对 oee52Rates(oee52Today()) 独立重算）全 = 0、八格直达落点逐格实测。<b>【B 项 · 导览与任务链补新（一致性维护）】</b>：TOUR_STOPS 自 13 站扩至 <b>24 站</b>——wp14–24 追加在经营驾驶舱之后（路点/目标点同序追加于 buildTour 数组尾，alignTourStops 按弧长自动回填 u，原 13 站 wp 与机位一字未动），十一新站 = 全厂图例与联动（R44）/ 设备综合效率 OEE（R52）/ 水平衡台账（R50）/ 班次交接（R49）/ 保养计划（R54）/ 原料覆盖天数（R54）/ 需求预测（R55）/ 单瓶成本（R55）/ 分级报警管理（R56）/ 事件回放（R56）/ 情景推演（R48，收官站），每站文案与对应节口径对齐（OEE 三率与分子分母、CIP 勾稽、TPM 只建议不自动停机、预测带回测与样本口径、报警只做管理层、推演非实测均按各节原文）；经营驾驶舱站文案同步修订（不再自称最后一站、预告续站）。CONFIG.r31.tourStops 同步改 24（站数判据单源，tourRun 判据零改动自动跟随）。新手任务链补 <b>5 项目标</b>（TASK_DEFS30 尾部，总数 10 → 15）：看一次双线 OEE（cockpitJump57 直达动作）/ 确认一条分级报警（almAck56）/ 做一次情景推演（wi48Render，按钮与探针同路）/ 确认一次接班（handoverAck49）/ 回放一次事件（ev56Focus）——判定全挂既有事件点、taskMark30 幂等只记首次，钩子均以 typeof 守卫接入各成功路径、原函数行为零改动；进度随 tasks30 既有 payload 往返（done 按 key 存、新 key 自动随档，<b>不新增存档字段</b>）。探针 tourRun57 = __r31Probe.tourRun 全套判据（站数/wp 连续/u 严格递增/文案 ≥40 字/过时词零命中）+ 十一新站标题齐全；tasksRun57 五目标各经真实事件点构造一次完成验置位 + 存档往返 done 逐字保留。<b>【C 项 · 例行回归】</b>：全家桶独立页口径数字见自检清单 R57 行与交付汇报。本轮新增计时见总表第 55 项。</div></div>
       <div class="dcell wide"><div class="l">R58 PDCA 打包轮（审计包二刷 + 大屏补卡 + 账目补记 + 组跑纪律固化）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R49 刷新审计包后又攒了 R53 班次汇算、R55 预测台账、R56 报警与事件流三本新账未入包；大屏模式（R17）七项 KPI 停在 R18 口径、R52/R55/R56 的关键数没上墙；R51 以来「场景探针独立页执行」只是约定、未固化进组跑执行口；VERSION_LOG 缺 v54（R56 轮）条目（R57 轮盘点发现）。参数全在 <b>CONFIG.r58</b>（auditPackVersion 3 / auditNewFiles / bigCards58 / probeDiscipline），读数口 <b>window.__r58()</b>，探针口 <b>window.__r58Probe</b>（audit58Run / big58Run / groupRun58），回归包 <b>window.__r58Check()</b>。<b>【A0 项 · 账目补记】</b>：VERSION_LOG 按镜像仓 v0.54.0 提交（f29d690）信息 + v54 快照（sha256 6d124e3b…、1,963,480 B）回填 v54 条目并注明回填来源（沿 v36–v39 回填先例）；回填后全表版本号连续性自检 v35–v56 无缺号（本轮 v56 条目照常新写）。<b>【A 项 · 审计包二刷】</b>：buildAuditPack35 按现行台账集合再刷新，manifest version 2 → <b>3</b>、round 升 <b>R58</b>，新增三份——<b>shifts53.json</b>（shift53Rows 班次汇算行 + Σ产量/完成单/迟交/罚金/故障/CIP 关键合计）、<b>forecast55.json</b>（FC55 到达台账逐日 + 总单数/总瓶数合计 + fc55Backtest 回测 + fc55Forecast 下一日预测落值，预测非承诺口径注随文件）、<b>alarms56.json</b>（ALM56 在册/活跃/已恢复留痕 + 未确认紧急等合计 + EV56 事件流全量），文件总数 13 → <b>16</b>。auditPackVerify35 逐份新增对账：包内合计 vs 源台账现读（shiftDiff / forecastDiff / almDiff / evDiff），连同原校验和/采购/利润/ESG 恒等——探针 audit58Run 逐份给数、差应全 = 0。情景推演仍不进包（R49 已定理由：纯读数推演、无落账数据，manifest.excluded 沿用不变）。<b>【B 项 · 大屏模式补卡】</b>：大屏带新增第二行三卡（#bbOee58 / #bbAlm58 / #bbFc58，与第一行以虚线分隔、窄屏随既有媒体查询收字号），读数由 <b>big58()</b> 与 R57 驾驶舱同纪律直读源台账同一函数——双线 OEE = oee52Agg("day") + oee52Rates（R52 口径）、未确认紧急 = almCritUnacked56()（R56 口径，&gt;0 时卡值标红）、明日需求预测 = fc55Forecast()（R55 口径，卡面明示预测值非承诺）；只搬运不重算，renderBigBand 在既有刷新点（renderKpis 节奏、BIG.on 时）写入，第一行七项与预警行零改动、__bigScreen().kpi 同步带三卡文本。探针 big58Run：三卡逐项与源节现读对账差 = 0 + 实开大屏验 DOM 落值。<b>【C 项 · 组跑纪律固化】</b>：GROUPRUN58 为组跑执行口的规范清单（21 项场景探针逐项标注 page = independent 独立页执行）；固定条款 PROBE_CLAUSE58「同页首测红旗须独立页复跑 + 基线对照后才许定案」写入验收清单模板（清单首部固定条款行）与本节；ecoVerdictRun 在清单中标注相位敏感性（沿 R52-B 定案：两段窗口须对齐生产相位、关段等料与 ECO/ESG 本体无关），<b>不改其判据</b>。探针 groupRun58 验清单完整性。<b>【D 项 · 例行回归】</b>：全家桶独立页口径数字见自检清单 R58 行与交付汇报。本轮新增计时见总表第 56 项。</div></div>
-<div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检本体为读数时对 TRACE/SLOTS 现算、触发走仿真时钟（出料归档事件点 + 每 360 仿真分钟 tick，与第 31 项同类）—— ✔ 一致<br>37. 双供应商与审计包（R35 新增）— 无独立计时：供应商承诺/实际提前期在下单事件点抽定、实际到场仍由 RAW.tankerLeft 仿真分钟倒计时驱动（与第 7 项罐车同钟）、延迟判定与少送抽定在到场事件点、台账累计在卸料完成事件点；风险提前期为 CONFIG 常量纯读数；审计包为导出动作当刻对既有台账的只读快照（manifest 仿真时刻读 S.simMin、真实时刻仅作文件元数据）—— ✔ 一致<br>38. 第二灭菌链工期 + 双链 CIP/段调度（R37 新增）— 仿真分钟 stepSter2 / sterCipTick37 在 step 内推进（工期与第 24/25 项投资同口径、换型/停电步同点推进；链 2 CIP 间隔/时长与链 1 同参数同钟；段的入队/开工/完工时刻与断供外推全读 S.simMin 与既有仿真速率，无独立计时）—— ✔ 一致<br>39. 排产建议计算/刷新留痕 + 预置选品（R38 新增）— 无独立计时：建议为读数时对订单队列/当前单/无菌分区/灭菌段账的纯派生（与第 27/31 项同类），方向变化留痕时刻读 S.simMin；预置是纯选择状态、不触发任何流程与计时，玩家点产品按钮后走既有换型时钟（第 4 项）—— ✔ 一致<br>40. 真实感对表呈现层（R42 新增）— 无独立计时：卫生三区着色/洁净间/参观走廊/划线/色环/标识全为建场期静态几何（无任何推进）；Andon 塔灯在 updateScene 帧节奏读既有状态派生（lineStatus / stationStatus / palletizerState + 健康度）写顶点色，与第 16 项纯视觉同类、状态本体全在仿真侧 —— ✔ 一致<br>41. 人员净化 / 分区 PPE / CIP 对表 / 状态挂牌呈现层（R43 新增）— 无独立计时：净化间群（更衣/洗手/风淋）与 CIP 铭牌/浓酸碱小罐/阀阵/换热器/洗眼器/围堰、动力站辨识件全为建场期静态几何；风淋互锁灯为静态示意色（不随门状态推进）；PPE 动态换装（__ppeTick43）、CIP 阶段脉冲（__cipTick43，阶段按 cipLeft 占 CONFIG.cipDurationMinutes 比例派生）、状态挂牌（__tagsTick43）均在 updateScene 帧节奏读既有仿真状态派生、变化才写入，不改变任何人员路线/速度/事件门控 —— ✔ 一致（与第 16/40 项同类）<br>42. 光照分区灯面 / 联动脉冲 / 图例与面积自检（R44 新增）— 无独立计时：灯面与氛围罩为建场期静态几何（自发光示意、零新增实时光源）；联动脉冲 __linkTick44 为真实秒呈现层（与第 15/16 项同类豁免），相机飞行走既有 flyTo 阻尼；图例拼装与面积量测为读数时对 CONFIG 的纯派生（与第 31 项同类）—— ✔ 一致<br>43. 可开合件动画 / 探针种子 / 牌面合并（R45 新增）— 门扇与风淋互锁为真实秒呈现层：__doorsTick45 读真实秒推进开度与互锁相位（与第 16 项同类豁免），开合状态不入任何事件门控/产量/库存判定，人员与车辆逻辑零改动；navGate 确定性种子只包裹探针同步执行窗（mulberry32 替换 Math.random、跑后恢复），不进入仿真时钟与生产代码；牌面图集化与透明同实例合并为建场期一次性几何处理，无计时 —— ✔ 一致<br>44. CO₂ 阀位指示灯 / 功能间（R46 新增）— __r46Tick 为真实秒呈现层：只读任一线在产产品（lineProd36 派生）改指示灯材质亮度，不入任何事件门控/产量/库存判定（与第 16 项同类豁免）；微生物室/气瓶间/月台件/地沟为建场期静态几何，无计时 —— ✔ 一致<br>45. 光伏发电估算 / 道闸与称重牌（R47 新增）— 发电积分 pvTick47 走仿真分钟（step 内推进：装机 × 日照曲线（simMin 钟点纯派生，与第 9 项同类）× 保守系数，属估算子账不入产量/库存判定）；道闸开合与称重牌刷新 __r47Tick 为真实秒呈现层（只读车辆既有状态改位姿/牌面，与第 16 项同类豁免）；围栏/门卫/停车/绿化/消防点为建场期静态几何，无计时 —— ✔ 一致<br>46. 情景推演 + 昼夜节律（R48 新增）— 无独立计时：推演 wi48Run 为读数时对当前台账快照的纯函数推演（内部以仿真分钟为步长做期望口径前推，不推进 S.simMin、不写任何状态，与第 31/39 项纯派生同类）；昼夜节律 dayPhase48/dayNightMix48/dayWarm48 为 simMin 钟点的纯派生（与 R47 光伏曲线 pvDaylightFactor47 同源、与第 9 项同类），applyDayNight48 在 updateScene 帧节奏只写既有光源/材质参数（呈现层，与第 16/40 项同类）—— ✔ 一致<br>47. 班次交接记录 + 接班确认 + 审计包清单刷新（R49 新增）— 无独立计时：交接记录在 step 的班次跨界判定点（与 SHIFT.changes 同点、仿真时钟）由 handoverSnapshot49 对当时真实状态只读生成；接班确认时刻 = 确认动作发生的 S.simMin（与第 31 项任务完成时刻同类）；审计包刷新为导出动作当刻的只读快照口径不变（与第 37 项同类）—— ✔ 一致<br>48. 水平衡事件源 + 月度汇算（R50 新增）— 无独立计时：CIP 水量/计数在 chargeUtilities 与 CIP/换产事件点（仿真时钟事件点，与第 3/4 项同钟）、制冷运行分钟在 stepR2 冷库启停判定同点累计（仿真分钟）、仿真时长在 pvTick47 同点累计（与第 45 项同钟）；水平衡分摊与月度汇算/预计均为读数时对既有台账与归档的纯派生（与第 27/31 项同类），零副作用由 monthRun 指纹自证 —— ✔ 一致<br>49. 探针拆旗 + 瘦身登记（R51 新增）— 无独立计时：拆旗为探针返回值口径（recallRun 泵口径不变、与第 35 项同钟），SLIM51/VIS51 为读数时现算的登记与核验记录（与第 31 项同类）—— ✔ 一致<br>50. 双线 OEE 子账（R52 新增）— 仿真分钟：oeeTick52 在 step 内与 downTick23 同点按线分桶（与第 23 项同钟）、act/good 在 settleLineProd36 结算同点累计（与第 36 项按线结算同点）；窗口汇算与三率现算为读数时纯派生（与第 31 项同类）；ecoCarbonRun 口径更新为探针方法（固定 1× + 净口径），无新增计时 —— ✔ 一致<br>51. 班次绩效快照链 + 库位周转流水（R53 新增）— 无独立计时：班次快照在 step 的班次跨界判定点（与第 47 项交接同点、仿真时钟）由 shift53Snap 对累计量只读快照，班次汇算为快照做差的读数时纯派生（与第 31 项同类）；库位流水在 AGV 转移事件点（入库落位/出库叉起，与第 36 项 FIFO 事件同点）追加，货位当前占用与滞留为 SLOTS.inAtMin 纯派生（与第 19 项库龄同钟）—— ✔ 一致<br>52. 保养计划推算 + 覆盖滚动消耗（R54 新增）— 无独立计时：运行时长在 stepPM 衰减同点按仿真分钟累计（与第 6 项同钟）、上次保养/维修时刻为既有事件点的 S.simMin（与第 31 项同类）；应保养时点/优先级/建议窗口与覆盖天数/断料/最晚下单均为读数时对 HEALTH/COVER54/订单队列的纯派生（谷段读 CONFIG.r33 钟点派生、与第 35 项同类）；滚动消耗在 stepR2 扣罐同点按仿真分钟累计（与第 36 项同钟），采样环无独立时钟 —— ✔ 一致<br>53. 需求预测到达台账 + 单瓶成本汇算（R55 新增）— 无独立计时：到达在 satTickArrivals 客户单生成事件点按 simMin 日界落账（与第 10 项订单同钟），预测/回测为读数时对到达台账与 seasonInfo29 日序派生的纯计算（与第 30 项季节因子同类）；单瓶成本在 archiveDay 翻页点与 OEE52 同点落 hist（与第 48/50 项同点），汇算为读数时对成本台账与 OEE52 良品账的纯派生（与第 31 项同类）—— ✔ 一致<br>54. 分级报警管理 + 事件回放（R56 新增）— 仿真分钟：almTick56 在 step 内与 alertCenterTick24 同点推进（与第 25 项同钟），报警发生/确认/搁置到期/恢复时刻全读 S.simMin；事件流在 log() 落账事件点按 simMin 同步落账（与第 31 项任务完成时刻同类），回放聚焦的相机飞行与联动脉冲为真实秒呈现层（与第 42 项同类豁免）—— ✔ 一致<br>55. 今日驾驶舱 + 导览/任务补新（R57 新增）— 无独立计时：驾驶舱八项为读数时对既有台账/汇算的纯派生搬运（与第 31 项同类），直达滚动高亮为呈现层；导览新增站的停留/字幕为真实秒叙事豁免（与第 15 项同类），u 由 alignTourStops 弧长回填无独立时钟；新任务完成时刻 = 各既有事件点发生的 S.simMin（与第 31 项同类）—— ✔ 一致<br>56. 审计包二刷 + 大屏补卡 + 组跑纪律（R58 新增）— 无独立计时：审计包为导出动作当刻对既有台账的只读快照（与第 37 项同类）；大屏三卡为 renderKpis 既有节奏下对源台账的读数时纯派生搬运（与第 31 项同类）；组跑清单与固定条款为静态执行口径，无任何推进 —— ✔ 一致</div></div>
+<div class="dcell wide"><div class="l">R59 PDCA 打包轮（冷启动治理 + 欢迎层续档）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：页面已 2.02 MB，平台审计沙箱近四轮三度在基线加载 180 秒超时（R50/R57/R58），自有路线冷启虽都成功但启动成本在涨。参数全在 <b>CONFIG.r59</b>（idleFlushMs / lazySections59 / registryCache59 / resume59），读数口 <b>window.__r59()</b>（含 PERF59 页内打点与基线参照），探针口 <b>window.__r59Probe</b>（coldRun59 / lazyRun59 / resumeRun59），回归包 <b>window.__r59Check()</b>。<b>【A 项 · 冷启动剖析与治理，行为零变更铁律】</b>：基线（R58 字节、自有无头路线、同口径连测 3 次取中位）——导航 → 文档可交互（DCL）<b>1,011 ms</b>、→ 首帧可交互（加载面纱撤下）<b>11,438 ms</b>；启动期大头剖析：初始场景构建 buildScene 自报 <b>2,282 ms</b> 为单项最大，CPU 剖析样本 25,942 ms 中 (program)（SwiftShader 软件光栅/驱动侧）占 65.8%、three.min.js 内部约 15%，本页自有函数单项都很小 —— 冷启动总时长的大头是场景构建与软件渲染，不在抽屉渲染；抽屉各节急切首渲落在脚本求值 + bootFactory 首个 renderAll 的关键路径上（数十至数百毫秒量级），是三类手法可治的部分。治理三手法：<b>① 抽屉 21 节改懒渲染</b>（lazySections59 登记；首渲延后至首次打开抽屉或首帧后 idle 冲刷 idleFlushMs=1,200 ms，节内占位文案标注；值函数与签名守卫一字未动，打开后读数与急切版逐项一致，lazyRun59 以图例长度 3,446 / 联动 28 行 / OEE 格 + 驾驶舱十一项对账（复用 dashRun 为 oracle、diffs 全 0）把关）；<b>② 非关键初始化延后</b>：求值期 8 处节首渲 try 块清零（图例/联动/面积、水平衡/月度、OEE、报警/事件回放、驾驶舱），shift/cover/uc 三处的数据 ensure（基线数据、亦被步进侧自调用）保留急切、只延后 DOM 渲染；导览索引 buildTour 评估后<b>不延后</b>（其弧长 u 被命令面板/任务链同步读取、收益小风险高，理由记在 bootFactory 注释），命令面板索引本就打开时现建（R32 既有口径，记为手法 ② 的既有合规项）；<b>③ 联动注册表 linkRegistry44 改共享缓存</b>（registryCache59，缓存键 = 门件数、门建好自动失效）：此前每次调用全量重拼（焦点/面板/事件回放/探针多路调用），现全会话同一份（28 条、sharedRef 实测 true）。页内打点 PERF59（performance.now()，__r59() 可读）：求值约 10–110 ms（随负载）、场景构建 1.8–5.0 s（软件渲染负载敏感）、懒冲刷全量 42.1 ms（其中图例构建 7.9 ms）。冷启动同口径复测：高负载窗口内<b>同窗 A/B</b>（基线与治理后各 3 次取中位）——DCL 6,866 → <b>5,905 ms（−14.0%）</b>、可交互 31,988 → <b>30,162 ms（−5.7%）</b>；外测在本机负载下单次抖动达 ±10 s 级，静窗基线只作量级参照、降幅以同窗 A/B 为准如实报，不拿跨窗数字冒充收益；被移出关键路径的工作量以页内打点计量（求值期急切首渲清零 + 懒构建总量 42.1 ms）。DrawCall 双态：组跑待机采样 622（帧时序抖动，R47 审计曾同值采样）→ 独立页 solo 待机 <b>619</b> / 作业 <b>623</b>，与 R58 基线 solo 619 / 636 同口径对照不升（作业反降 13），守 CONFIG.r45 目标（待机 ≤620 / 作业 ≤640）。<b>【B 项 · 欢迎层续档】</b>（resume59）：欢迎/速览层在检测到本会话已导出/导入的存档信封（SAVE25.lastEnv，仍经 saveValidate 同校验）时显示「继续上次进度」提示条（第 N 天 / 时刻 / 累计产量 / checksum 摘要），点击走既有 saveRestore 读档路径并关闭欢迎层；无档不显示。口径说明：本页 R10 已定案不落 localStorage 持久化（沙箱会话即清、不得假造跨会话持久），故「已有存档」= 本会话内经导出/导入通道在手的 FSIM_SAVE 信封、不跨刷新 —— resumeRun59 两态实测（无档隐藏 / 有档显示 / 预热推进分叉后应用续档，simMin、成品、产品与信封逐项一致 + whOk）。<b>【C 项 · 例行回归】</b>（独立页口径，逐项）：守恒 20,000 步 conservationOk、成品 499,420、利润 −¥106,505 分列；navGate5 组跑 4/5（第 3 连 ship 段 −0.75、5 个负采样 —— R44 已定案的入场状态伪影签名，同签名曾在 R43 基线复现）→ 独立页 solo 复跑 <b>5/5</b>、首连签名 0.7/1.05/0.06/0.31 与 R45 定案及 R58 基线 solo 逐值一致；traceAudit ok；queueRun 单 16.0 → 双 8.2 min（<b>1.95×</b>、段池差 0、谱系灭菌缺失 0）；schedRun 三场景 + 采纳零副作用 ok；dualRun 增量 78,504/1,500 与基线签名逐值一致；五本对账 fineAudit 0/0/0、cashRun ok、marketAudit 全差 0（segment 子旗 false 系窗口仅 1 笔交付采样、沿既有口径单列）、touRun dayDiff 0、auditRun49 13 份 ok、audit58Run 16 份 ok；ESG pvRun identDiff/carbonDiff 0、ecoVerdictRun 组跑 false（两段 finished 0 相位伪影、沿 R52-B 定案）→ solo ok；水平衡 waterRun（CIP 8 次、增量 19.2 = 期望 19.2、恒等/交叉差全 0、cipItem 25.2）；monthRun 五项对账 ok；满意度 satRun 高位 90.1→85.3、两迟单事件 85.3→68.6；出库链速组跑 false（satRun 后库存相位）→ 标准窗 solo shipRun(3,1) <b>2.03</b> ≥ 1.75 定案；存档往返 saveRoundTrip 前后状态逐字一致 + saveCheck56（R49–R58 状态保留）ok；handoverRun / demoRun ok；tourRun57 24 站 + tasksRun57 15 任务 ok；双召回 recallRun substantiveOk（采样旗 stillMarked 30 沿 R51-A 拆旗单列）、rawSpanRun 两段拼接逐值同基线（罐存 171,600 → 143,693、标记 49/49、损失 ¥22,500 + ¥22,253.98、双差 0）；各节复跑 oee/shift/slot/maint/cover/fc/uc/alarm/replay/dash/big58/groupRun58 全 ok；断言链 r36–r59 全真（badAsserts 空）。执行注记：平台重启曾中断回归电池前半的尾项（/tmp 探针同毁），按盘点纪律以工作区探针目录 c1–c11 独立页文件续跑补齐、无重复施工，源码与出货字节重启前后同哈希。本轮新增计时见总表第 57 项。</div></div>
+<div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检本体为读数时对 TRACE/SLOTS 现算、触发走仿真时钟（出料归档事件点 + 每 360 仿真分钟 tick，与第 31 项同类）—— ✔ 一致<br>37. 双供应商与审计包（R35 新增）— 无独立计时：供应商承诺/实际提前期在下单事件点抽定、实际到场仍由 RAW.tankerLeft 仿真分钟倒计时驱动（与第 7 项罐车同钟）、延迟判定与少送抽定在到场事件点、台账累计在卸料完成事件点；风险提前期为 CONFIG 常量纯读数；审计包为导出动作当刻对既有台账的只读快照（manifest 仿真时刻读 S.simMin、真实时刻仅作文件元数据）—— ✔ 一致<br>38. 第二灭菌链工期 + 双链 CIP/段调度（R37 新增）— 仿真分钟 stepSter2 / sterCipTick37 在 step 内推进（工期与第 24/25 项投资同口径、换型/停电步同点推进；链 2 CIP 间隔/时长与链 1 同参数同钟；段的入队/开工/完工时刻与断供外推全读 S.simMin 与既有仿真速率，无独立计时）—— ✔ 一致<br>39. 排产建议计算/刷新留痕 + 预置选品（R38 新增）— 无独立计时：建议为读数时对订单队列/当前单/无菌分区/灭菌段账的纯派生（与第 27/31 项同类），方向变化留痕时刻读 S.simMin；预置是纯选择状态、不触发任何流程与计时，玩家点产品按钮后走既有换型时钟（第 4 项）—— ✔ 一致<br>40. 真实感对表呈现层（R42 新增）— 无独立计时：卫生三区着色/洁净间/参观走廊/划线/色环/标识全为建场期静态几何（无任何推进）；Andon 塔灯在 updateScene 帧节奏读既有状态派生（lineStatus / stationStatus / palletizerState + 健康度）写顶点色，与第 16 项纯视觉同类、状态本体全在仿真侧 —— ✔ 一致<br>41. 人员净化 / 分区 PPE / CIP 对表 / 状态挂牌呈现层（R43 新增）— 无独立计时：净化间群（更衣/洗手/风淋）与 CIP 铭牌/浓酸碱小罐/阀阵/换热器/洗眼器/围堰、动力站辨识件全为建场期静态几何；风淋互锁灯为静态示意色（不随门状态推进）；PPE 动态换装（__ppeTick43）、CIP 阶段脉冲（__cipTick43，阶段按 cipLeft 占 CONFIG.cipDurationMinutes 比例派生）、状态挂牌（__tagsTick43）均在 updateScene 帧节奏读既有仿真状态派生、变化才写入，不改变任何人员路线/速度/事件门控 —— ✔ 一致（与第 16/40 项同类）<br>42. 光照分区灯面 / 联动脉冲 / 图例与面积自检（R44 新增）— 无独立计时：灯面与氛围罩为建场期静态几何（自发光示意、零新增实时光源）；联动脉冲 __linkTick44 为真实秒呈现层（与第 15/16 项同类豁免），相机飞行走既有 flyTo 阻尼；图例拼装与面积量测为读数时对 CONFIG 的纯派生（与第 31 项同类）—— ✔ 一致<br>43. 可开合件动画 / 探针种子 / 牌面合并（R45 新增）— 门扇与风淋互锁为真实秒呈现层：__doorsTick45 读真实秒推进开度与互锁相位（与第 16 项同类豁免），开合状态不入任何事件门控/产量/库存判定，人员与车辆逻辑零改动；navGate 确定性种子只包裹探针同步执行窗（mulberry32 替换 Math.random、跑后恢复），不进入仿真时钟与生产代码；牌面图集化与透明同实例合并为建场期一次性几何处理，无计时 —— ✔ 一致<br>44. CO₂ 阀位指示灯 / 功能间（R46 新增）— __r46Tick 为真实秒呈现层：只读任一线在产产品（lineProd36 派生）改指示灯材质亮度，不入任何事件门控/产量/库存判定（与第 16 项同类豁免）；微生物室/气瓶间/月台件/地沟为建场期静态几何，无计时 —— ✔ 一致<br>45. 光伏发电估算 / 道闸与称重牌（R47 新增）— 发电积分 pvTick47 走仿真分钟（step 内推进：装机 × 日照曲线（simMin 钟点纯派生，与第 9 项同类）× 保守系数，属估算子账不入产量/库存判定）；道闸开合与称重牌刷新 __r47Tick 为真实秒呈现层（只读车辆既有状态改位姿/牌面，与第 16 项同类豁免）；围栏/门卫/停车/绿化/消防点为建场期静态几何，无计时 —— ✔ 一致<br>46. 情景推演 + 昼夜节律（R48 新增）— 无独立计时：推演 wi48Run 为读数时对当前台账快照的纯函数推演（内部以仿真分钟为步长做期望口径前推，不推进 S.simMin、不写任何状态，与第 31/39 项纯派生同类）；昼夜节律 dayPhase48/dayNightMix48/dayWarm48 为 simMin 钟点的纯派生（与 R47 光伏曲线 pvDaylightFactor47 同源、与第 9 项同类），applyDayNight48 在 updateScene 帧节奏只写既有光源/材质参数（呈现层，与第 16/40 项同类）—— ✔ 一致<br>47. 班次交接记录 + 接班确认 + 审计包清单刷新（R49 新增）— 无独立计时：交接记录在 step 的班次跨界判定点（与 SHIFT.changes 同点、仿真时钟）由 handoverSnapshot49 对当时真实状态只读生成；接班确认时刻 = 确认动作发生的 S.simMin（与第 31 项任务完成时刻同类）；审计包刷新为导出动作当刻的只读快照口径不变（与第 37 项同类）—— ✔ 一致<br>48. 水平衡事件源 + 月度汇算（R50 新增）— 无独立计时：CIP 水量/计数在 chargeUtilities 与 CIP/换产事件点（仿真时钟事件点，与第 3/4 项同钟）、制冷运行分钟在 stepR2 冷库启停判定同点累计（仿真分钟）、仿真时长在 pvTick47 同点累计（与第 45 项同钟）；水平衡分摊与月度汇算/预计均为读数时对既有台账与归档的纯派生（与第 27/31 项同类），零副作用由 monthRun 指纹自证 —— ✔ 一致<br>49. 探针拆旗 + 瘦身登记（R51 新增）— 无独立计时：拆旗为探针返回值口径（recallRun 泵口径不变、与第 35 项同钟），SLIM51/VIS51 为读数时现算的登记与核验记录（与第 31 项同类）—— ✔ 一致<br>50. 双线 OEE 子账（R52 新增）— 仿真分钟：oeeTick52 在 step 内与 downTick23 同点按线分桶（与第 23 项同钟）、act/good 在 settleLineProd36 结算同点累计（与第 36 项按线结算同点）；窗口汇算与三率现算为读数时纯派生（与第 31 项同类）；ecoCarbonRun 口径更新为探针方法（固定 1× + 净口径），无新增计时 —— ✔ 一致<br>51. 班次绩效快照链 + 库位周转流水（R53 新增）— 无独立计时：班次快照在 step 的班次跨界判定点（与第 47 项交接同点、仿真时钟）由 shift53Snap 对累计量只读快照，班次汇算为快照做差的读数时纯派生（与第 31 项同类）；库位流水在 AGV 转移事件点（入库落位/出库叉起，与第 36 项 FIFO 事件同点）追加，货位当前占用与滞留为 SLOTS.inAtMin 纯派生（与第 19 项库龄同钟）—— ✔ 一致<br>52. 保养计划推算 + 覆盖滚动消耗（R54 新增）— 无独立计时：运行时长在 stepPM 衰减同点按仿真分钟累计（与第 6 项同钟）、上次保养/维修时刻为既有事件点的 S.simMin（与第 31 项同类）；应保养时点/优先级/建议窗口与覆盖天数/断料/最晚下单均为读数时对 HEALTH/COVER54/订单队列的纯派生（谷段读 CONFIG.r33 钟点派生、与第 35 项同类）；滚动消耗在 stepR2 扣罐同点按仿真分钟累计（与第 36 项同钟），采样环无独立时钟 —— ✔ 一致<br>53. 需求预测到达台账 + 单瓶成本汇算（R55 新增）— 无独立计时：到达在 satTickArrivals 客户单生成事件点按 simMin 日界落账（与第 10 项订单同钟），预测/回测为读数时对到达台账与 seasonInfo29 日序派生的纯计算（与第 30 项季节因子同类）；单瓶成本在 archiveDay 翻页点与 OEE52 同点落 hist（与第 48/50 项同点），汇算为读数时对成本台账与 OEE52 良品账的纯派生（与第 31 项同类）—— ✔ 一致<br>54. 分级报警管理 + 事件回放（R56 新增）— 仿真分钟：almTick56 在 step 内与 alertCenterTick24 同点推进（与第 25 项同钟），报警发生/确认/搁置到期/恢复时刻全读 S.simMin；事件流在 log() 落账事件点按 simMin 同步落账（与第 31 项任务完成时刻同类），回放聚焦的相机飞行与联动脉冲为真实秒呈现层（与第 42 项同类豁免）—— ✔ 一致<br>55. 今日驾驶舱 + 导览/任务补新（R57 新增）— 无独立计时：驾驶舱八项为读数时对既有台账/汇算的纯派生搬运（与第 31 项同类），直达滚动高亮为呈现层；导览新增站的停留/字幕为真实秒叙事豁免（与第 15 项同类），u 由 alignTourStops 弧长回填无独立时钟；新任务完成时刻 = 各既有事件点发生的 S.simMin（与第 31 项同类）—— ✔ 一致<br>56. 审计包二刷 + 大屏补卡 + 组跑纪律（R58 新增）— 无独立计时：审计包为导出动作当刻对既有台账的只读快照（与第 37 项同类）；大屏三卡为 renderKpis 既有节奏下对源台账的读数时纯派生搬运（与第 31 项同类）；组跑清单与固定条款为静态执行口径，无任何推进 —— ✔ 一致<br>57. 冷启动治理 + 欢迎层续档（R59 新增）— 无独立计时：PERF59 页内打点为 performance.now() 表现层量测、不推进仿真；懒渲染只改抽屉各节 DOM 首建时机（值函数、签名守卫与 renderKpis 既有节奏不变，激活后与急切版同一渲染路径）；联动注册表共享缓存只省重复拼装、条目内容与生成口径不变；续档提示的存档检测与读档全走既有 FSIM_SAVE 信封通道（saveValidate/saveRestore 同一点），不新增任何时间基准 —— ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1413,6 +1419,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R56 分级报警 + 事件回放：抽屉新增「报警管理」节（#alm56List/#alm56Rec：alerts23 全量 + 无菌罐断供/灭菌队列偏长/CIP 待执行三路派生，分级映射 bad→紧急（红）/warn→警告（黄）/派生→提示（灰）节内明示，确认记 ackMin、搁置 120 分到期自动回未确认、条件消除转已恢复留痕，顶栏红徽标计未确认紧急数）与「事件回放」节（#ev56Filter/#ev56List/#ev56Snap：log() 落账同点分类记流八类，点事件 focusEquip44 飞抵高亮 + 事件点快照展示）；__r56Probe.alarmRun() ok = true（压低原料水位构造已知告警全生命周期：触发 crit 级/来源 = 原料供应/raisedMin 落账、确认入档 ackMin + 指纹 pureAck、恢复液位转已恢复 + 留痕、再触发搁置时长恰 = CONFIG 120 分、到期自动回未确认 expireOk——到期点定点拨短 +1 分并在返回值标注 expiryShortened，避开实等 120 分期间罐车到场卸料使条件消除的干扰，到期判定分支本身与时长无关）；__r56Probe.replayRun() ok = true（当日 9 条、与事件流独立重数 countDiff = 0、抽 3 条 fault/cip/handover 的 linkKey/snap/msg 逐项一致、focusOk、纯度 pure；当日事件不足带关联设备者经 log() 同一落账口构造并标注 constructed）；__r56SaveCheck() ok = true（almKept/evKept 双 true，往返时活跃报警 4 条/事件 9 条逐字保留）；自有路线截图核验两节版式（报警行分级色/来源/确认与搁置钮/恢复留痕齐全、快照格时刻/类型/当刻读数/关联设备齐全、DOM 零越界）；例行回归独立页口径：守恒 soakRun(20000) conservationOk/whOk = true、nanOrNeg 空、finished 897,638、利润 +¥342,705 单列（profitNegative = false）；navGate5 五连 allPass（种子 45045、首跑签名 0.70/1.05/0.06/0.31、完成段 1.95/9.08/12.6、负值全 0）；traceAudit ok（12 字段填充率全 100%）；queueRun ok；schedRun ok（三场景 + 采纳零副作用）；dualRun 增量 [32293, 9448]、B 线连续、wh ok；五本对账（cashRun ok、marketAuditRun 本体 audit.ok = true 残差 0（segment 子旗因窗口仅 1 笔交付为 false、diffLedger 0，如实记——与 R55 同因）、touRun ok dayDiff 0）+ ESG 三行 pvRun identDiff/carbonDiff = 0（日发电 1,760 kWh、正午 230.4 kW）+ ecoVerdictRun 独立页 ok（净口径 24.7 → 23.6 g/瓶、电耗 40.7 → 33.5；同页连跑曾因前序探针状态污染两段产量 0，独立页复测收口）+ 水平衡 waterRun ok + monthRun ok（五项差 0）；satRun 独立页双 verdict true（高满意段到达 5 单/低满意段 0 单、逾期事件满意度 81.5 → 64.8）；shipStdRun 标准窗独立页 2.03 ≥ 1.75 pass（同页连跑曾被 ecoVerdictRun 热状态污染出 0，独立页收口——探针同页污染纪律问题、非模拟降速）；DrawCall 待机 619 ≤ 620 / 作业 626（drawRun ok、本轮零新增几何）；saveRoundTrip 独立页 ok（before/after 逐值相等；在产热页曾出现 stock/taken 差 1 = 在途托恢复重分类的既有状态敏感性，沿 R53 定案、独立页收口）；handoverRun ok/pure；demoRun ok（八阶段）；tourRun ok；双召回——recallRun 独立页 ok = true（R51-A 口径：实质旗 substantiveOk = true、marked 41 全标记、lossDiff 0、sealed 20、flagsLeft 0；采样旗 sampleOk = false（stillMarked 20 = 封存读数）单列沿定案）、rawSpanRun ok（两段拼接、markedOk）；oeeRun ok；shiftRun ok；slotRun ok；maintRun ok；coverRun ok（recDiff 0、减半比值 0.481、日均 667,591 瓶/天覆盖 0.27 天）；fcRun ok（dayDiff 0、恒等差 0.146、修正 1.2、回测 MAPE 28.1% 单样本如实读数）；ucRun ok（sumDiff/daySumDiff 0、方向断言 dirOk）；window.__r56Check() 全绿（r36–r55 断言链全 true、r56assert.ok = true：参数/五格面板/顶栏徽标/八类事件/来源同源/仓库守恒），时间基准总表已续第 54 项</li>
       <li>R57 今日驾驶舱 + 导览补新：window.__r57Check() 全绿（r57assert 六项全 true、r36–r56 断言链 badAsserts = 空）；window.__r57Probe.dashRun() 冷/热/终页三测 ok = true（十一项差 finished/ordSettled/ordLate/fine/profit/cash/alm/cov/fcOrders/fcBottles/oee 全 = 0、聚合前后指纹 pure = true、八格直达落点与源节标题逐字一致：生产日报 / 设备综合效率 OEE / 订单队列 / 资金与现金流 / 报警管理 / 原料覆盖天数预测 / 需求预测 / 交接班）；tourRun57() ok = true（24 站 = CONFIG.r57.tourStops57、wp 序与 u 单调、十一新站标题齐备、过期词零命中，含修订后 wp13 与收官站情景推演）；tasksRun57() ok = true（五新目标 oee57/almAck57/whatif57/handAck57/replay57 各经真实事件点构造置位、存档往返 done 集合逐字保留，任务总数 10 → 15）；例行回归独立页口径逐项：守恒 20,000 步 conservationOk/whOk = true（成品 504,064、利润 −¥62,757 分列）、navGate5 五连 allPass（负值全 0）、traceAudit ok（qcFill 22/22、tankPurity 5/5）、queueRun ok、schedRun ok、dualRun 150,312/1,500、fineAudit 三值 0=0=0、cashRun ok、采购 audit ok（重算 = 台账 ¥66,903.46；segment 子旗 false 系窗口仅 1 笔交付的采样伪影，沿既有定案）、touRun ok、审计包 13 份 ok、pvRun ESG 三行恒等 ok、ecoVerdictRun ok = false（沿 R52-B 定案：关段相位双线等料产量 0，与 ECO/ESG 本体无关；本体由 carbonAudit 净口径重算差 0 + pvRun 恒等 0 另证）、waterRun ok（CIP 8 次增量 19.2 = 期望 19.2、恒等/废水交叉差 0、窗口总进水 64.474 m³）、monthRun 五项差 0、satRun 迟交事件 86.3 → 69.6 且到达调制两判据 true、出库链速标准窗 shipStdRun 独立页 2.03 托/分 ≥ 1.75（同页首测 0 系 satRun 后暂存为空的同页污染，独立页复测收口）、DrawCall 独立页待机 619 / 作业 636（同页首测 622 系帧时序抖动，沿 R47 口径）、saveRoundTrip ok、R56 存档保留 ok（almActive 10 / evLen 176）、handoverRun ok、demoRun ok、recallRun 实质旗与采样旗双 true（marked 49、sealed 20、lossDiff 0）、rawSpanRun 独立页 ok = true 且与 v0.54.0 对照签名逐值一致（marked 49/49、两段损失 ¥22,500 + ¥22,253.98、finDiff/upDiff 0；同页热态首测 frozenHeld = false 系 drawRun 热场景污染，独立页 + 基线对照双定案）、oeeRun 六项差 0（故障注入误差 0.25 分）、shiftRun crossDiff 0（Σ 575,719 两口径一致）、slotRun 抽样差 ≤ 0.002、maintRun maxDueDiff 0、coverRun ok（recDiff 0.003、减半比 0.5）、fcRun ok（dayDiff 0、恒等差 0.291、MAPE 0.605 仍单样本口径界面已标、corr 0.808）、ucRun ok（sumDiff 0、单瓶 ¥1.6729）、alarmRun ok、replayRun countDiff 0；驾驶舱截图与 DOM 量测（overflowChildren = 0、热态产量/OEE 格实值渲染）齐备、时间基准总表已续第 55 项</li>
       <li>R58 审计包二刷 + 大屏补卡 + 组跑纪律固化：__r58Probe.audit58Run() ok = true（审计包 16 份、manifest version = 3 / round = R58、三份新文件 shifts53/forecast55/alarms56 在册、verify 校验和全对、procureDiff / profitDiff / esgIdentDiff 全 = 0、新文件关键合计与源台账逐份对账 shiftDiff / forecastDiff / almDiff / evDiff 全 = 0、推演排除注 excluded 沿用）；__r58Probe.big58Run() ok = true（三卡与源节现读对账差 oee/alm/fcOrders/fcBottles 全 = 0、指纹 pure、实开大屏第二行三格 DOM 落值与第一行七格并存）；__r58Probe.groupRun58() ok = true（组跑清单 21 项全标注独立页、固定条款原文在册、ecoVerdictRun 相位敏感标注在册）；大屏截图与 DOM 量测（第二行不遮挡第一行与预警行、移动端不溢出）齐备；VERSION_LOG v54 条目已按镜像仓 v0.54.0 提交 f29d690 回填并注明来源、v35–v56 连续性自检无缺号；例行回归独立页口径逐项数字见交付汇报（守恒/navGate5/traceAudit/queueRun/schedRun/dualRun/五本对账+ESG+水平衡/满意度/链速标准窗/DrawCall/存档往返/演示日/tourRun 24 站/双召回/OEE·班次·库位·保养·覆盖·预测·成本·报警·回放·驾驶舱复跑/断言链 r36–r58）；window.__r58Check() 全绿（r58assert 五项全 true、r36–r57 断言链全 true）、时间基准总表已续第 56 项</li>
+      <li>R59 冷启动治理 + 欢迎层续档：冷启动基线（R58 字节同口径 3 次中位）DCL 1,011 ms / 可交互 11,438 ms、buildScene 自报 2,282 ms、CPU 剖析 (program) 65.8% + three 内部约 15%（大头在场景构建与软件渲染）；__r59Probe.coldRun59() ok = true（页内 PERF59 打点齐备、懒冲刷 42.1 ms）；lazyRun59() ok = true（激活后图例 3,446 字符 / 联动 28 行 / OEE 格非空、驾驶舱十一项对账 oracle diffs 全 0、注册表 28 条 sharedRef）；resumeRun59() ok = true（无档隐藏 / 有档显示 / 应用续档后 simMin·成品·产品与信封逐项一致 + whOk）；治理三手法落地——抽屉 21 节懒渲染（首次打开/idle 冲刷激活）、求值期 8 处急切首渲清零（数据 ensure 保留）、linkRegistry44 共享缓存；同窗 A/B 复测 DCL −14.0% / 可交互 −5.7%（外测负载抖动 ±10 s 级、降幅以同窗为准如实报）；DrawCall 独立页 solo 待机 619 / 作业 623（基线 solo 619/636，不升）；例行回归独立页口径逐项数字见交付汇报（守恒 20,000 步/navGate5 solo 5/5 签名 0.7·1.05·0.06·0.31/traceAudit/queueRun 1.95×/schedRun/dualRun 78,504·1,500/五本对账+ESG 三行+水平衡三段/满意度/链速标准窗 solo 2.03/存档往返/演示日/tourRun 24 站/双召回（R51-A 拆旗 + rawSpanRun 逐值同基线）/OEE·班次·库位·保养·覆盖·预测·成本·报警·回放·驾驶舱·审计包·大屏复跑）；window.__r59Check() 全绿（r59assert 五项全 true、r36–r58 断言链全 true）、时间基准总表已续第 57 项</li>
     </ul>
   </div>
 </aside>
@@ -1577,6 +1584,33 @@ if(!window.THREE){
  * ========================================================================== */
 (function(){
 "use strict";
+/* ================= R59 · 冷启动性能治理（状态与打点，先于 CONFIG 定义） =================
+ * PERF59 = 冷启动分段打点（performance.now()，导航相对毫秒）：tScript 脚本开始执行 /
+ * tEvalEnd 脚本求值结束（scheduleBoot 前置位）/ tBootStart bootFactory 进入 / sceneMs
+ * buildScene 自报耗时（与既有 console 口径同源）/ tFirstFrame 首个 loop 帧 /
+ * tInteractive bootFactory 完成（renderAll 已跑、加载态撤下）。__r59() 读全量。
+ * LAZY59 = 抽屉分析节懒构建登记：active 前 renderKpis 的抽屉节刷新整组跳过、各节
+ * 求值期急切首渲改为登记 builder；激活 = 首次 openDrawer 或首帧后 idle 冲刷
+ * （lazy59Activate，幂等）。数据侧 ensure（shift53/cover54/uc55）仍在求值期急切
+ * 执行——它们是台账基线不是 DOM，延后会改读数口径，铁律不碰。 */
+var PERF59 = { tScript: (window.performance && performance.now) ? performance.now() : 0,
+               tEvalEnd: null, tBootStart: null, sceneMs: null, tFirstFrame: null, tInteractive: null };
+var LAZY59 = { active: false, activatedBy: null, activatedAt: null, flushMs: null, buildMs: {}, builders: [] };
+function lazy59Register(id, fn){ LAZY59.builders.push({ id: id, fn: fn }); }
+function lazy59Activate(reason){
+  if(LAZY59.active) return false;
+  LAZY59.active = true; LAZY59.activatedBy = reason || "manual";
+  LAZY59.activatedAt = (window.performance && performance.now) ? performance.now() : null;
+  var t0 = (window.performance && performance.now) ? performance.now() : 0;
+  LAZY59.builders.forEach(function(b){
+    var s = (window.performance && performance.now) ? performance.now() : 0;
+    try { b.fn(); } catch(e){ if(window.console && console.warn) console.warn("[r59] lazy build " + b.id + " failed", e); }
+    LAZY59.buildMs[b.id] = Math.round((((window.performance && performance.now) ? performance.now() : 0) - s) * 10) / 10;
+  });
+  try { renderKpis(); } catch(e){}   /* 激活即以当前状态全量刷新一遍门内各节（与急切版同路同值） */
+  LAZY59.flushMs = Math.round((((window.performance && performance.now) ? performance.now() : 0) - t0) * 10) / 10;
+  return true;
+}
 var $ = function(id){ return document.getElementById(id); };
 var fmt = function(n){ return Math.round(n).toLocaleString("zh-CN"); };
 var fmtMoney = function(n){ var r = Math.round(n); return "¥" + (r === 0 ? "0" : r.toLocaleString("zh-CN")); };   /* R18：归一负零——利润 −0.0x 时 Math.round 得 −0、toLocaleString 会渲染成「¥-0」（审计 P2 指出），统一显 ¥0 */
@@ -2487,6 +2521,21 @@ var CONFIG = {
     auditNewFiles: ["shifts53.json", "forecast55.json", "alarms56.json"],
     bigCards58: ["oee", "alm", "fc"],
     probeDiscipline: "independent-page"
+  },
+  /* ================= R59 · 冷启动性能治理 =================
+   * idleFlushMs = 首帧后 idle 冲刷懒构建的延时口径（requestIdleCallback 的
+   * timeout 与 setTimeout 替身同值）；lazySections59 = 受懒构建门管理的抽屉节
+   * 清单（渲染器本体/签名守卫/刷新节奏零改动，门只决定「激活前不构建」）；
+   * registryCache59 = 联动注册表共享缓存开关（③ 重复构建合并，见
+   * linkRegistry44）；resume59 = 欢迎层续档提示（B 项）开关，检测口径 =
+   * 本会话内经导出/导入留存且通过 saveValidate 的 FSIM_SAVE 信封（沿 R10
+   * 结论：不冒充跨刷新持久化）。基线（治理前，本轮自有无头路线同口径 3 次
+   * 中位）：DCL 1,011 ms / 首帧可交互 11,438 ms / buildScene 自报 2,282 ms。 */
+  r59: {
+    idleFlushMs: 1200,
+    lazySections59: ["legend44", "link44", "area44", "sup35", "recall33", "rawRecall34", "traceChips", "handover49", "water50", "month50", "oee52", "shift53", "slot53", "maint54", "cover54", "fc55", "uc55", "alm56", "ev56", "cockpit57", "traceAudit34"],
+    registryCache59: true,
+    resume59: true
   },
   /* R44 口径（详见交接文档 R44 节）：light=报告2.2-13光照材质分区（零新增实时光源、灯面自发光示意）；link=案例5双向联动；areas=报告1.2经验比例10:4:1.5:0.8只报告不改布局；图例由renderLegend44从CONFIG.r42/r43拼装 */
   
@@ -5209,6 +5258,10 @@ $("reportDlBtn").addEventListener("click", function(){
   $("obStart").addEventListener("click", function(){ close(); if(!S.running) $("playBtn").click(); });
   $("obTour").addEventListener("click", function(){ close(); $("tourBtn").click(); });
   $("obData").addEventListener("click", function(){ close(); openDrawer(); });
+  /* R59 B：续档提示——检测口径见 resumeEnv59（本会话留存且过 saveValidate 的 FSIM_SAVE 信封）；无档不显示 */
+  var rb59 = $("obResumeBtn59");
+  if(rb59) rb59.addEventListener("click", function(){ if(resumeApply59()) close(); });
+  refreshResume59();
 })();
 /* R10 自检（PDCA Check 证据口）：控制台读 window.__pdcaCheck() —— 仓库守恒 / 队列 / 抽检 / 巡游站数 / 货位占用 */
 window.__pdcaCheck = function(){
@@ -7494,6 +7547,11 @@ function renderKpis(){
       var pmc = $("pmCost"); if(pmc) pmc.textContent = fmtMoney(PM.maintCost) + "（保养 " + PM.maintenances + " 次 · 劣化故障 " + PM.degFaults + " 次）";
       var pml = $("pmLeanTxt"); if(pml) pml.textContent = "最低健康度 " + Math.round(low15.health) + "（" + low15.name + "）· 预警 " + PM.warnings + " 次 · 保养 " + PM.maintenances + " 次 · 劣化故障 " + PM.degFaults + " 次";
     }
+    /* R59 懒构建门：以下抽屉分析节在 LAZY59 激活前整组跳过（首次打开抽屉或首帧后
+     * idle 冲刷激活，见 lazy59Activate）；激活后与治理前同节奏、同渲染器、同签名
+     * 守卫刷新，读数逐项一致。门外消费者为零（各节 DOM 只在抽屉内可见；顶栏报警
+     * 徽标 almBadge56 / 大屏 big58 走源函数直读、不经这些渲染器）。 */
+    if(LAZY59.active){
     if(typeof renderTraceChips === "function") renderTraceChips();
     if(TRACE.viewKey && TRACE.byKey[TRACE.viewKey]) renderGenealogy(TRACE.viewKey);
     if(typeof renderRecall33 === "function") renderRecall33();   /* R33：召回面板随抽屉节奏刷新（签名守卫，状态不变零重建） */
@@ -7513,6 +7571,7 @@ function renderKpis(){
     if(typeof renderEv56 === "function") renderEv56();   /* R56：事件回放节同节奏刷新（签名守卫） */
     if(typeof renderCockpit57 === "function") renderCockpit57();   /* R57：今日驾驶舱同节奏刷新（签名守卫） */
     if(typeof renderTraceAudit34 === "function") renderTraceAudit34();   /* R34：谱系自检读数行同节奏刷新（签名守卫，未跑时只显一行） */
+    }
     var spOut = $("spareOut");
     if(spOut) spOut.textContent = SPARES.stock + " 件" + (SPARES.stock === 0 ? "（缺货）" : "") + " · 已领用 " + SPARES.used + " 件";
     /* R13：调度台原料预警行 + 精益看板原料行（与 rawAlertState 同源同节奏刷新） */
@@ -8612,7 +8671,10 @@ function buildRealism44(){
   var lc = 0; scene.traverse(function(o){ if(o.isLight) lc++; });
   LIGHT44.baseLights = lc;
 }
+var __linkRegCache44 = null;   /* R59 ③：注册表构建一次共享——缓存键 = DOORS45.list 长度（门件建场前后各成一版，长度变化自动失效重建）；stations/lines 与 lab/gate 条目为静态定义，建场后内容恒定 */
 function linkRegistry44(){
+  var doorN = (typeof DOORS45 !== "undefined" && DOORS45.list) ? DOORS45.list.length : -1;
+  if(CONFIG.r59.registryCache59 && __linkRegCache44 && __linkRegCache44.doorN === doorN) return __linkRegCache44.reg;
   var reg = [];
   function add(key, label, sel, pos, size){ reg.push({ key: key, label: label, sel: sel, pos: pos, size: size }); }
   var stPos = { supply: [-88, 0], blend: [-46, 0], sterilize: [-10, 4] };
@@ -8630,6 +8692,7 @@ function linkRegistry44(){
   if(typeof doorLinkEntries45 === "function") doorLinkEntries45().forEach(function(e){ reg.push(e); });   /* R45：开合件同源登记（门扇/风淋/传递窗） */
   if(typeof labLinkEntries46 === "function") labLinkEntries46().forEach(function(e){ reg.push(e); });   /* R46：功能间同源登记（微生物室/留样格柜/气瓶间/充电区） */
   if(typeof gateLinkEntries47 === "function") gateLinkEntries47().forEach(function(e){ reg.push(e); });   /* R47：厂区外围同源登记（光伏/厂门/停车场/消防点） */
+  if(CONFIG.r59.registryCache59) __linkRegCache44 = { doorN: doorN, reg: reg };
   return reg;
 }
 function linkPulse44(e){
@@ -8754,7 +8817,7 @@ function linkTagRows44(root){
   var n = document.getElementById(id);
   if(n && window.MutationObserver) new MutationObserver(function(){ linkTagRows44(n); }).observe(n, { childList: true, subtree: true });
 });
-renderLegend44(); renderLinkPanel44(); renderArea44();
+lazy59Register("legend44", function(){ renderLegend44(); renderLinkPanel44(); renderArea44(); });   /* R59：求值期急切首渲改懒构建登记（首次打开抽屉 / idle 冲刷时构建，内容与急切版同路同值；图例/目录/面积三件同属静态拼装、共享一次激活） */
 window.__r44 = function(){
   return { cfg: CONFIG.r44, light: { cleanPanels: LIGHT44.cleanPanels, warmPanels: LIGHT44.warmPanels, tint: !!LIGHT44.tint, baseLights: LIGHT44.baseLights }, links: linkRegistry44().length, areas: areaAudit44(),
            legend: "区域三色/管道介质色/Andon/PPE分区色/地面划线 五类同源拼装（renderLegend44 读 CONFIG.r42/r43）" };
@@ -9176,7 +9239,7 @@ function buildRealism45(){
       }
     }
   })();
-  if(document.getElementById("linkPanel44")) renderLinkPanel44();   /* 联动目录补渲染（含开合件条目） */
+  if(LAZY59.active && document.getElementById("linkPanel44")) renderLinkPanel44();   /* 联动目录补渲染（含开合件条目）；R59：未激活时不抢建——激活时 legend44 builder 以门件就绪后的注册表统一构建（含开合件条目） */
 }
 /* —— C 牌面图集合并（建场末执行）：静态组内 canvas 纹理牌面 → 一张图集 + 一个网格 —— */
 function atlasMerge45(){
@@ -10627,7 +10690,7 @@ whOk: window.__whCheck().ok};
 out.r50assert.ok = out.r50assert.configOk && out.r50assert.waterIdent && out.r50assert.waterCross && out.r50assert.panel && out.r50assert.whOk;
 return out;
 };
-try { renderWater50(); renderMonth50();} catch(e50){}
+/* R59：求值期急切首渲已撤——水平衡/月度两节由 renderKpis 懒构建门在激活后同节奏首建（数据侧 waterBalance50/month50Agg 为读时纯派生，无求值期基线可丢） */
 
 /* ================= R51 · 探针治理（recallRun 拆旗）+ 源码瘦身审计 =================
  * A 拆旗：见 __r33Probe.recallRun 尾段（定案号 CONFIG.r51.recallVerdict = R51-A）——
@@ -10825,7 +10888,7 @@ window.__r52Check = function(){
   out.r52assert.ok = out.r52assert.configOk && out.r52assert.panel && out.r52assert.countersOk && out.r52assert.whOk;
   return out;
 };
-try { renderOee52(); } catch(e52){}
+/* R59：求值期急切首渲已撤——OEE 节由 renderKpis 懒构建门在激活后同节奏首建（OEE52 子账在 step 结算同点累计，不依赖首渲） */
 
 /* ================= [M1] R53 · 经营分析深化（SHIFT53 班次绩效 + SLOT53 库位周转） =================
  * 【A 项 · 班次绩效】以 R49 班次边界（白班 08:00 / 夜班 20:00，shiftInfoAt 同源）切分
@@ -11052,7 +11115,7 @@ window.__r53Check = function(){
   out.r53assert.ok = out.r53assert.configOk && out.r53assert.shiftPanel && out.r53assert.slotPanel && out.r53assert.occDiff === 0 && out.r53assert.whOk;
   return out;
 };
-try { shift53Ensure(); renderShift53(); renderSlot53(); } catch(e53){}
+try { shift53Ensure(); } catch(e53){}   /* R59：数据基线 ensure 保持急切（台账口径）；两节首渲改由懒构建门在激活后同节奏完成 */
 
 /* ================= R54 · 预测维护计划（TPM） + 原料覆盖天数预测 =================
  * 【A 项 · 保养计划】数据全部挂 R15 既有 HEALTH 条目：runMin 在 stepPM 与健康衰减
@@ -11318,7 +11381,7 @@ window.__r54Check = function(){
   out.r54assert.ok = out.r54assert.configOk && out.r54assert.maintPanel && out.r54assert.coverPanel && out.r54assert.devices === out.r54assert.expectDevices && out.r54assert.coverAlertSameSource && out.r54assert.whOk;
   return out;
 };
-try { cover54Ensure(); renderMaint54(); renderCover54(); } catch(e54){}
+try { cover54Ensure(); } catch(e54){}   /* R59：数据基线 ensure 保持急切（滚动消耗采样口径）；两节首渲改由懒构建门在激活后同节奏完成 */
 
 /* ================= R55 · 需求预测（S&OP · 带回测） + 单瓶成本构成 =================
  * 【A 项 · 需求预测】到达台账 FC55.days 在 satTickArrivals 与 SAT.arrivals.push
@@ -11619,7 +11682,7 @@ window.__r55Check = function(){
   out.r55assert.ok = out.r55assert.configOk && out.r55assert.fcPanel && out.r55assert.btPanel && out.r55assert.ucPanel && out.r55assert.identityDiff <= 0.5 && out.r55assert.ucSumDiff < 0.01 && out.r55assert.fcCats && out.r55assert.whOk;
   return out;
 };
-try { uc55Ensure(); renderFc55(); renderUc55(); } catch(e55){}
+try { uc55Ensure(); } catch(e55){}   /* R59：数据基线 ensure 保持急切（单瓶成本分段基线口径）；两节首渲改由懒构建门在激活后同节奏完成 */
 
 /* ================= R56 · 分级报警管理（ISA-18.2 风格） + 事件时间轴回放 =================
  * 【A 项 · 报警管理 ALM56】almTick56 在 step 内与 alertCenterTick24 同点推进：
@@ -11913,7 +11976,7 @@ window.__r56Check = function(){
   out.r56assert.ok = out.r56assert.configOk && out.r56assert.almPanel && out.r56assert.recPanel && out.r56assert.evPanel && out.r56assert.snapPanel && out.r56assert.filterPanel && out.r56assert.badgeOk && out.r56assert.typesOk && out.r56assert.sourcesOk && out.r56assert.whOk;
   return out;
 };
-try { renderAlm56(); renderEv56(); } catch(e56init){}
+/* R59：求值期急切首渲已撤——报警/事件两节由 renderKpis 懒构建门在激活后同节奏首建（ALM56/EV56 状态在 step/log 同点维护，不依赖首渲） */
 /* R56 存档往返自检（探针口）：信封构建 → 校验 → 恢复后 ALM56/EV56 逐字比对
  * （报警状态与事件流随档保留的直接证据；与 __r25Probe.saveRoundTrip 同流程）。 */
 window.__r56SaveCheck = function(){
@@ -12092,7 +12155,7 @@ window.__r57Check = function(){
   out.r57assert.ok = out.r57assert.configOk && out.r57assert.panelOk && out.r57assert.targetsOk && out.r57assert.tasksOk && out.r57assert.tourOk && out.r57assert.whOk;
   return out;
 };
-try { renderCockpit57(); } catch(e57init){}
+/* R59：求值期急切首渲已撤——驾驶舱由 renderKpis 懒构建门在激活后同节奏首建（cockpit57 为读时纯派生搬运，无求值期状态） */
 
 /* ================= R58 · 审计包二刷 + 大屏补卡 + 组跑纪律固化 =================
  * 【A 项 · 审计包二刷】buildAuditPack35 按现行台账集合再刷新（清单口径版本
@@ -12211,6 +12274,132 @@ window.__r58Check = function(){
                     groupOk: GROUPRUN58.length >= 20 && GROUPRUN58.every(function(g){ return g.page === "independent"; }),
                     whOk: window.__whCheck().ok };
   out.r58assert.ok = out.r58assert.configOk && out.r58assert.auditOk && out.r58assert.bigPanelOk && out.r58assert.groupOk && out.r58assert.whOk;
+  return out;
+};
+
+/* ================= R59 · 冷启动性能治理（续档 + 读数口/探针/回归包） =================
+ * 【B 项 · 欢迎层续档】检测口径 resumeEnv59：SAVE25.lastEnv（本会话导出/导入成功时
+ * 留存的信封）须通过既有 saveValidate（FSIM_SAVE magic/版本/校验和/结构全口径）
+ * 才算「已有存档」；恢复走 saveRestore 既有读档路径（与导入成功分支同路、同状态
+ * 行与日志口径）。跨刷新不留存——本页无服务端存储，沿 R10 结论不冒充持久化。 */
+function resumeEnv59(){
+  if(!CONFIG.r59.resume59) return null;
+  if(typeof SAVE25 === "undefined" || !SAVE25.lastEnv) return null;
+  return saveValidate(SAVE25.lastEnv) === null ? SAVE25.lastEnv : null;
+}
+function refreshResume59(){
+  var bar = document.getElementById("obResume59"); if(!bar) return false;
+  var env = resumeEnv59();
+  if(!env){ bar.style.display = "none"; return false; }
+  var txt = document.getElementById("obResumeTxt59");
+  if(txt) txt.textContent = "检测到本会话留存的存档：第 " + (Math.floor(env.payload.S.simMin / 1440) + 1) + " 天 " + fmtSimClock(env.payload.S.simMin) + " · 累计产量 " + fmt(env.payload.S.finished) + " 瓶（FSIM_SAVE v" + env.version + " · 校验和 " + String(env.checksum).slice(0, 10) + "…）——点右侧按钮即按导入存档的同一路径恢复。";
+  bar.style.display = "flex";
+  return true;
+}
+function resumeApply59(){
+  var env = resumeEnv59();
+  if(!env){ refreshResume59(); return false; }
+  try {
+    var wh = saveRestore(env.payload);
+    var okTxt = wh.ok ? "守恒自检通过（在库 " + wh.stock + " 托 = 期初 + 入库 " + wh.inCases + " − 出库 " + wh.outCases + "）" : "守恒自检未通过（在库 " + wh.stock + " vs 应有 " + wh.expected + "），状态已恢复但请留意";
+    saveSetStatus("续档成功（欢迎层）：已恢复到第 " + (Math.floor(S.simMin / 1440) + 1) + " 天 " + fmtSimClock(S.simMin) + " · 产品「" + product.name + "」· 累计产量 " + fmt(S.finished) + " 瓶 · " + okTxt + " · 日报归档 " + DAYREP.history.length + " 天。");
+    log("↺ 已按存档续上进度（与导入存档同一恢复路径）：" + okTxt + "。", wh.ok ? "good" : "bad");
+    return true;
+  } catch(ex){
+    saveSetStatus("续档失败（恢复过程出错）：" + ex.message);
+    log("↺ 续档失败：" + ex.message, "bad");
+    return false;
+  }
+}
+window.__showOnboard59 = function(){ var ob = document.getElementById("onboard"); if(ob) ob.classList.add("show"); return refreshResume59(); };
+window.__r59 = function(){
+  var env = resumeEnv59();
+  var b = PERF59;
+  return {
+    cfg: CONFIG.r59,
+    boot: { tScript: Math.round(b.tScript),
+            tEvalEnd: b.tEvalEnd === null ? null : Math.round(b.tEvalEnd),
+            evalMs: b.tEvalEnd === null ? null : Math.round(b.tEvalEnd - b.tScript),
+            tBootStart: b.tBootStart === null ? null : Math.round(b.tBootStart),
+            sceneMs: b.sceneMs,
+            tFirstFrame: b.tFirstFrame === null ? null : Math.round(b.tFirstFrame),
+            tInteractive: b.tInteractive === null ? null : Math.round(b.tInteractive) },
+    lazy: { active: LAZY59.active, by: LAZY59.activatedBy,
+            activatedAt: LAZY59.activatedAt === null ? null : Math.round(LAZY59.activatedAt),
+            flushMs: LAZY59.flushMs, buildMs: LAZY59.buildMs,
+            builders: LAZY59.builders.map(function(x){ return x.id; }),
+            sections: CONFIG.r59.lazySections59 },
+    registry: { cached: !!(__linkRegCache44 && __linkRegCache44.reg), entries: linkRegistry44().length,
+                sharedRef: linkRegistry44() === linkRegistry44() },
+    resume: { has: !!env, day: env ? Math.floor(env.payload.S.simMin / 1440) + 1 : null,
+              finished: env ? env.payload.S.finished : null }
+  };
+};
+window.__r59Probe = {
+  /* 冷启动打点自检：页内分段齐全（外部同口径 3 次中位对照见交接文档 R59 节） */
+  coldRun59: function(){
+    var b = window.__r59().boot;
+    return { boot: b, baselineR58: { dclMs: 1011, interactiveMs: 11438, sceneMs: 2282 },
+             ok: b.tEvalEnd !== null && b.evalMs !== null && b.sceneMs !== null && b.tInteractive !== null && b.tFirstFrame !== null };
+  },
+  /* 懒构建：激活后静态三件（图例/目录/面积）与门内各节 DOM 就位、驾驶舱十一项
+   * 对账借 R57 dashRun 现成判据复核（与急切版逐项一致的现成证据口）、注册表共享引用 */
+  lazyRun59: function(){
+    var wasActive = LAZY59.active;
+    var actNow = lazy59Activate("probe");
+    var legend = document.getElementById("legendPanel44");
+    var link = document.getElementById("linkPanel44");
+    var oee = document.getElementById("oee52Grid");
+    var dash = window.__r57Probe.dashRun();
+    var reg1 = linkRegistry44(), reg2 = linkRegistry44();
+    return { wasActive: wasActive, activatedNow: actNow, active: LAZY59.active, by: LAZY59.activatedBy, flushMs: LAZY59.flushMs,
+             legendLen: legend ? legend.innerHTML.length : -1,
+             linkRows: link ? link.querySelectorAll("[data-link44]").length : -1,
+             oeeCells: oee ? oee.children.length : -1,
+             dashOk: dash.ok, registryShared: reg1 === reg2, registryEntries: reg1.length,
+             ok: LAZY59.active && !!legend && legend.innerHTML.length > 200 && !!link && link.querySelectorAll("[data-link44]").length >= 20
+                 && !!oee && oee.children.length > 0 && dash.ok && reg1 === reg2 && reg1.length >= 24 };
+  },
+  /* 续档两态：无档隐藏 → 造档（saveBuildEnvelope 既有口径）留存后显示 → 推进
+   * 状态使现场偏离 → 点欢迎层同一恢复路径（resumeApply59）→ 关键状态与存档逐项一致 */
+  resumeRun59: function(){
+    var prevEnv = (typeof SAVE25 !== "undefined") ? SAVE25.lastEnv : null;
+    SAVE25.lastEnv = null;
+    var noSaveShown = refreshResume59();
+    var barHidden = document.getElementById("obResume59").style.display === "none";
+    var env = saveBuildEnvelope();
+    var key = { simMin: env.payload.S.simMin, finished: env.payload.S.finished, productId: env.payload.productId };
+    SAVE25.lastEnv = env;
+    var hasShown = refreshResume59();
+    var barShown = document.getElementById("obResume59").style.display === "flex";
+    if(!S.running) document.getElementById("playBtn").click();
+    window.__pumpSim(240);
+    var diverged = Math.round(S.simMin) !== Math.round(key.simMin) || S.finished !== key.finished;
+    var applied = resumeApply59();
+    var match = applied && Math.round(S.simMin) === Math.round(key.simMin) && S.finished === key.finished && product.id === key.productId;
+    var wh = window.__whCheck();
+    SAVE25.lastEnv = prevEnv; refreshResume59();
+    return { noSaveHidden: barHidden && !noSaveShown, hasSaveShown: barShown && hasShown, diverged: diverged,
+             applied: applied, stateMatch: match, whOk: wh.ok, envKey: key,
+             restored: { simMin: Math.round(S.simMin), finished: S.finished, productId: product.id },
+             ok: barHidden && !noSaveShown && barShown && hasShown && diverged && applied && match && wh.ok };
+  }
+};
+window.__r59Check = function(){
+  var c58 = window.__r58Check();
+  var out = {}; Object.keys(c58).forEach(function(k){ out[k] = c58[k]; });
+  lazy59Activate("check");
+  var r59 = window.__r59();
+  var legend = document.getElementById("legendPanel44");
+  out.r59 = r59;
+  out.r59assert = {
+    configOk: !!(CONFIG.r59 && CONFIG.r59.idleFlushMs > 0 && CONFIG.r59.lazySections59.length >= 20 && CONFIG.r59.registryCache59 === true && CONFIG.r59.resume59 === true),
+    bootMarksOk: r59.boot.tEvalEnd !== null && r59.boot.evalMs !== null && r59.boot.sceneMs !== null && r59.boot.tInteractive !== null,
+    lazyOk: LAZY59.active && !!legend && legend.innerHTML.length > 200 && r59.registry.sharedRef && r59.registry.entries >= 24,
+    resumeUiOk: !!document.getElementById("obResume59") && !!document.getElementById("obResumeBtn59") && !!document.getElementById("obResumeTxt59"),
+    whOk: window.__whCheck().ok
+  };
+  out.r59assert.ok = out.r59assert.configOk && out.r59assert.bootMarksOk && out.r59assert.lazyOk && out.r59assert.resumeUiOk && out.r59assert.whOk;
   return out;
 };
 
@@ -16548,6 +16737,7 @@ $("infoCard").addEventListener("pointerleave", function(){ infoHover = false; })
    ================================================================ */
 var drawerTimer = null;
 function openDrawer(){
+  lazy59Activate("drawer");   /* R59：首次打开抽屉即激活懒构建（先于展开动画完成首建，打开后读数与急切版逐项一致） */
   var d = $("drawer");
   clearTimeout(drawerTimer);
   d.classList.add("show");
@@ -18512,7 +18702,7 @@ document.addEventListener("keydown", function(e){ if(DEMO.on && e.key === "Escap
  * 导入时入库在途回暂存位、出库 / 叉车在途回交接位（无空位则回货架空位），
  * 守恒恒等式不破。已知取舍：SMED 当班计时牌与 STRESS 连环故障的待发第二击
  * （持有设备对象引用）不入存档，恢复后从干净状态继续，不影响任何账目。 */
-var SAVE25 = { lastMsg: "" };
+var SAVE25 = { lastMsg: "", lastEnv: null };   /* R59：lastEnv = 本会话最近一次导出/导入成功的 FSIM_SAVE 信封（仅内存留存，供欢迎层续档检测；不落存储，沿 R10 口径） */
 function saveHash53(str, seed){
   var h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
   for(var i = 0, ch; i < str.length; i++){
@@ -18776,6 +18966,7 @@ function renderSave25(){
 function saveExport(){
   taskMark30("export");   /* R30：新手任务「导出一次存档」挂导出动作本身 */
   var env = saveBuildEnvelope();
+  SAVE25.lastEnv = env; if(typeof refreshResume59 === "function") refreshResume59();   /* R59：信封留存会话内供欢迎层续档检测（不落任何存储，沿 R10 口径） */
   var blob = new Blob([JSON.stringify(env)], { type: "application/json" });
   var a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -18795,6 +18986,7 @@ function saveImportFile(file){
     if(err){ saveSetStatus("导入拒绝：" + err); log("⬆ 存档导入拒绝：" + err, "bad"); return; }
     try {
       var wh = saveRestore(env.payload);
+      SAVE25.lastEnv = env; if(typeof refreshResume59 === "function") refreshResume59();   /* R59：导入成功的信封同样留存供续档检测 */
       var okTxt = wh.ok ? "守恒自检通过（在库 " + wh.stock + " 托 = 期初 + 入库 " + wh.inCases + " − 出库 " + wh.outCases + "）" : "守恒自检未通过（在库 " + wh.stock + " vs 应有 " + wh.expected + "），状态已恢复但请留意";
       saveSetStatus("导入成功：已恢复到第 " + (Math.floor(S.simMin / 1440) + 1) + " 天 " + fmtSimClock(S.simMin) + " · 产品「" + product.name + "」· 累计产量 " + fmt(S.finished) + " 瓶 · " + okTxt + " · 日报归档 " + DAYREP.history.length + " 天。");
       log("⬆ 存档导入成功（格式 v" + env.version + "，校验和通过）：" + okTxt + "。", wh.ok ? "good" : "bad");
@@ -20575,6 +20767,7 @@ window.__r36Check = function(){
 };
 
 function loop(ts){
+  if(PERF59.tFirstFrame === null) PERF59.tFirstFrame = (window.performance && performance.now) ? performance.now() : null;   /* R59 打点：首帧 */
   requestAnimationFrame(loop);
   if(lastTs===null) lastTs = ts;
   var dt = Math.min(0.1, (ts-lastTs)/1000); lastTs = ts;
@@ -20606,6 +20799,7 @@ function bootFactory(){
   if(__booted) return;
   __booted = true;
   var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  PERF59.tBootStart = (window.performance && performance.now) ? performance.now() : null;   /* R59 打点 */
   try {
     buildScene();
     collectFarCull();   /* R18：建场后收集远距剔除候选（动态根排除清单见 collectFarCull） */
@@ -20616,16 +20810,25 @@ function bootFactory(){
     return;
   }
   var t1 = (window.performance && performance.now) ? performance.now() : Date.now();
+  PERF59.sceneMs = Math.round(t1 - t0);   /* R59 打点：与下方 console 同源同值 */
   if(window.console && console.info) console.info("[factory] buildScene 耗时 " + Math.round(t1 - t0) + "ms（DOMContentLoaded 后异步构建，未阻塞首屏解析）");
   initControls();
   buildTour();
   applyProduct(product);
   log("欢迎来到饮料工厂。点右下角「开始生产」，"+CONFIG.lineCount+" 条灌装线就会动起来；点任意设备或产线可以查看它、停用它或抢修它。");
   drawChart(); renderAll();
+  PERF59.tInteractive = (window.performance && performance.now) ? performance.now() : null;   /* R59 打点：首帧可交互点（建场+首轮全量渲染完成、加载态即将撤下） */
   var bl = $("buildLoading"); if(bl) bl.classList.remove("show");
   requestAnimationFrame(loop);
+  /* R59 ②：非关键构建延后到首帧之后——抽屉分析节的懒构建由 idle 冲刷兜底激活
+   * （用户先开抽屉则 openDrawer 已提前激活，此处幂等空转）；导览曲线 buildTour
+   * 保留建场内构建（弧长 u 被 __tourStopUs/命令面板/任务链多处读数口依赖，收益
+   * 小风险大，如实不延）；命令面板索引 R32 起即打开时现场生成、本轮核实沿用。 */
+  if(window.requestIdleCallback) requestIdleCallback(function(){ lazy59Activate("idle"); }, { timeout: CONFIG.r59.idleFlushMs + 1800 });
+  else setTimeout(function(){ lazy59Activate("timer"); }, CONFIG.r59.idleFlushMs);
 }
 (function scheduleBoot(){
+  PERF59.tEvalEnd = (window.performance && performance.now) ? performance.now() : null;   /* R59 打点：脚本求值结束（本 IIFE 为脚本尾部最后执行段） */
   var bl = $("buildLoading"); if(bl) bl.classList.add("show");
   function kick(){ requestAnimationFrame(function(){ setTimeout(bootFactory, 0); }); }
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", kick);
