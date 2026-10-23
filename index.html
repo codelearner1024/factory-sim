@@ -1144,7 +1144,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R42 PDCA 打包轮（真实感对表 · 一：卫生三区 / 地面划线 / 管道标识 / Andon 塔灯）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户要求别闭门造车——先做真实饮料工厂调研（报告口径：GB 12695 三区划分与灌装间 ISO 7 背景 / ISO 5 局部、压差梯度为行业惯例值；GB 7231 管道色已并入 GB 2894-2025，Hex 为报告近似渲染值非国标色号；划线尺寸为中国工厂 5S 惯例），再按设计清单对表改造。参数全在 <b>CONFIG.r42</b>（zones / markings / pipes / cleanroom / corridor / andon），读数口 <b>window.__r42()</b>，探针口 <b>window.__r42Probe</b>（andonRun / markRun），划线开关 <b>window.__setMarkings42(v)</b>，回归包 <b>window.__r42Check()</b>。<b>【A 卫生三区】</b>：地面整面分区着色进 buildShell 地面颜色/粗糙度贴图——清洁区（灌装/封盖段 x −14~24、z ±27，两条线）浅色环氧 + 准清洁区（调配/UHT/无菌罐 x −74~46、z −44~34 + CIP 条带）灰绿 + 一般区灰底，边界描边、分界处地面色带（清洁南入口 / 准清洁南入口），吊牌三块（清洁/准清洁/一般，signMesh 双面）+ 压差牌（每线「灌装间 +10 Pa」、准清洁「+5 Pa」）。灌装间洁净间化：双线各加玻璃 Bloc 罩（北墙整面 + 南墙两段 + 气锁门洞 3 m + 滑开门扇 + 顶框梁/角柱，GLASSMAT 透明 0.22），2 号线外侧沿墙参观走廊（x −4~24、走廊面 2.4 m 宽 + 栏杆 + 解说牌「参观走廊」）——玻璃与栏杆<b>不登记</b>进 NAV_OBSTACLES / PERSON_OBSTACLES / COLLIDERS，南墙门洞对齐既有巡检路线穿越点（x −3.2~−0.2），车辆/人员路线零改动。<b>【B 地面划线】</b>：batch42 顶点色批量几何（单 MeshBasicMaterial 网格、零光源成本）：主车道黄边线 100 mm #F5C518（AGV 环线双道 + 交接横道 + B/C 巷 + 北横道，实线收口既有虚线环）、人行绿道 #2E9E5B 南侧净宽 1.4 m + 白边线、交接横道斑马线（x=61 垛位间隙）、白色定置框（下线暂存整框 + 逐位 L 角 + 码垛单元框）、红色禁堆框（消防点 ×2 / 锅炉配电柜 / 北安全出口）、黄黑警戒纹（无菌罐区围堰南缘 / 原料罐区东缘 / CIP 化学品区南界）、参观走廊地面带；独立开关（抽屉「现场标识与 Andon」节按钮 #markingsToggle42，大屏默认开，CONFIG.r42.markings.defaultOn）。<b>【C 管道介质标识 GB 7231】</b>：公用工程整管着色——蒸汽大红 #E60012（锅炉汽包立管 + 蒸汽总管 sm1/sm2/下行支管；分汽缸与机组进汽管保留保温色加红环意象）、压缩空气淡灰 #B5B5B5（母管 + 向南供气管）、生产用水艳绿 #00A651（水处理母管）；新增 CO₂ 支线（卧罐 + 中黄 #FFD200 母管 + 碳酸化机，报告 1.2 苏打水碳酸化）；不锈钢主管保持本色 + 色环（单个 InstancedMesh 实例色）：CIP 紫 #7D3C98（供液/汇管/去 UHT 共 5 环）、物料按产品色（主管冰红茶 + 双线支管本线产品色 + 机组产品管）、蒸汽红环 ×4；浓酸/碱出液管加危险带（黄带 + 两侧黑环）；流向箭头锥体 ×6（蒸汽/空气/水/CIP/CO₂/物料）；介质名牌 ×6（蒸汽/空气/水/CIP 酸碱/CO₂/碳酸化机）。共享材质 M(0xd9c9a8) 本体未动——仅定点换用新材质，热水管/分汽缸本体等共用件不受牵连。<b>【D Andon 塔灯】</b>：双线灌装位 + 封盖位（同线同状态）、UHT/灭菌链、码垛机共 6 塔，批量合并几何（底座/灯杆/三段一网格）+ 顶点色驱动（亮色 = MeshBasicMaterial 顶点色，零点光源）：绿 = 运行、黄 = 待料/阻塞/健康度 ≤ warnThreshold 预警、红 = 故障/换型/任一灭菌链 CIP 中/码垛改造中、全灭 = 待机/停线；状态源全为既有派生（lineStatus / stationStatus / palletizerState + healthOf），updateScene 每帧经 __andonTick42 刷新（状态不变零写入）；抽屉新增「现场标识与 Andon」节含图例行（#andonLegend42）与划线开关。静态件（洁净间/走廊/标识/箭头）登记 D.staticGroups 走既有合并；划线 +1 网格、塔灯 +1 网格、色环 +1 实例网格。<b>【E 校验】</b>：探针走自有无头浏览器路线补跑欠账（navGate / traceAudit / queueRun / schedRun 三场景）+ 例行回归全家桶，数字逐项写当轮交付汇报；DrawCall 双态守线（待机 ≤650 / 作业 ≤800）同口径实测。本轮无任何新增计时（总表第 40 项）。</div></div>
       <div class="dcell wide"><div class="l">R43 PDCA 打包轮（真实感对表 · 二：人员净化动线 / 工人分区 PPE / CIP 对表 / 动力站辨识 / 状态挂牌）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：续 R42——按同份调研报告（GB 14881 人员净化与分区着装硬原则；风淋 ≥30 s、洗手池与 CIP 罐容为行业惯例值）把第二批清单落地。参数全在 <b>CONFIG.r43</b>（suite / ppe / cip），读数口 <b>window.__r43()</b>，探针口 <b>window.__r43Probe</b>（suiteRun / ppeRun / cipRun），回归包 <b>window.__r43Check()</b>。<b>【A 人员净化动线】</b>：在南侧人行道（z=44）与 2 号线洁净间气锁门之间建净化间群（x −13.5~−5.5、z 27~43，隔墙高 2.7）：一更（鞋柜双层分私鞋/工鞋 + 长凳 + 更衣柜 ×4）→ 二更（白色洁净服柜 ×4 + 发网口罩发放盒）→ 洗手消毒（水槽台 + 感应龙头 ×4 + 消毒液浸泡槽 + 干手机）→ 风淋室（南门闭位/北门滑开位互锁意象 + 红绿互锁灯 + 两侧喷嘴墙各 9 嘴 + 顶置风机箱 + 地沟盖板）；三道隔断门洞左右交错成 S 形强制动线，南入北出、单向不逆行；入口立牌「人员净化通道」+ 逐间铭牌 ×5，入口与风淋出口另挂<b>蓝色指令牌 ×3</b>（GB 2894 指令色蓝底白图：必须戴发网/口罩、洗手消毒、风淋 30 秒）；风淋北出口经<b>缓冲走廊带</b>接参观走廊西端、与洁净间气锁门同轴——人员入口视觉动线全程对齐（路径本体仍为既有巡检路线，本轮不改路点，仅选址与地带对齐）。纯视觉隔断：<b>不登记</b> NAV/PERSON 障碍、不改任何人员/车辆路线（与 R42 洁净间同口径）。<b>【B 工人分区 PPE】</b>：makeWorker ppe 参数（hairnet 发网帽 / mask 口罩 / suit 连体服）+ 双头套组（盔组/发网组切换显隐）+ 逐人独立材质；<b>动态换装</b>：三名巡逻人员（ppe.dynamic）由 __ppeTick43 按当前所在区（CONFIG.r42.zones 矩形）<b>即时换色/换头套</b>——清洁区 = 连体洁净服浅色 + 发网 + 口罩、准清洁区 = 白工装 + 发网、一般区 = 蓝工装 + 安全盔；<b>简化说明</b>：无换装动画、无「必须经净化间才换装」的路径门控，过区即换（真实工厂须经净化动线，此处以视觉对齐代替）；岗位固定人员按所属区着装（质检员白服 + 发网 + 口罩、CIP 班组白工装 + 发网、维修工维持红背心白盔）；叉车补坐姿司机（蓝工装 + 黄色安全帽）。着装口径见 CONFIG.r43.ppeZones，ppeRun 实测三区换装。<b>【C CIP 四罐对表 + 阶段脉冲】</b>：既有 CIP 站本有酸/碱/热水三罐 + 回收罐（扩容轮）但无名无分工——本轮逐罐挂铭牌定版标准四罐（酸罐/碱罐/热水罐/回收水罐，英文行带循环用途），补浓酸/浓碱配制小罐 ×2（紫环 = 酸碱 GB 7231 + 计量泵 + 共用铭牌）、汇管阀阵排 ×6（气动蝶阀：阀杆 + 执行器 + 顶碟——CIP 站视觉特征）、板式换热器（肋片箱体）、洗眼器（绿盆双喷头 + 铭牌）、罐区围堰（南侧留作业缺口）；PLC 控制柜为站内既有件（带小屏与状态条，本轮据此认定在位）；<b>阶段色脉冲</b>：阀顶碟与新增汇管套管共用脉冲材质，__cipTick43 按双链 cipLeft 占总时长比例派生程序阶段（预冲洗绿 → 碱洗紫 1–2% NaOH 60–80℃ → 中间水冲 → 酸洗浅紫 → 终冲洗水蓝 → 热水消毒红 >90℃，时序表 CONFIG.r43.cip.phases）呼吸变色，无 CIP 时暗琥珀待机——绝不常亮假装；既有罐体/泵组/液位视管位置与驱动零改动。<b>【D 动力站辨识件】</b>：分汽缸（既有卧筒）补顶部阀门排 ×3；空压站补双塔干燥机（双立筒 + 连通管 + 铭牌）与储气罐铭牌；冷库屋面冷却塔群 ×3（方形塔 + 散热条 + 顶部风机圆件）；水处理 RO 膜壳补第 3 排 ×2（共 6 支）+ 机组铭牌；计数 __UTIL43（utilRun 断言）。<b>【E 设备铭牌与状态挂牌】</b>：主要新件均带铭牌小纹理（编号 + 型号字样，nameplateMesh）；调配罐（主罐）与无菌罐 ×5 挂三态牌（运行中绿 / 已清洁蓝 / 待清洗橙，纹理预生成、切换只换 map）：无菌罐按罐级 qty/lastPid 派生（有料 = 运行中；排空未清洗 = 待清洗；任一链 CIP 完成后空罐 = 已清洁——口径简化：CIP 完成事件对全部空罐生效，不逐罐追踪清洗归属），调配罐按换型中 = 待清洗 / 批次进行中 = 运行中 / 其余 = 已清洁派生；__tagsTick43 帧奏、状态变才写入（tagsRun 实测三态切换）。<b>【F 校验】</b>：__r43Check() = __r42Check 全量 + r43assert（suite/util/ppe/cip/tags）；探针 suiteRun / ppeRun（三区换装实测）/ cipRun / cipPulseRun（阶段变色实测）/ utilRun / tagsRun（三态切换实测）；例行回归与 DrawCall 双态同 R42 口径，数字写当轮交付汇报。本轮无任何新增计时（总表第 41 项）。</div></div>
             <div class="dcell wide"><div class="l">R44 PDCA 打包轮（真实感对表 · 三：光照材质分区 / 2D↔3D 联动 / 统一图例 / 面积自检 / rawRun 三次定案）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：续 R42/R43——按同份调研报告 2.2 第 13 条与案例 4/5 收尾对表。参数全在 <b>CONFIG.r44</b>（light / link / areas），读数口 <b>window.__r44()</b>，探针口 <b>window.__r44Probe</b>（lightRun / linkRun / legendRun / areaRun / rawSpanRun），回归包 <b>window.__r44Check()</b>。<b>【A 光照与材质分区】</b>：零新增实时光源——洁净区（灌装间上方）平板灯阵 ×6 冷白自发光面（MeshBasicMaterial，色 CONFIG.r44.light.cleanPanel）、仓库/包装高棚灯 ×4 暖黄自发光面，两区氛围靠灯面色 + 洁净区一层极低透明冷色氛围罩区分（罩不登记障碍、不进遮挡系统）；不锈钢粗糙 0.22→0.16（CONFIG.mats.stainless 与 r44.light.stainlessRough 同值）、环氧 0.5→0.42，环境反射仍走既有 PMREM + envIntensity 一处。夜班插值只改既有三灯、不碰灯面（灯面为自发光示意）。<b>【B 2D↔3D 联动】</b>：LINK44 注册表由 linkRegistry44() 在调用时从 stations / lines / 区域 hitbox 定义现场生成（与 R32 命令面板同哲学，不手写清单）：正向——抽屉「设备联动目录」行、告警条目、谱系卡设备行可点（data-link44 委托）→ focusEquip44(key)：置 S.selected 出信息卡 + flyTo 平滑飞镜头（复用既有机位/飞行系统）+ 目标处脉冲框（单网格线框、__linkTick44 按真实秒呼吸、pulseSec 后自灭，呈现层豁免计时）；反向——pickAt 命中或程序置 S.selected 时 renderInfo 末尾调 linkSyncFromSel44()，把联动目录对应行滚动定位 + cmdkFlash 同款描边闪烁。覆盖：双灌装线 / 供应 / 调配（含调配罐批次卡）/ 杀菌与无菌罐 / 码垛机 / 仓库 / 月台 / CIP / 水处理 / 空压 / 锅炉 / 冷库 / 质检。<b>【C 统一图例】</b>：抽屉新增「全厂图例」节 #legendPanel44，renderLegend44() 从 CONFIG.r42.zones（区域三色+等级+压差口径）/ CONFIG.r42.pipes（介质色，含「产品管不锈钢本色 + 150 mm 色环 + 流向箭头、整管着色只用于公用工程碳钢管」口径）/ R42 Andon 图例 / CONFIG.r43.ppeZones（PPE 分区色）/ CONFIG.r42.markings（划线含义与尺寸）现场拼装，配置改一处图例自动跟随（legendRun 断言拼装值与 CONFIG 逐项一致）。<b>【D 面积自检】</b>：areaAudit44() 按 CONFIG.r44.areas 量测矩形算各功能区占地，归一到车间 = 10 与报告经验比例 10:4:1.5:0.8 对照出表进图例区 #areaAudit44：成品库偏大（货架区含下线暂存与扩容预留，饮料高体积低值、仓储偏大与报告「仓储永远很大」方向一致，建议保留）；动力站量测为北带条带、与车间矩形共面交叠，比例仅作量级参考，不建议据此改布局；原辅料库以罐区计量、与报告口径（库房建筑面积）不完全同口径，偏差单列归因。只报告、不动布局。<b>【E rawRun 三次定案】</b>：__r44Probe.rawSpanRun 三次定案——先实证卡点：rawRun 两轮所构造的「新批」在现行批账归属下机制性不可横跨三态（卸料期间逐步 resync 把新到料量记到既有头批名下，实测新批到场 234k 当量、落账后头批 244,313 / 新批仅剩 186，头批耗尽前新批永远成不了领料批）；改以罐区当前领料头批（rawCurrentLot34）为对象分两段构造拼接证据——段一取证「罐存未用完 + 在制归属含该批」，段二取证「该批已有成托成品」，同批拼接成立后就地发起原料召回跑完三档计数与两段损失对账（内部断言口径与 __r34Probe.rawRun 一致）。任一段构造不出，返回写明卡点与量测值。<b>【F 校验】</b>：__r44Check() = __r43Check 全量 + r44assert（light/link/legend/area 四项）；例行回归数字写当轮交付汇报，DrawCall 双态守线（待机 ≤650 / 作业 ≤800）。本轮无新增仿真计时（总表第 42 项）。</div></div>
-<div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检本体为读数时对 TRACE/SLOTS 现算、触发走仿真时钟（出料归档事件点 + 每 360 仿真分钟 tick，与第 31 项同类）—— ✔ 一致<br>37. 双供应商与审计包（R35 新增）— 无独立计时：供应商承诺/实际提前期在下单事件点抽定、实际到场仍由 RAW.tankerLeft 仿真分钟倒计时驱动（与第 7 项罐车同钟）、延迟判定与少送抽定在到场事件点、台账累计在卸料完成事件点；风险提前期为 CONFIG 常量纯读数；审计包为导出动作当刻对既有台账的只读快照（manifest 仿真时刻读 S.simMin、真实时刻仅作文件元数据）—— ✔ 一致<br>38. 第二灭菌链工期 + 双链 CIP/段调度（R37 新增）— 仿真分钟 stepSter2 / sterCipTick37 在 step 内推进（工期与第 24/25 项投资同口径、换型/停电步同点推进；链 2 CIP 间隔/时长与链 1 同参数同钟；段的入队/开工/完工时刻与断供外推全读 S.simMin 与既有仿真速率，无独立计时）—— ✔ 一致<br>39. 排产建议计算/刷新留痕 + 预置选品（R38 新增）— 无独立计时：建议为读数时对订单队列/当前单/无菌分区/灭菌段账的纯派生（与第 27/31 项同类），方向变化留痕时刻读 S.simMin；预置是纯选择状态、不触发任何流程与计时，玩家点产品按钮后走既有换型时钟（第 4 项）—— ✔ 一致<br>40. 真实感对表呈现层（R42 新增）— 无独立计时：卫生三区着色/洁净间/参观走廊/划线/色环/标识全为建场期静态几何（无任何推进）；Andon 塔灯在 updateScene 帧节奏读既有状态派生（lineStatus / stationStatus / palletizerState + 健康度）写顶点色，与第 16 项纯视觉同类、状态本体全在仿真侧 —— ✔ 一致<br>41. 人员净化 / 分区 PPE / CIP 对表 / 状态挂牌呈现层（R43 新增）— 无独立计时：净化间群（更衣/洗手/风淋）与 CIP 铭牌/浓酸碱小罐/阀阵/换热器/洗眼器/围堰、动力站辨识件全为建场期静态几何；风淋互锁灯为静态示意色（不随门状态推进）；PPE 动态换装（__ppeTick43）、CIP 阶段脉冲（__cipTick43，阶段按 cipLeft 占 CONFIG.cipDurationMinutes 比例派生）、状态挂牌（__tagsTick43）均在 updateScene 帧节奏读既有仿真状态派生、变化才写入，不改变任何人员路线/速度/事件门控 —— ✔ 一致（与第 16/40 项同类）<br>42. 光照分区灯面 / 联动脉冲 / 图例与面积自检（R44 新增）— 无独立计时：灯面与氛围罩为建场期静态几何（自发光示意、零新增实时光源）；联动脉冲 __linkTick44 为真实秒呈现层（与第 15/16 项同类豁免），相机飞行走既有 flyTo 阻尼；图例拼装与面积量测为读数时对 CONFIG 的纯派生（与第 31 项同类）—— ✔ 一致</div></div>
+      <div class="dcell wide"><div class="l">R45 PDCA 打包轮（细节互动与探针治理：可开合件动画 / navGate 确定性定案 / DrawCall 余量回收）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：续 R44 三笔挂账——待机 DrawCall 650 已顶格、navGate 间歇抖动只定性未治理、对表优秀 3D 工厂案例的开合件互动细节缺位。参数全在 <b>CONFIG.r45</b>（doors / navDet / draw），读数口 <b>window.__r45()</b>，探针口 <b>window.__r45Probe</b>（doorRun / airlockRun / drawRun / navGate5 / singlesRun），回归包 <b>window.__r45Check()</b>。<b>【A 可开合件动画】</b>：灌装线玻璃 Bloc 罩原固定滑门改<b>铰链对开双扇</b>（每线 2 扇、枢轴在门洞两侧立柱、玻璃面 + 合并框体一扇一枢轴），默认开位（巡检路线穿越门洞，路线/障碍/人员逻辑零改动）；点选门扇（doorPick45 专用拾取，先于 hitbox 拾取）或联动目录点选均可开合，easeInOut 缓动（swingSec 1.15，真实秒呈现层），与 R44 脉冲高亮共存（focusEquip44 先脉冲后触发开合）。<b>风淋室双门互锁演示</b>：南北门扇改滑动活件，七相位串行（北门关 → 南门开 → 保持 → 南门关 → 吹淋（双门全关）→ 北门开 → 保持），构造上任一时刻双门开度之和 ≤ 1、吹淋段双门闭锁；间口状态灯两盏随门位（闭锁绿 / 其余红）；触发点 = 联动目录「风淋室 · 双门互锁」/ 信息卡按钮 / 本节按钮 <button class="btn" id="airlockDemoBtn45" style="padding:1px 10px">▶ 播放互锁演示</button>，不改人员动线与 PPE 逻辑。脱外包间南墙（2 号线侧、x = 14）新增<b>传递窗</b>：不锈钢框 + 紫外灯管 + 铰链门（默认闭）+ 铭牌「传递窗 PASS BOX」，口径与双线门扇同（点选/目录双路可开）。全部开合件由 doorLinkEntries45() 同源登记进 R44 联动注册表（linkDoors = 4：1/2 号线门 + 风淋 + 传递窗），信息卡 kind = door45 带状态行与开合按钮。<b>定版修复</b>：门框与风淋门扇初版被 R7 设备合并按材质签名并入全场静态桶、位姿冻死（doorRun 只验开度数值看不出来）——已登记 D.r45Dyn 走动态注册表同口径排除合并，截图与开度实测位姿恢复；此后新增活件必须先登记 D 再建网格。<b>【B navGate 探针可靠性定案】</b>：治理探针本身——__r28Probe.navGate 的同步执行窗内以 mulberry32 种子（CONFIG.r45.navDet.seed = 45045）替换 Math.random、跑后 try/finally 恢复，取托 FIFO 本体、模拟路点与障碍<b>零改动</b>。__r45Probe.navGate5() 连跑 5 次<b>全过</b>：出库段四类最小净距首跑 0.70 / 1.05 / 0.06 / 0.31、第 2–5 跑完全同值（1.95 / 9.08 / 12.6 / 0.49，确定性实证），完成段 1.95 / 9.08 / 12.6 / 0.53，负值计数全 0——R44 抖动定案关闭：探针场景 FIFO 取托随机性竞态，非模拟回归；确定性化后无负值，不触发模拟侧修复。<b>【C DrawCall 余量回收】</b>：三刀合并审计（不删任何内容）：① <b>画布牌面图集化</b> atlasMerge45——静态组内 85 张画布牌面（区域牌/铭牌/指令牌正反面 + 传递窗牌）拼 4096×2048 图集、UV 重映射后合并为 <b>1 网格</b>（repeat 包裹 4 面守卫跳过、组外共用纹理 0 面；动态参数牌 D.sterPlates 不在收集域、另有 underDynPlate45 守卫防读数冻结）；② <b>透明静态件同材质实例合并</b> mergeSharedTransparent45——AGV 地面虚线段/安全围栏面等 131 件 → 76 件（18 桶，同实例 = 同运行时命运、状态改色照常跟随；车辆/工人/转盘/门枢轴等动态根下件一律跳过）；③ <b>状态挂牌图集化</b>——6 块挂牌三态纹理拼 1 图集 + 牌面合并 1 网格、吊杆 6 → 1，状态切换改走 tagUvSet45 改写 UV 单元（tagsRun 三态实测不变；本项在 R7 口径下计数中性，属纹理机制治理）。回吐如实记：A 项活件登记使设备合并排除 +7 件（门框 5 + 风淋门扇 2，此前误并冻死、本轮恢复为活件）。<b>合计：待机 650 → 579（−71，≤ 620 达标）、作业 596（≤ 800）</b>，__perfSnapshot 与 drawRun 双口径复核一致。<b>【D 例行回归】</b>：全家桶<b>独立页口径</b>逐项数字：守恒 soakRun(20000) ok（finished 997,902、nanOrNeg 空、对象池有界、wh.ok）；traceAudit 12 字段填充率全 100% ok；queueRun 单链 16.0 / 双链 8.2 分钟（1.95×）、谱系灭菌缺失 0；schedRun 三场景 + 采纳零副作用 ok；dualRun 双线增量 [144176, 55145]、B 线连续；五本对账（罚金三值相等、现金恒等式 0 差、市场 marketAudit ok 残差 0、促销账与日报同源、ESG carbonAudit ok dayDiff = 0、审计包 ok）；satRun 高低双 verdict true、迟到事件满意度 −16.7；shipRun 出库链速 1.97 托/分、wh.ok、采样净距全正；存档往返 ok（26 → 26）；demoRun ok（八阶段走完）；tourRun 13 站 ok；双召回——recallRun 实质项全过（lossDiff = 0 / markedAll / fifoSkip / sealed 20/20 / backAll / flagsLeft = 0 / whOk），stillMarked 31 vs 期望 32 差 1 沿用<b>在途托伪影定案口径</b>（采样瞬间一托在 AGV 交接途中，R43 先例同签名）；rawSpanRun ok（两段拼接、marked 49 = 49、双损失差 0）；r42/r43/r44 断言经 __r45Check 链全绿。<b>探针纪律备忘</b>：同页连跑时 navGate 的 compRun 会把矿泉水无菌分区灌至 30,000 顶格，使其后 queueRun/shipRun 等场景前提失效（本轮曾同页连跑出现 queueRun 单链段不启动、shipRun 链速 0，独立页复跑全过定案）——回归数字一律独立页口径，勿同页连跑下结论。<b>【挂账 · 既有缺陷】</b>：completeLine4 陈旧崩溃（TypeError 读 lines[3].name）——R36 线数定版 3 → 2 后 R23 第 4 线投资收尾代码未随迁，__r28Probe.workRun 因此不可用；已在 R44 基线（v42 快照）同签名复现，定案<b>非本轮引入</b>，列下轮 P0 候选（EXP4 休眠口径下应守卫 no-op）。本轮新增计时见总表第 43 项。</div></div>
+<div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检本体为读数时对 TRACE/SLOTS 现算、触发走仿真时钟（出料归档事件点 + 每 360 仿真分钟 tick，与第 31 项同类）—— ✔ 一致<br>37. 双供应商与审计包（R35 新增）— 无独立计时：供应商承诺/实际提前期在下单事件点抽定、实际到场仍由 RAW.tankerLeft 仿真分钟倒计时驱动（与第 7 项罐车同钟）、延迟判定与少送抽定在到场事件点、台账累计在卸料完成事件点；风险提前期为 CONFIG 常量纯读数；审计包为导出动作当刻对既有台账的只读快照（manifest 仿真时刻读 S.simMin、真实时刻仅作文件元数据）—— ✔ 一致<br>38. 第二灭菌链工期 + 双链 CIP/段调度（R37 新增）— 仿真分钟 stepSter2 / sterCipTick37 在 step 内推进（工期与第 24/25 项投资同口径、换型/停电步同点推进；链 2 CIP 间隔/时长与链 1 同参数同钟；段的入队/开工/完工时刻与断供外推全读 S.simMin 与既有仿真速率，无独立计时）—— ✔ 一致<br>39. 排产建议计算/刷新留痕 + 预置选品（R38 新增）— 无独立计时：建议为读数时对订单队列/当前单/无菌分区/灭菌段账的纯派生（与第 27/31 项同类），方向变化留痕时刻读 S.simMin；预置是纯选择状态、不触发任何流程与计时，玩家点产品按钮后走既有换型时钟（第 4 项）—— ✔ 一致<br>40. 真实感对表呈现层（R42 新增）— 无独立计时：卫生三区着色/洁净间/参观走廊/划线/色环/标识全为建场期静态几何（无任何推进）；Andon 塔灯在 updateScene 帧节奏读既有状态派生（lineStatus / stationStatus / palletizerState + 健康度）写顶点色，与第 16 项纯视觉同类、状态本体全在仿真侧 —— ✔ 一致<br>41. 人员净化 / 分区 PPE / CIP 对表 / 状态挂牌呈现层（R43 新增）— 无独立计时：净化间群（更衣/洗手/风淋）与 CIP 铭牌/浓酸碱小罐/阀阵/换热器/洗眼器/围堰、动力站辨识件全为建场期静态几何；风淋互锁灯为静态示意色（不随门状态推进）；PPE 动态换装（__ppeTick43）、CIP 阶段脉冲（__cipTick43，阶段按 cipLeft 占 CONFIG.cipDurationMinutes 比例派生）、状态挂牌（__tagsTick43）均在 updateScene 帧节奏读既有仿真状态派生、变化才写入，不改变任何人员路线/速度/事件门控 —— ✔ 一致（与第 16/40 项同类）<br>42. 光照分区灯面 / 联动脉冲 / 图例与面积自检（R44 新增）— 无独立计时：灯面与氛围罩为建场期静态几何（自发光示意、零新增实时光源）；联动脉冲 __linkTick44 为真实秒呈现层（与第 15/16 项同类豁免），相机飞行走既有 flyTo 阻尼；图例拼装与面积量测为读数时对 CONFIG 的纯派生（与第 31 项同类）—— ✔ 一致<br>43. 可开合件动画 / 探针种子 / 牌面合并（R45 新增）— 门扇与风淋互锁为真实秒呈现层：__doorsTick45 读真实秒推进开度与互锁相位（与第 16 项同类豁免），开合状态不入任何事件门控/产量/库存判定，人员与车辆逻辑零改动；navGate 确定性种子只包裹探针同步执行窗（mulberry32 替换 Math.random、跑后恢复），不进入仿真时钟与生产代码；牌面图集化与透明同实例合并为建场期一次性几何处理，无计时 —— ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1242,6 +1243,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
         <li>R42 打包轮（真实感对表 · 一）：地面三区着色在位（__r42().zones 三区 rect 与 CONFIG.r42 一致）、双线洁净间玻璃罩 + 参观走廊建成且 navGate 复跑通过（隔断零登记障碍、路线零改动）；划线开关往返 ok（__r42Probe.markRun()：before 开 → 关 → 开、quads &gt; 40）；Andon 四态映射 ok（__r42Probe.andonRun()：等料黄 / 故障红 / 运行绿 / 健康预警黄 / 待机全灭）、塔位 6 个、色环 ≥ 15；管道整管着色（蒸汽红 / 空气灰 / 水绿）与介质名牌在位；抽屉「现场标识与 Andon」节含图例 #andonLegend42 与划线开关 #markingsToggle42；window.__r42Check() 全绿（r42assert.ok = true）、时间基准总表已续第 40 项</li>
                 <li>R44 打包轮（真实感对表 · 三）：光照分区在位（__r44Probe.lightRun() ok = true：洁净平板灯 = 6 冷白 / 高棚灯 = 4 暖黄、氛围罩在位、实时光源数与 R43 基线一致 = 3、不锈钢粗糙 = CONFIG.r44.light.stainlessRough）；2D↔3D 联动（__r44Probe.linkRun() ok = true：注册表 ≥ 13 项且全部可解析到 sel/机位、正向 focus 置选中 + 脉冲点亮、反向置 S.selected 后目录行被定位高亮）；统一图例（__r44Probe.legendRun() ok = true：#legendPanel44 拼装值与 CONFIG.r42/r43 逐项同源、五类齐全）；面积自检（__r44Probe.areaRun() ok = true：四区量测出表、归一比例与目标对照、偏差归因行在位）；rawRun 三次定案走 __r44Probe.rawSpanRun()（分两段构造拼接证据 + 三档计数与两段损失对账，结论写当轮交付汇报）；window.__r44Check() 全绿（r44assert.ok = true）、时间基准总表已续第 42 项</li>
 <li>R43 打包轮（真实感对表 · 二）：人员净化间群建成（__r43Probe.suiteRun() ok = true：逐间铭牌 ≥ 5、龙头 4 + 器具计数 ≥ 7、四间房名与 CONFIG.r43.suite.rooms 一致、蓝色指令牌 = 3、缓冲走廊带在位、南入北出且隔断零登记障碍、navGate 复跑通过）；分区 PPE 动态换装（__r43Probe.ppeRun() ok = true：巡逻人员挪至三区实测换色/换头套/口罩显隐与 CONFIG.r43.ppeZones 一致、固定岗位着装齐全）；CIP 四罐对表（__r43Probe.cipRun() ok = true：阀阵 = 6、浓酸碱小罐 = 2、铭牌 ≥ 6 含四罐逐罐名牌）+ 阶段脉冲（__r43Probe.cipPulseRun() ok = true：碱洗/热水段阶段色不同、无 CIP 回暗色待机）；动力站辨识件（__r43Probe.utilRun() ok = true：分汽缸阀门 3 / 干燥塔 2 / 冷却塔 3 / RO 膜壳 6）；状态挂牌（__r43Probe.tagsRun() ok = true：无菌罐运行中 → 待清洗 → 已清洁三态随罐级与 CIP 完成事件切换）；抽屉「现场标识与 Andon」节含 PPE 图例 #ppeLegend43；window.__r43Check() 全绿（r43assert.ok = true）、时间基准总表已续第 41 项</li>
+        <li>R45 打包轮（细节互动与探针治理）：灌装双线铰链门扇点选/目录双路开合（__r45Probe.doorRun() ok = true：三门开度单调、往返还原）、风淋互锁演示七相位全程双门开度和 ≤ 1 且吹淋段双门全关、演示后回待机位（airlockRun() ok = true）、传递窗门在位、四件同源登记联动注册表（r45assert.linkDoors = 4）；navGate 确定性化（种子 45045 只包裹探针执行窗）连跑 5 次全过、四类净距全正、负值全 0（__r45Probe.navGate5()）；DrawCall 待机 650 → 579 ≤ 620、作业 596 ≤ 800（图集 85 面 → 1 / 透明同实例 131 → 76 / 挂牌图集化，逐组计数见 R45 节）；例行回归全家桶独立页口径全过（守恒 20,000 步 / traceAudit 12 字段 100% / queueRun 1.95× / schedRun / dualRun / 五本对账 / satRun / shipRun 链速 1.97 / 存档往返 / demoRun / tourRun 13 站 / 双召回实质项 + stillMarked 在途托定案口径 / rawSpanRun）；window.__r45Check() 全绿（r45assert.ok = true）、时间基准总表已续第 43 项；既有缺陷 completeLine4（R36 遗留、R44 基线同签名复现）挂账下轮 P0</li>
     </ul>
   </div>
 </aside>
@@ -2095,6 +2097,22 @@ var CONFIG = {
   rawWh: { label: '原辅料库（原料罐区+卸料）', rect: [-150,-30,-118,30] },
   power: { label: '动力站（水处理/空压/锅炉/冷库北带）', rect: [-118,-58,110,-44] },
   target: { workshop: 10, finishedWh: 4, rawWh: 1.5, power: 0.8 } }
+  },
+  /* ================= R45 · 细节互动与探针治理 =================
+   * 口径（详见交接文档 R45 节）：doors = 调研报告 2.2 第 10 条「可开合件」与案例 2/6 的
+   * 交互分水岭（铰链门扇点选/联动开合、风淋双门互锁演示、传递窗）；navDet = B 项探针
+   * 确定性治理（种子 RNG 只包裹 navGate 探针场景的同步执行窗，模拟本体随机行为零改动）；
+   * draw = C 项余量回收目标（图集化合并牌面，不删任何内容）。 */
+  r45: {
+    doors: { swingSec: 1.15,          /* 门扇全程开合时长（真实秒，呈现层缓动） */
+             openAngle: 1.85,          /* 洁净间门扇开启角（rad，≈106°，向罩内开启） */
+             passboxAngle: 1.65,       /* 传递窗门开启角（rad，向走廊侧开启） */
+             airlockSlideSec: 0.9,     /* 风淋门扇滑动全程时长 */
+             airlockHoldSec: 0.8,      /* 互锁演示进/出停留 */
+             airlockBlowSec: 1.6,      /* 互锁演示吹淋段（双门锁闭）时长 */
+             passbox: { x: 14, w: 1.3, h: 1.05, sillY: 1.12, depth: 0.62 } },  /* 传递窗：2 号线洁净间南墙 · 参观走廊侧 */
+    navDet: { seed: 45045, gateRuns: 5 },   /* B：navGate 确定性种子与连跑次数（判定口径不变） */
+    draw: { idleTarget: 620, workTarget: 800 }   /* C：待机回收目标 / 作业守线（与 CONFIG.r28.workTarget 同值） */
   },
   /* R44 口径（详见交接文档 R44 节）：light=报告2.2-13光照材质分区（零新增实时光源、灯面自发光示意）；link=案例5双向联动；areas=报告1.2经验比例10:4:1.5:0.8只报告不改布局；图例由renderLegend44从CONFIG.r42/r43拼装 */
   
@@ -7513,6 +7531,7 @@ function exitSign(parent, x, y, z, ry){
  * 静态件进 D.staticGroups 走既有静态合并；划线与塔灯各 1 个合并网格（+1/+1 draw call 量级）。
  * 洁净间为纯视觉隔断：不登记进 NAV_OBSTACLES / PERSON_OBSTACLES / COLLIDERS，南墙留人员气锁门洞
  * 对齐既有巡检路线穿越点——不切断任何车辆/人员既有路线（navGate 口径不变，建成后复跑验证）。 */
+var CRDOORS42 = [];   /* R45：洁净间气锁门洞登记（buildRealism42 逐线写入，buildRealism45 据此建铰链门扇） */
 var MARK42 = { mesh: null, quads: 0 };
 var RING42 = { mesh: null, count: 0 };
 var ANDON42 = { mesh: null, segs: {}, cur: {} };
@@ -7573,7 +7592,7 @@ function buildRealism42(){
     var s1w = CR.doorX0 - CR.x0, s2w = CR.x1 - CR.doorX1;                                                                     /* 南墙两段 + 气锁门洞 */
     var gw1 = new THREE.Mesh(new THREE.BoxGeometry(s1w, CR.h, 0.06), GLASSMAT); gw1.position.set(CR.x0 + s1w / 2, CR.h / 2, zS); gs.add(gw1);
     var gw2 = new THREE.Mesh(new THREE.BoxGeometry(s2w, CR.h, 0.06), GLASSMAT); gw2.position.set(CR.doorX1 + s2w / 2, CR.h / 2, zS); gs.add(gw2);
-    var gd = new THREE.Mesh(new THREE.BoxGeometry(CR.doorX1 - CR.doorX0, CR.h, 0.05), GLASSMAT); gd.position.set((CR.doorX0 + CR.doorX1) / 2, CR.h / 2, zS + 0.38); gs.add(gd);  /* 门扇滑开位 */
+    CRDOORS42.push({ lz: lz, zS: zS, x0: CR.doorX0, x1: CR.doorX1, h: CR.h });   /* R45：原静态滑开门扇改由 buildRealism45 建铰链对开门扇（默认开启位，通行口径不变） */
     B(gs, len, 0.16, 0.16, DARKSTEEL, cx, CR.h, zN).castShadow = false;
     B(gs, len, 0.16, 0.16, DARKSTEEL, cx, CR.h, zS).castShadow = false;
     [CR.x0, CR.x1].forEach(function(px){ CY(gs, 0.07, 0.07, CR.h, DARKSTEEL, px, 0, zN, 8).castShadow = false; CY(gs, 0.07, 0.07, CR.h, DARKSTEEL, px, 0, zS, 8).castShadow = false; });
@@ -7787,6 +7806,7 @@ window.__r42Check = function(){
  * 阀阵排 + 板式换热器 + 洗眼器 + 罐区围堰）。全部静态件进 D.staticGroups 走既有合并；
  * 净化间与围堰不登记 NAV/PERSON 障碍、不 cut 任何既有路线（与 R42 洁净间同口径）。 */
 var SUITE43 = { plates: 0, fixtures: 0 };
+var ASDOOR43 = { group: null, south: null, north: null };   /* R45：风淋双门改挂可动组（不入静态合并），由 buildRealism45 的互锁演示驱动 */
 var CIP43 = { valves: 0, conc: 0, plates: 0, pulseMat: null, phase: null, _idle: 0 };
 var TAGS43 = { aseptic: [], blend: null, cleaned: [], prevCip: 0 };
 function buildRealism43(){
@@ -7794,15 +7814,16 @@ function buildRealism43(){
   var wallM = M(0xd8dee2, 0.7, 0.05), H = S43.wallH, cx = (S43.x0 + S43.x1) / 2;
   /* ---------- A 人员净化间群（静态组） ---------- */
   var g = new THREE.Group(); scene.add(g); D.staticGroups.push({ root: g, label: "R43人员净化间" });
+  ASDOOR43.group = new THREE.Group(); scene.add(ASDOOR43.group);   /* R45：风淋门扇独立可动组 */
   B(g, 0.15, H, S43.z1 - S43.z0, wallM, S43.x0, 0, (S43.z0 + S43.z1) / 2);                    /* 西墙 */
   B(g, 0.15, H, S43.z1 - S43.z0, wallM, S43.x1, 0, (S43.z0 + S43.z1) / 2);                    /* 东墙 */
   B(g, 3.1, H, 0.15, wallM, -11.95, 0, S43.z1); B(g, 3.5, H, 0.15, wallM, -7.25, 0, S43.z1);  /* 南墙两段（入口缺口 x −10.4..−9.0） */
   B(g, 6.1, H, 0.15, wallM, -10.45, 0, S43.z0); B(g, 0.5, H, 0.15, wallM, -5.75, 0, S43.z0);  /* 北墙两段（风淋出口缺口 x −7.4..−6.0） */
-  B(g, 1.3, 2.2, 0.06, M(0x3f6fb5, 0.5, 0.3), -8.05, 0, S43.z0 - 0.05).castShadow = false;     /* 风淋北门：滑开位 */
+  ASDOOR43.north = B(ASDOOR43.group, 1.3, 2.2, 0.06, M(0x3f6fb5, 0.5, 0.3), -8.05, 0, S43.z0 - 0.05); ASDOOR43.north.castShadow = false;   /* R45：风淋北门（建场位 = 滑开位，互锁演示滑动驱动） */
   B(g, 6.5, H, 0.15, wallM, -10.25, 0, 38.5);                                                 /* 隔断 一更|二更（东侧门洞） */
   B(g, 5.6, H, 0.15, wallM, -8.3, 0, 34);                                                     /* 隔断 二更|洗手（西侧门洞，S 形强制动线） */
   B(g, 6.5, H, 0.15, wallM, -10.25, 0, 30.5);                                                 /* 隔断 洗手|风淋（东侧门洞） */
-  B(g, 1.15, 2.2, 0.06, M(0x3f6fb5, 0.5, 0.3), -6.42, 0, 30.5).castShadow = false;             /* 风淋南门（闭位，与北门互锁意象） */
+  ASDOOR43.south = B(ASDOOR43.group, 1.15, 2.2, 0.06, M(0x3f6fb5, 0.5, 0.3), -6.42, 0, 30.5); ASDOOR43.south.castShadow = false;   /* R45：风淋南门（建场位 = 闭位，互锁演示滑动驱动） */
   /* 风淋室：顶箱 + 风机 + 两侧喷嘴墙 + 互锁指示灯（红/绿小球，静态示意） */
   B(g, 8.3, 0.18, 3.8, DARKSTEEL, cx, H, 28.75).castShadow = false;
   B(g, 1.2, 0.5, 1.2, MACH, cx, H + 0.18, 28.75).castShadow = false;
@@ -8025,7 +8046,9 @@ window.__tagsTick43 = function(){   /* E 状态挂牌：无菌罐按罐级 qty/l
   TAGS43.prevCip = cipNow;
   function setTag(tag, st){
     if(tag.state === st) return;
-    tag.state = st; tag.mesh.material.map = window.__TAGTEX43[st]; tag.mesh.material.needsUpdate = true;
+    tag.state = st;
+    if(tag.uvCell45 && typeof tagUvSet45 === "function"){ tagUvSet45(tag, st); return; }   /* R45：挂牌已图集化——切换改写 UV 单元，不再换 map */
+    tag.mesh.material.map = window.__TAGTEX43[st]; tag.mesh.material.needsUpdate = true;
   }
   for(var i = 0; i < TAGS43.aseptic.length; i++){
     var tk = ASEPTIC_TANKS36[i], st;
@@ -8166,6 +8189,7 @@ function linkRegistry44(){
    ["air", "空压站", [-58, -54], [24, 8, 20]], ["boiler", "锅炉 · 蒸汽站", [4, -54], [32, 14, 22]],
    ["coldstore", "冷库 · 低温周转", [82, -54], [44, 11, 26]], ["qc", "质检实验室", [36, -52], [26, 8, 20]]
   ].forEach(function(z){ add("zone-" + z[0], z[1], { kind: "zone", id: z[0] }, z[2], z[3]); });
+  if(typeof doorLinkEntries45 === "function") doorLinkEntries45().forEach(function(e){ reg.push(e); });   /* R45：开合件同源登记（门扇/风淋/传递窗） */
   return reg;
 }
 function linkPulse44(e){
@@ -8197,6 +8221,7 @@ function focusEquip44(key){
   S.selected = e.sel; renderInfo();
   flyTo(e.pos[0] + 18, 22, e.pos[1] + 33, e.pos[0], 3, e.pos[1], CONFIG.r44.link.camDur);
   linkPulse44(e);
+  if(e.door && typeof triggerDoor45 === "function") triggerDoor45(e.door);   /* R45：目录点选开合件 = 飞镜头 + 脉冲 + 开合（高亮与开门共存） */
   return true;
 }
 function linkKeyForSel44(sel){
@@ -8421,6 +8446,556 @@ window.__r44Check = function(){
 };
 
 
+
+/* ================= R45 · 细节互动与探针治理：可开合件 / navGate 确定性 / 牌面图集合并 =================
+ * A 可开合件：洁净间气锁门由 R42 静态滑开门扇升级为铰链对开门扇（默认开启位，巡检通行
+ *   口径与 R42 一致）；风淋双门（R43 门扇改挂可动组）由互锁演示驱动——相位严格串行，
+ *   任一时刻两扇开度之和 ≤1（互锁不变式由构造保证、airlockRun 采样自证）；传递窗新建于
+ *   2 号线洁净间南墙（参观走廊侧）。开合为真实秒呈现层动画（doorsStep45 推进、只写位姿），
+ *   不改任何人员/车辆路线与事件门控（总表第 43 项）。全部开合件经 doorLinkEntries45()
+ *   登记进 R44 联动注册表（与 stations/lines 同源生成）：目录点选 → focusEquip44 飞镜头 +
+ *   脉冲 + triggerDoor45 开合，与联动高亮共存；3D 点选门面经 pickAt 的 doorPick45 优先拾取。
+ * B navGate 确定性：种子 RNG 只包裹 __r28Probe.navGate 的同步执行窗（见该函数内注）。
+ * C 牌面图集合并：建场末（mergeAllStaticGroups 之后）把静态组内全部 canvas 纹理牌面
+ *   （区域牌/铭牌/指令牌/安全标识的正反面）烘焙进一张图集纹理、几何合并为 1 个网格，
+ *   内容与位姿逐面等价、不删任何牌面；运行时换纹理的挂牌（TAGS43 不在静态组）不参与。 */
+var DOORS45 = { root: null, list: [], byId: {}, pickMeshes: [],
+                airlock: { active: false, phase: -1, phaseName: "", t: 0, phases: null, south: null, north: null, lampS: null, lampN: null, maxSum: 0 } };
+var PLATEATLAS45 = { faces: 0, merged: 0, skippedShared: 0, skippedBad: 0, atlasW: 0, atlasH: 0, done: false };
+var TAGS45MERGED45 = { planes: 0, hangers: 0 };
+function tagUvSet45(tag, st){   /* 挂牌图集化后的状态切换：改写该牌在合并几何中的 UV 单元（__tagsTick43 的 setTag 调用） */
+  var cell = { run: 0, clean: 1, dirty: 2 }[st];
+  if(cell === undefined || !tag.uvCell45 || !tag.mesh) return;
+  var uv = tag.mesh.geometry.attributes.uv, C = tag.uvCell45;
+  for(var i = 0; i < C.count; i++) uv.setXY(C.start + i, (cell + C.base[i * 2]) / 3, C.base[i * 2 + 1]);
+  uv.needsUpdate = true;
+}
+function easeInOut45(x){ return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+function mergeLocalGeos45(parts){   /* 局部几何合并：parts = [{geo, x, y, z}]，烘焙平移后拼接（与 mergeStaticGroup 同法） */
+  var total = 0, geos = [];
+  parts.forEach(function(p){
+    var g2 = p.geo.index ? p.geo.toNonIndexed() : p.geo.clone();
+    g2.applyMatrix4(new THREE.Matrix4().makeTranslation(p.x, p.y, p.z));
+    geos.push(g2); total += g2.attributes.position.count;
+  });
+  var pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = new Float32Array(total * 2), off = 0;
+  geos.forEach(function(g2){
+    pos.set(g2.attributes.position.array, off * 3); nor.set(g2.attributes.normal.array, off * 3);
+    if(g2.attributes.uv) uv.set(g2.attributes.uv.array, off * 2);
+    off += g2.attributes.position.count; g2.dispose();
+  });
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  return geo;
+}
+function buildDoorLeaf45(w, h, side){   /* 铰链门扇：玻璃面 + 合并框（横梃/竖梃/把手），枢轴在原点、扇面向 side 向展开 */
+  var glass = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05), GLASSMAT);
+  glass.position.set(side * w / 2, h / 2, 0); glass.castShadow = false;
+  var bw = 0.1;
+  var frameGeo = mergeLocalGeos45([
+    { geo: new THREE.BoxGeometry(w, bw, 0.09), x: side * w / 2, y: h - bw / 2, z: 0 },
+    { geo: new THREE.BoxGeometry(w, bw, 0.09), x: side * w / 2, y: bw / 2, z: 0 },
+    { geo: new THREE.BoxGeometry(bw, h, 0.09), x: side * bw / 2, y: h / 2, z: 0 },
+    { geo: new THREE.BoxGeometry(bw, h, 0.09), x: side * (w - bw / 2), y: h / 2, z: 0 },
+    { geo: new THREE.BoxGeometry(0.06, 0.55, 0.12), x: side * (w - 0.24), y: 1.05, z: 0.03 }
+  ]);
+  var frame = new THREE.Mesh(frameGeo, DARKSTEEL); frame.castShadow = false;
+  return { glass: glass, frame: frame };
+}
+function doorApply45(d){
+  var ang = (d.id === "passbox" ? CONFIG.r45.doors.passboxAngle : CONFIG.r45.doors.openAngle) * d.frac;
+  d.pivots.forEach(function(p){ p.g.rotation.y = p.dir * ang; });
+}
+function setDoor45(d, open){
+  var to = open ? 1 : 0;
+  if(d.to === to && !d.anim) return;
+  d.from = d.frac; d.to = to; d.t = 0;
+  d.dur = Math.max(0.25, CONFIG.r45.doors.swingSec * Math.abs(to - d.from));
+  d.anim = true;
+}
+function toggleDoor45(id){ var d = DOORS45.byId[id]; if(d) setDoor45(d, d.to !== 1); }
+function triggerDoor45(id){
+  if(id === "airlock") return startAirlock45();
+  toggleDoor45(id); return true;
+}
+/* —— 风淋互锁演示：相位串行（北门关 → 南门开 → 停留 → 南门关 → 吹淋双锁 → 北门开 → 停留），
+ * 任一相位只驱动一扇门、另一扇恒全关——互锁不变式 sum(frac) ≤ 1 由构造保证。 —— */
+function airlockPhases45(){
+  var C = CONFIG.r45.doors;
+  return [
+    { name: "northClose", dur: C.airlockSlideSec, drv: "n", a: 1, b: 0 },
+    { name: "southOpen",  dur: C.airlockSlideSec, drv: "s", a: 0, b: 1 },
+    { name: "holdIn",     dur: C.airlockHoldSec },
+    { name: "southClose", dur: C.airlockSlideSec, drv: "s", a: 1, b: 0 },
+    { name: "blow",       dur: C.airlockBlowSec },
+    { name: "northOpen",  dur: C.airlockSlideSec, drv: "n", a: 0, b: 1 },
+    { name: "holdOut",    dur: C.airlockHoldSec } ];
+}
+function airlockApply45(){
+  var AL = DOORS45.airlock; if(!AL.south || !AL.north) return;
+  AL.south.mesh.position.x = AL.south.closedX + (AL.south.openX - AL.south.closedX) * AL.south.frac;
+  AL.north.mesh.position.x = AL.north.closedX + (AL.north.openX - AL.north.closedX) * AL.north.frac;
+  if(AL.lampS) AL.lampS.material.color.set(AL.south.frac <= 0.02 ? 0x00c853 : 0xff2213);
+  if(AL.lampN) AL.lampN.material.color.set(AL.north.frac <= 0.02 ? 0x00c853 : 0xff2213);
+  var sum = AL.south.frac + AL.north.frac; if(sum > AL.maxSum) AL.maxSum = sum;
+}
+function startAirlock45(){
+  var AL = DOORS45.airlock;
+  if(!AL.south || AL.active) return false;
+  AL.active = true; AL.phase = 0; AL.t = 0; AL.maxSum = AL.south.frac + AL.north.frac;
+  AL.phases = airlockPhases45(); AL.phaseName = AL.phases[0].name;
+  return true;
+}
+function airlockStep45(dt){
+  var AL = DOORS45.airlock;
+  if(!AL.active || !AL.phases) return;
+  var ph = AL.phases[AL.phase]; if(!ph){ AL.active = false; AL.phaseName = ""; return; }
+  AL.t += dt;
+  var k = ph.dur > 0 ? Math.min(1, AL.t / ph.dur) : 1;
+  if(ph.drv){
+    var tgt = ph.drv === "s" ? AL.south : AL.north;
+    tgt.frac = ph.a + (ph.b - ph.a) * easeInOut45(k);
+  }
+  airlockApply45();
+  if(k >= 1){
+    if(ph.drv){ var t2 = ph.drv === "s" ? AL.south : AL.north; t2.frac = ph.b; airlockApply45(); }
+    AL.phase++; AL.t = 0;
+    if(AL.phase >= AL.phases.length){ AL.active = false; AL.phase = -1; AL.phaseName = ""; }
+    else AL.phaseName = AL.phases[AL.phase].name;
+  }
+}
+function doorsStep45(dt){
+  DOORS45.list.forEach(function(d){
+    if(!d.anim) return;
+    d.t += dt;
+    var k = d.dur > 0 ? Math.min(1, d.t / d.dur) : 1;
+    d.frac = d.from + (d.to - d.from) * easeInOut45(k);
+    doorApply45(d);
+    if(k >= 1){ d.frac = d.to; d.anim = false; doorApply45(d); }
+  });
+  airlockStep45(dt);
+}
+var __doorsLastMs45 = 0;
+window.__doorsTick45 = function(){   /* updateScene 帧奏：真实秒呈现层（总表第 43 项），只写门扇位姿 */
+  var now = performance.now();
+  var any = DOORS45.airlock.active || DOORS45.list.some(function(d){ return d.anim; });
+  if(!any){ __doorsLastMs45 = now; return; }
+  var dt = Math.min(0.06, Math.max(0.001, (now - __doorsLastMs45) / 1000 || 0.016));
+  __doorsLastMs45 = now;
+  doorsStep45(dt);
+};
+var doorRay45 = null;
+function doorPick45(mouse){   /* pickAt 优先拾取：门面实体网格（0 层）命中即开合，不占用点选盒通道 */
+  if(!DOORS45.pickMeshes.length) return false;
+  if(!doorRay45) doorRay45 = new THREE.Raycaster();
+  doorRay45.setFromCamera(mouse, camera);
+  var hits = doorRay45.intersectObjects(DOORS45.pickMeshes, false);
+  if(!hits.length) return false;
+  var id = hits[0].object.userData.doorId;
+  if(!id) return false;
+  triggerDoor45(id);
+  return true;
+}
+function doorLinkEntries45(){   /* R44 联动注册表同源生成：开合件条目（目录点选即开合，与脉冲高亮共存） */
+  if(typeof DOORS45 === "undefined" || !DOORS45.list) return [];   /* R44 块在脚本加载期先行渲染目录时 DOORS45 尚未赋值——建场后由 buildRealism45 补渲染 */
+  var out = [];
+  DOORS45.list.forEach(function(d){
+    out.push({ key: "door-" + d.id, label: d.label, sel: { kind: "door45", id: d.id }, pos: d.linkPos, size: d.linkSize, door: d.id });
+  });
+  if(DOORS45.airlock.south) out.push({ key: "door-airlock", label: "风淋室 · 双门互锁演示", sel: { kind: "door45", id: "airlock" }, pos: [-9.5, 29], size: [9, 3.4, 8], door: "airlock" });
+  return out;
+}
+function buildRealism45(){
+  var C = CONFIG.r45.doors;
+  var g = new THREE.Group(); scene.add(g); DOORS45.root = g;
+  if(!D.r45Dyn) D.r45Dyn = [];   /* R7 合并排除：门扇枢轴/风淋门扇登记进 D 动态注册表（collectDynamicRegistry 同口径），否则会被按材质并入全场静态桶冻死位姿 */
+  /* A1 洁净间铰链对开门扇（逐线，默认开启位——巡检路线经门洞穿越，与 R42 滑开位口径一致） */
+  CRDOORS42.forEach(function(dw, li){
+    var id = "line" + li;
+    var door = { id: id, label: (li + 1) + " 号线灌装 Bloc 玻璃罩门 · 铰链对开", kind: "swing", frac: 1, from: 1, to: 1, t: 0, dur: 0, anim: false, pivots: [],
+                 linkPos: [(dw.x0 + dw.x1) / 2, dw.zS], linkSize: [5, 6.4, 3.4] };
+    var leafW = (dw.x1 - dw.x0) / 2;
+    [[dw.x0, 1], [dw.x1, -1]].forEach(function(j){
+      var piv = new THREE.Group(); piv.position.set(j[0], 0, dw.zS); g.add(piv);
+      var leaf = buildDoorLeaf45(leafW, dw.h, j[1]);
+      piv.add(leaf.glass); piv.add(leaf.frame);
+      leaf.glass.userData.doorId = id; leaf.frame.userData.doorId = id;
+      DOORS45.pickMeshes.push(leaf.glass, leaf.frame);
+      D.r45Dyn.push(piv);
+      door.pivots.push({ g: piv, dir: j[1] });
+    });
+    doorApply45(door);
+    DOORS45.list.push(door); DOORS45.byId[id] = door;
+  });
+  /* A2 风淋双门接管（门扇实体在 ASDOOR43 可动组，建场位 = 南闭北开的 rest 位）+ 状态灯 */
+  if(ASDOOR43.south && ASDOOR43.north){
+    var AL = DOORS45.airlock;
+    AL.south = { mesh: ASDOOR43.south, closedX: ASDOOR43.south.position.x, openX: ASDOOR43.south.position.x - 1.13, frac: 0 };
+    AL.north = { mesh: ASDOOR43.north, closedX: -6.7, openX: ASDOOR43.north.position.x, frac: 1 };
+    ASDOOR43.south.userData.doorId = "airlock"; ASDOOR43.north.userData.doorId = "airlock";
+    DOORS45.pickMeshes.push(ASDOOR43.south, ASDOOR43.north);
+    D.r45Dyn.push(ASDOOR43.south, ASDOOR43.north);
+    AL.lampS = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: 0x00c853 }));
+    AL.lampS.position.set(-7.35, 2.32, 30.26); g.add(AL.lampS);
+    AL.lampN = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2213 }));
+    AL.lampN.position.set(-5.5, 2.32, 30.26); g.add(AL.lampN);
+    airlockApply45();
+  }
+  /* A3 传递窗（2 号线洁净间南墙 · 参观走廊侧）：不锈钢箱体 + 紫外灯 + 铰链门（默认闭）+ 铭牌 */
+  var PB = C.passbox, wz = LINE_Z[LINE_Z.length - 1] + CONFIG.r42.cleanroom.halfD;
+  var bx = new THREE.Group(); bx.position.set(PB.x, PB.sillY, wz); g.add(bx);
+  var frameGeo = mergeLocalGeos45([
+    { geo: new THREE.BoxGeometry(0.05, PB.h, PB.depth), x: -(PB.w / 2 - 0.025), y: 0, z: 0 },
+    { geo: new THREE.BoxGeometry(0.05, PB.h, PB.depth), x: (PB.w / 2 - 0.025), y: 0, z: 0 },
+    { geo: new THREE.BoxGeometry(PB.w, 0.05, PB.depth), x: 0, y: PB.h / 2 - 0.025, z: 0 },
+    { geo: new THREE.BoxGeometry(PB.w, 0.05, PB.depth), x: 0, y: -(PB.h / 2 - 0.025), z: 0 },
+    { geo: new THREE.BoxGeometry(PB.w, PB.h, 0.03), x: 0, y: 0, z: -PB.depth / 2 + 0.015 } ]);
+  var frameM = new THREE.Mesh(frameGeo, STEEL); frameM.castShadow = false; bx.add(frameM);
+  var uvBar = new THREE.Mesh(new THREE.BoxGeometry(PB.w * 0.6, 0.04, 0.06), new THREE.MeshBasicMaterial({ color: 0x9d8cff }));
+  uvBar.position.set(0, PB.h / 2 - 0.1, 0); uvBar.castShadow = false; bx.add(uvBar);
+  var piv = new THREE.Group(); piv.position.set(-PB.w / 2, -PB.h / 2, PB.depth / 2); bx.add(piv);
+  var leaf = buildDoorLeaf45(PB.w, PB.h, 1);
+  piv.add(leaf.glass); piv.add(leaf.frame);
+  var pdoor = { id: "passbox", label: "传递窗 · 双门互锁（包材传递）", kind: "swing", frac: 0, from: 0, to: 0, t: 0, dur: 0, anim: false,
+                pivots: [{ g: piv, dir: -1 }], linkPos: [PB.x, wz + 0.4], linkSize: [2.8, 2.8, 2.2] };
+  leaf.glass.userData.doorId = "passbox"; leaf.frame.userData.doorId = "passbox";
+  DOORS45.pickMeshes.push(leaf.glass, leaf.frame);
+  D.r45Dyn.push(piv);
+  doorApply45(pdoor);
+  DOORS45.list.push(pdoor); DOORS45.byId.passbox = pdoor;
+  var pbTex = canvasTex(512, 128, function(c2){
+    c2.fillStyle = "#1c2320"; c2.fillRect(0, 0, 512, 128);
+    c2.strokeStyle = "#f2b01e"; c2.lineWidth = 5; c2.strokeRect(6, 6, 500, 116);
+    c2.fillStyle = "#f5f2e8"; c2.font = '900 52px "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif'; c2.textAlign = "center";
+    c2.fillText("传递窗 PASS BOX", 256, 62);
+    c2.fillStyle = "#a8b5ad"; c2.font = '500 27px "Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+    c2.fillText("双门互锁 · 紫外消毒 · 纸箱不入灌装间", 256, 104);
+  });
+  var pbPlate = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.475), new THREE.MeshBasicMaterial({ map: pbTex }));
+  pbPlate.position.set(PB.x, PB.sillY + PB.h / 2 + 0.42, wz + 0.1); pbPlate.rotation.y = Math.PI; pbPlate.castShadow = false; pbPlate.userData.atlasStatic45 = true; g.add(pbPlate);
+  /* C2 状态挂牌图集化（R43 E 项的 6 块挂牌：调配罐 + 无菌罐 ×5）：三态纹理拼一张图集、
+   * 牌面几何合并为 1 网格、吊杆合并为 1 网格；状态切换经 setTag → tagUvSet45 改写 UV 单元
+   * （tagsRun 只读 TAGS43.state，口径不变）；牌面内容/位姿逐件等价，不删任何挂牌。 */
+  (function(){
+    var tags = [];
+    if(typeof TAGS43 === "undefined" || !TAGS43.blend) return;
+    var gtParent = TAGS43.blend.mesh ? TAGS43.blend.mesh.parent : null;
+    tags.push(TAGS43.blend);
+    TAGS43.aseptic.forEach(function(t){ tags.push(t); });
+    var states = ["run", "clean", "dirty"], cellW = 256, cellH = 80;
+    var ac = document.createElement("canvas"); ac.width = cellW * 3; ac.height = cellH;
+    var actx = ac.getContext("2d");
+    states.forEach(function(st, i){ var img = window.__TAGTEX43[st] && window.__TAGTEX43[st].image; if(img) actx.drawImage(img, i * cellW, 0); });
+    var tex = new THREE.CanvasTexture(ac); tex.anisotropy = 4;
+    var total = 0, parts = [];
+    tags.forEach(function(tag){
+      tag.mesh.updateMatrixWorld(true);
+      var g2 = tag.mesh.geometry.index ? tag.mesh.geometry.toNonIndexed() : tag.mesh.geometry.clone();
+      g2.applyMatrix4(tag.mesh.matrixWorld);
+      parts.push({ tag: tag, geo: g2 }); total += g2.attributes.position.count;
+    });
+    var pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uvA = new Float32Array(total * 2), off = 0;
+    parts.forEach(function(p){
+      pos.set(p.geo.attributes.position.array, off * 3); nor.set(p.geo.attributes.normal.array, off * 3);
+      var uv = p.geo.attributes.uv;
+      p.tag.uvCell45 = { start: off, count: uv.count, base: new Float32Array(uv.array) };
+      uvA.set(uv.array, off * 2);
+      off += uv.count; p.geo.dispose();
+    });
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(uvA, 2));
+    var merged = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+    merged.castShadow = false; merged.receiveShadow = false;
+    scene.add(merged);
+    tags.forEach(function(tag){
+      if(tag.mesh.parent) tag.mesh.parent.remove(tag.mesh);
+      tag.mesh = merged;
+      tagUvSet45(tag, tag.state || "clean");
+    });
+    TAGS45MERGED45.planes = tags.length;
+    if(gtParent){
+      var hangers = [];
+      gtParent.children.slice().forEach(function(ch){ if(ch.isMesh && ch.geometry && ch.geometry.type === "BoxGeometry") hangers.push(ch); });
+      if(hangers.length > 1){
+        var hgeo = mergeLocalGeos45(hangers.map(function(hm){ return { geo: hm.geometry, x: hm.position.x, y: hm.position.y, z: hm.position.z }; }));
+        var hmesh = new THREE.Mesh(hgeo, DARKSTEEL); hmesh.castShadow = false;
+        hangers.forEach(function(hm){ gtParent.remove(hm); });
+        gtParent.add(hmesh);
+        TAGS45MERGED45.hangers = hangers.length;
+      }
+    }
+  })();
+  if(document.getElementById("linkPanel44")) renderLinkPanel44();   /* 联动目录补渲染（含开合件条目） */
+}
+/* —— C 牌面图集合并（建场末执行）：静态组内 canvas 纹理牌面 → 一张图集 + 一个网格 —— */
+function atlasMerge45(){
+  if(PLATEATLAS45.done) return PLATEATLAS45;
+  PLATEATLAS45.done = true;
+  scene.updateMatrixWorld(true);
+  var staticRootSet = {};
+  D.staticGroups.forEach(function(sg){ staticRootSet[sg.root.uuid] = true; });
+  function underStatic(o){ while(o){ if(staticRootSet[o.uuid]) return true; o = o.parent; } return false; }
+  var outsideTex = {};
+  scene.traverse(function(o){
+    if(o.isMesh && o.material && o.material.map && !underStatic(o) && !(o.userData && o.userData.atlasStatic45)) outsideTex[o.material.map.uuid] = true;
+  });
+  var dynPlateRoots = [];
+  if(D.sterPlates) ["uht", "homog", "preheat"].forEach(function(k){ if(D.sterPlates[k] && D.sterPlates[k].group) dynPlateRoots.push(D.sterPlates[k].group); });
+  function underDynPlate45(o){ var a = o; while(a){ if(dynPlateRoots.indexOf(a) >= 0) return true; a = a.parent; } return false; }
+  var faces = [];
+  function tryFace45(o){
+    if(!o.isMesh || o.isInstancedMesh) return;
+    if(underDynPlate45(o)) { PLATEATLAS45.skippedDyn = (PLATEATLAS45.skippedDyn || 0) + 1; return; }   /* 动态参数牌（D.sterPlates 低频重绘）绝不图集化，否则读数冻结 */
+    var m = o.material;
+    if(!m || !m.map || !m.map.image || m.map.image.tagName !== "CANVAS") return;
+    if(m.transparent || clickables.indexOf(o) >= 0) return;
+    if(!o.geometry || !o.geometry.attributes || !o.geometry.attributes.uv || !o.geometry.attributes.normal) return;
+    if((m.map.repeat && (m.map.repeat.x !== 1 || m.map.repeat.y !== 1)) || (m.map.offset && (m.map.offset.x !== 0 || m.map.offset.y !== 0))) { PLATEATLAS45.skippedBad++; return; }
+    if(m.map.wrapS === THREE.RepeatWrapping || m.map.wrapT === THREE.RepeatWrapping) { PLATEATLAS45.skippedBad++; return; }
+    if(outsideTex[m.map.uuid]) { PLATEATLAS45.skippedShared++; return; }
+    faces.push(o);
+  }
+  D.staticGroups.forEach(function(sg){ sg.root.traverse(tryFace45); });
+  scene.traverse(function(o){ if(o.userData && o.userData.atlasStatic45) tryFace45(o); });   /* R45 自建静态牌面（如传递窗铭牌）同口径并入 */
+  if(faces.length < 2) { PLATEATLAS45.faces = faces.length; return PLATEATLAS45; }
+  /* shelf 打包（行宽 4096、高按 2 的幂收口） */
+  var items = faces.map(function(f){ var img = f.material.map.image; return { mesh: f, w: img.width, h: img.height, x: 0, y: 0 }; });
+  items.sort(function(a, b){ return b.h - a.h; });
+  var AW = 4096, x = 0, y = 0, rowH = 0;
+  items.forEach(function(it){
+    if(x + it.w > AW){ x = 0; y += rowH; rowH = 0; }
+    it.x = x; it.y = y; x += it.w; rowH = Math.max(rowH, it.h);
+  });
+  var needH = y + rowH, AH = 512;
+  while(AH < needH) AH *= 2;
+  if(AH > 8192) { PLATEATLAS45.skippedBad += items.length; return PLATEATLAS45; }
+  var ac = document.createElement("canvas"); ac.width = AW; ac.height = AH;
+  var actx = ac.getContext("2d");
+  items.forEach(function(it){ actx.drawImage(it.mesh.material.map.image, it.x, it.y); });
+  var atlasTex = new THREE.CanvasTexture(ac); atlasTex.anisotropy = 4;
+  var total = 0, parts = [];
+  items.forEach(function(it){
+    var src = it.mesh.geometry;
+    var g2 = src.index ? src.toNonIndexed() : src.clone();
+    g2.applyMatrix4(it.mesh.matrixWorld);
+    var uv = g2.attributes.uv, img = it.mesh.material.map.image;
+    for(var i = 0; i < uv.count; i++){
+      var u = uv.getX(i), v = uv.getY(i);
+      uv.setXY(i, (it.x + u * img.width) / AW, 1 - (it.y + (1 - v) * img.height) / AH);
+    }
+    parts.push(g2); total += g2.attributes.position.count;
+  });
+  var pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uvA = new Float32Array(total * 2), off = 0;
+  parts.forEach(function(g2){
+    pos.set(g2.attributes.position.array, off * 3); nor.set(g2.attributes.normal.array, off * 3); uvA.set(g2.attributes.uv.array, off * 2);
+    off += g2.attributes.position.count; g2.dispose();
+  });
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute("uv", new THREE.BufferAttribute(uvA, 2));
+  var merged = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: atlasTex }));
+  merged.castShadow = false; merged.receiveShadow = false; merged.userData.plateAtlas45 = true;
+  scene.add(merged);
+  var disposedMat = {};
+  faces.forEach(function(f){
+    if(f.parent) f.parent.remove(f);
+    var mm = f.material;
+    if(mm && !disposedMat[mm.uuid]){ disposedMat[mm.uuid] = true; if(mm.map) mm.map.dispose(); mm.dispose(); }
+  });
+  PLATEATLAS45.faces = faces.length; PLATEATLAS45.merged = 1; PLATEATLAS45.atlasW = AW; PLATEATLAS45.atlasH = AH;
+  if(window.console && console.info) console.info("[factory] R45 牌面图集合并：" + faces.length + " 面 → 1 网格（图集 " + AW + "×" + AH + "）");
+  return PLATEATLAS45;
+}
+/* C3 透明静态件同实例合并（R7 因透明排序整体排除的一类）：AGV 地面虚线段（共享 agvLineMat）、
+ * 安全围栏面（FENCEMAT）等同材质实例的静态透明件，按「最近注册祖先 = 静态组根或 scene」分桶
+ * 烘焙合并。同实例合并 ⇒ 运行时改色/改透明度仍作用于合并网格，语义不变；车辆/工人/转盘/
+ * 门枢轴等动态根下的件一律跳过。逐实例改材质的件（斑马线/库位框为逐件新建实例）天然不入桶。 */
+var TRANSMERGE45 = { before: 0, after: 0, buckets: 0, done: false };
+function mergeSharedTransparent45(){
+  if(TRANSMERGE45.done) return TRANSMERGE45;
+  TRANSMERGE45.done = true;
+  var reg = collectDynamicRegistry();
+  var regSet = new Set(reg.objs);
+  var staticRoots = new Set(D.staticGroups.map(function(sg){ return sg.root; }));
+  var clickSet = new Set(clickables);
+  scene.updateMatrixWorld(true);
+  var buckets = {}, order = [];
+  scene.traverse(function(o){
+    if(!o.isMesh || o.isInstancedMesh) return;
+    var m = o.material;
+    if(!m || Array.isArray(m) || !m.transparent || m.map) return;
+    if(clickSet.has(o) || regSet.has(o)) return;
+    if(!o.geometry || !o.geometry.attributes || !o.geometry.attributes.position || !o.geometry.attributes.normal || o.geometry.attributes.color) return;
+    var root = scene, anc = o.parent, ok = true;
+    while(anc && anc !== scene){
+      if(staticRoots.has(anc)){ root = anc; break; }
+      if(regSet.has(anc)){ ok = false; break; }
+      anc = anc.parent;
+    }
+    if(!ok) return;
+    var key = root.uuid + "|" + m.uuid;
+    if(!buckets[key]){ buckets[key] = { root: root, mat: m, list: [] }; order.push(key); }
+    buckets[key].list.push(o);
+  });
+  order.forEach(function(key){
+    var b = buckets[key];
+    TRANSMERGE45.before += b.list.length;
+    if(b.list.length < 2){ TRANSMERGE45.after += b.list.length; return; }
+    var inv = new THREE.Matrix4().copy(b.root.matrixWorld).invert();
+    var parts = [], total = 0, hasUv = true, ok = true;
+    for(var i = 0; i < b.list.length; i++){
+      var gg = null;
+      try { gg = b.list[i].geometry.index ? b.list[i].geometry.toNonIndexed() : b.list[i].geometry.clone(); } catch(e){ ok = false; break; }
+      gg.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, b.list[i].matrixWorld));
+      if(!gg.attributes.uv) hasUv = false;
+      parts.push(gg); total += gg.attributes.position.count;
+    }
+    if(!ok || !total){ parts.forEach(function(p){ p.dispose(); }); TRANSMERGE45.after += b.list.length; return; }
+    var pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), uv = hasUv ? new Float32Array(total * 2) : null, off = 0;
+    parts.forEach(function(gg){
+      pos.set(gg.attributes.position.array, off * 3); nor.set(gg.attributes.normal.array, off * 3);
+      if(uv) uv.set(gg.attributes.uv.array, off * 2);
+      off += gg.attributes.position.count; gg.dispose();
+    });
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    if(uv) geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    geo.computeBoundingSphere();
+    var merged = new THREE.Mesh(geo, b.mat);
+    merged.castShadow = b.list.some(function(mm){ return mm.castShadow; });
+    merged.receiveShadow = b.list.some(function(mm){ return mm.receiveShadow; });
+    b.list.forEach(function(mm){ if(mm.parent) mm.parent.remove(mm); });
+    b.root.add(merged);
+    TRANSMERGE45.after += 1; TRANSMERGE45.buckets++;
+  });
+  return TRANSMERGE45;
+}
+
+window.__r45 = function(){
+  var AL = DOORS45.airlock;
+  return { cfg: CONFIG.r45,
+    doors: DOORS45.list.map(function(d){ return { id: d.id, label: d.label, frac: Math.round(d.frac * 100) / 100, target: d.to, anim: d.anim }; }),
+    airlock: { built: !!AL.south, active: AL.active, phase: AL.phaseName || null,
+               southFrac: AL.south ? Math.round(AL.south.frac * 100) / 100 : null, northFrac: AL.north ? Math.round(AL.north.frac * 100) / 100 : null,
+               maxSum: Math.round(AL.maxSum * 1000) / 1000 },
+    atlas: PLATEATLAS45, tagsMerged: TAGS45MERGED45, transMerged: TRANSMERGE45,
+    navDet: { seed: CONFIG.r45.navDet.seed, gateRuns: CONFIG.r45.navDet.gateRuns, last5: window.__r45NavGate5 || null },
+    drawTargets: CONFIG.r45.draw };
+};
+window.__r45Probe = {
+  singlesRun: function(){   /* C 合并审计诊断：按（顶层组 × 材质签名）列出现存网格簇，定位未合并单件 */
+    var rows = {};
+    scene.traverse(function(o){
+      if(!o.isMesh || o.isInstancedMesh) return;
+      var top = o; while(top.parent && top.parent !== scene) top = top.parent;
+      var label = top.name || (top.userData && top.userData.label) || top.type;
+      var m = o.material, sig = !m ? "none" : (Array.isArray(m) ? "multi" : m.type + "#" + (m.color ? m.color.getHexString() : "-") + (m.map ? "+map" : "") + (m.transparent ? "T" : ""));
+      var key = label + " | " + o.geometry.type + " | " + sig;
+      if(!rows[key]){ rows[key] = { n: 0, sample: null }; }
+      rows[key].n++;
+      if(!rows[key].sample){
+        var wp = new THREE.Vector3(); o.getWorldPosition(wp);
+        var chain = [], a = o.parent, guard = 0;
+        while(a && a !== scene && guard++ < 5){ chain.push(a.name || a.type); a = a.parent; }
+        rows[key].sample = { pos: [Math.round(wp.x), Math.round(wp.y), Math.round(wp.z)], chain: chain.join("<"), ud: Object.keys(o.userData || {}) };
+      }
+    });
+    var arr = Object.keys(rows).map(function(k){ return { k: k, n: rows[k].n, sample: rows[k].sample }; }).sort(function(a, b){ return b.n - a.n; });
+    return { total: arr.reduce(function(s, r){ return s + r.n; }, 0), top: arr.slice(0, 40) };
+  },
+  doorRun: function(){
+    var rows = [], allOk = true;
+    DOORS45.list.forEach(function(d){
+      var init = d.to, mono = true, prev = -1, guard = 0;
+      setDoor45(d, false);
+      while(d.anim && guard++ < 300) doorsStep45(0.05);
+      var closedFrac = d.frac;
+      setDoor45(d, true); guard = 0; prev = -1;
+      while(d.anim && guard++ < 300){ doorsStep45(0.05); if(d.frac < prev - 1e-9) mono = false; prev = d.frac; }
+      var openFrac = d.frac;
+      setDoor45(d, init === 1); guard = 0; while(d.anim && guard++ < 300) doorsStep45(0.05);
+      var okD = closedFrac <= 0.02 && openFrac >= 0.98 && mono && Math.abs(d.frac - init) <= 0.02;
+      rows.push({ id: d.id, closedFrac: Math.round(closedFrac * 1000) / 1000, openFrac: Math.round(openFrac * 1000) / 1000, monotonic: mono, restored: Math.round(d.frac * 100) / 100, ok: okD });
+      if(!okD) allOk = false;
+    });
+    return { doors: rows, ok: allOk && rows.length >= 3 };
+  },
+  airlockRun: function(){
+    var AL = DOORS45.airlock;
+    if(!AL.south) return { ok: false, note: "风淋门未建" };
+    var started = startAirlock45();
+    var guard = 0, maxSum = 0, sawBlow = false, seq = [];
+    while(AL.active && guard++ < 3000){
+      if(AL.phaseName && seq[seq.length - 1] !== AL.phaseName) seq.push(AL.phaseName);
+      doorsStep45(0.05);
+      maxSum = Math.max(maxSum, AL.south.frac + AL.north.frac);
+      if(AL.phaseName === "blow" && AL.south.frac <= 0.02 && AL.north.frac <= 0.02) sawBlow = true;
+    }
+    var restOk = Math.abs(AL.south.frac) <= 0.02 && Math.abs(AL.north.frac - 1) <= 0.02;
+    return { started: started, steps: guard, maxSum: Math.round(maxSum * 1000) / 1000, sawBlowBothClosed: sawBlow, phaseSeq: seq, restOk: restOk,
+             ok: started && maxSum <= 1.02 && sawBlow && restOk && !AL.active };
+  },
+  drawRun: function(){
+    /* 作业态口径：双线满产泵送（上游拉满 + __pumpSim 10×120 + restoreQuality 后实渲一帧）。
+     * 不走 __r28Probe.workRun 的 lineRun 路径：EXP4/completeLine4 自 R36（lineCount 3→2）
+     * 起即为孤儿缺陷——completeLine4 读 lines[3].name 必崩，已在 R44 原版快照 v42 上同
+     * 签名复现确认为既有问题（非 R45 引入），本轮只登记不重构，见交接文档 R45 节挂账。 */
+    function snap(){ if(renderer && scene && camera) renderer.render(scene, camera); return window.__perfSnapshot(); }
+    var idle = snap();
+    var keep = { filler: S.filler, tanks: S.tanks, ster: S.sterilize, supply: S.supply, running: S.running };
+    S.tanks = 14; S.sterilize = 6000; S.supply = 6000;
+    if(!S.running) S.running = true;
+    for(var k = 0; k < 10; k++) window.__pumpSim(120);
+    if(window.__restoreQuality) window.__restoreQuality();
+    var work = snap();
+    S.filler = keep.filler; S.tanks = keep.tanks; S.sterilize = keep.ster; S.supply = keep.supply;
+    if(!keep.running) S.running = false;
+    return { idleCalls: idle.drawCalls, workCalls: work.drawCalls, atlas: PLATEATLAS45, method: "双线满产泵送（lineRun/EXP4 路径为 R36 既有缺陷，本轮未走）",
+             idleOk: idle.drawCalls <= CONFIG.r45.draw.idleTarget, workOk: work.drawCalls <= CONFIG.r45.draw.workTarget,
+             ok: idle.drawCalls <= CONFIG.r45.draw.idleTarget && work.drawCalls <= CONFIG.r45.draw.workTarget };
+  },
+  navGate5: function(){
+    var runs = [], pass = 0;
+    for(var i = 0; i < CONFIG.r45.navDet.gateRuns; i++){
+      var g = window.__r28Probe.navGate();
+      function mins(s){ return s ? { agv: Math.round(s.nav.agvMinEquip * 100) / 100, fork: Math.round(s.nav.forkMinEquip * 100) / 100, veh: Math.round(s.nav.minVehicle * 100) / 100, per: Math.round(s.nav.personMinEquip * 100) / 100, neg: s.nav.neg } : null; }
+      runs.push({ pass: g.pass, seeded: !!(g.det && g.det.seeded), ship: mins(g.ship), comp: mins(g.comp) });
+      if(g.pass) pass++;
+    }
+    var out = { seed: CONFIG.r45.navDet.seed, runs: runs, passCount: pass, allPass: pass === CONFIG.r45.navDet.gateRuns };
+    window.__r45NavGate5 = out;
+    return out;
+  }
+};
+window.__r45Check = function(){
+  var c44 = window.__r44Check();
+  var out = {}; Object.keys(c44).forEach(function(k){ out[k] = c44[k]; });
+  out.r45 = window.__r45();
+  var dr = window.__r45Probe.doorRun(), ar = window.__r45Probe.airlockRun();
+  out.r45assert = {
+    configOk: !!(CONFIG.r45 && CONFIG.r45.navDet.gateRuns === 5 && CONFIG.r45.draw.idleTarget === 620),
+    doorsOk: dr.ok, airlockOk: ar.ok,
+    atlasOk: PLATEATLAS45.done && PLATEATLAS45.merged === 1 && PLATEATLAS45.faces >= 30,
+    tagsOk: TAGS45MERGED45.planes === 6 && TAGS45MERGED45.hangers >= 5,
+    linkDoors: linkRegistry44().filter(function(e){ return !!e.door; }).length,
+    whOk: window.__whCheck().ok
+  };
+  out.r45assert.ok = out.r45assert.configOk && out.r45assert.doorsOk && out.r45assert.airlockOk && out.r45assert.atlasOk && out.r45assert.tagsOk && out.r45assert.linkDoors >= 4 && out.r45assert.whOk;
+  return out;
+};
+document.addEventListener("click", function(ev){
+  if(ev.target && ev.target.id === "airlockDemoBtn45"){ startAirlock45(); }
+  if(ev.target && ev.target.id === "doorToggleBtn45" && S.selected && S.selected.kind === "door45"){
+    triggerDoor45(S.selected.id);
+    setTimeout(function(){ if(S.selected && S.selected.kind === "door45") renderInfo(); }, (CONFIG.r45.doors.swingSec + CONFIG.r45.doors.airlockSlideSec * 4 + CONFIG.r45.doors.airlockBlowSec + 1.2) * 1000);
+  }
+});
 
 /* ---------------- [M2] 分区 builder · 厂房壳体 buildShell ---------------- */
 function buildShell(){
@@ -11469,6 +12044,7 @@ function buildScene(){
   buildRealism42();      /* R42 真实感对表（一）：洁净间玻璃罩 + 参观走廊 + 区域吊牌/压差牌 + 地面划线 + 管道色环/箭头/名牌 + CO₂ 支线 + Andon 塔灯 */
   buildRealism43();      /* R43 真实感对表（二）：人员净化间群（更衣→洗手→风淋）+ CIP 四罐对表（铭牌/浓酸碱小罐/阀阵/换热器/洗眼器/围堰）；分区 PPE 在 makeWorker 调用处 */
   buildRealism44();      /* R44 真实感对表（三）：分区灯面（洁净冷白平板灯阵 / 仓库暖黄高棚灯 / 洁净冷色氛围罩），零新增实时光源 */
+  buildRealism45();      /* R45 细节互动：洁净间铰链门扇（接管 CRDOORS42 门洞）+ 风淋双门互锁演示（接管 ASDOOR43）+ 传递窗 */
   buildBackdrop();       /* R3 远景剪影：北侧缓丘 / 邻厂烟囱厂房 / 东侧水塔，给厂界纵深参照 */
   /* R3 环境反射强度统一收口：PMREM 环境贴图对全场 Standard 材质生效，强度只认 CONFIG.light.envIntensity 一处 */
   scene.traverse(function(o){
@@ -11491,6 +12067,8 @@ function buildScene(){
   });
   window.__casterAudit = { kept: casterKept, cut: casterCut, maxEdge: CONFIG.r16.casterAuditMaxEdge };
   mergeAllStaticGroups();   /* R5：纯静态组按材质合并（在小件阴影规则之后执行，合并网格继承来源 cast/receive 标记；策略与范围见 buildScene 前 R5 一节） */
+  atlasMerge45();           /* R45 C 项：静态组牌面（区域牌/铭牌/指令牌正反面）图集化合并为 1 网格，回收待机 DrawCall 余量 */
+  mergeSharedTransparent45();   /* R45 C3：透明静态件同材质实例合并（AGV 虚线段/围栏面等） */
   window.__setShadowTier(window.__shadowTier);   /* R4：粒子系统此时已建好，重调一次让当前档的粒子保留比例（drawRange）真正落到几何上 */
 }
 window.__setProductColor = function(hex, labelHex){
@@ -11811,7 +12389,8 @@ function updateScene(dt, t){
   if(window.__ppeTick43) window.__ppeTick43();       /* R43：巡逻人员按所在区即时换装（跨区才写入） */
   if(window.__cipTick43) window.__cipTick43(t);      /* R43：CIP 阶段色脉冲（无 CIP 时暗色待机） */
   if(window.__tagsTick43) window.__tagsTick43();
-  if(window.__linkTick44) window.__linkTick44();       /* R44：联动脉冲框呼吸/到期自灭（真实秒呈现层） */     /* R43：调配/无菌罐状态挂牌（状态变才换纹理） */
+  if(window.__linkTick44) window.__linkTick44();       /* R44：联动脉冲框呼吸/到期自灭（真实秒呈现层） */
+  if(window.__doorsTick45) window.__doorsTick45();     /* R45：门扇开合/风淋互锁演示帧奏（真实秒呈现层，只写位姿） */     /* R43：调配/无菌罐状态挂牌（状态变才换纹理） */
   updateDockForklifts(vdt18, SHIP.active);
   /* R18：车辆耗电结算——忙碌时长（已按补偿后步长累计）× 平均功率，经 chargeUtilities
    * 唯一入口计入当前产品电耗台账；补偿倍速越高、车辆干的活越多、电耗越高。 */
@@ -12404,6 +12983,7 @@ function pickAt(cx, cy){
       return;
     }
   }
+  if(typeof doorPick45 === "function" && doorPick45(mouse)) return;   /* R45：可开合门扇优先拾取（命中即开合） */
   raycaster.setFromCamera(mouse, camera);
   var hits = raycaster.intersectObjects(clickables, false);
   if(hits.length){
@@ -12693,6 +13273,20 @@ function renderInfo(){
       rowHtml("联动", "成品库存 "+WH.stockCases+" 箱 · 入库活跃时停机段缩短") +
       rowHtml("用途", "包材与成品低温周转");
     $("infoBtns").innerHTML = "";
+  } else if(sel.kind === "door45"){
+    /* R45：可开合件信息卡（状态读 DOORS45 实时开度，按钮经文档委托触发 triggerDoor45） */
+    var d45 = (typeof DOORS45 !== "undefined") ? (sel.id === "airlock" ? null : DOORS45.byId[sel.id]) : null;
+    var isAir45 = sel.id === "airlock";
+    $("infoTitle").textContent = isAir45 ? "风淋室 · 双门互锁" : (d45 ? d45.label : "可开合门扇");
+    var stTxt45 = isAir45 ? (DOORS45.airlock.active ? "演示进行中 · " + (DOORS45.airlock.phaseName || "") : "待机（南门闭 / 北门开）")
+                          : (d45 ? (d45.anim ? "开合中…" : (d45.frac >= 0.98 ? "已开启" : d45.frac <= 0.02 ? "已关闭" : "半开 " + Math.round(d45.frac * 100) + "%")) : "—");
+    $("infoStatus").textContent = "● " + stTxt45;
+    $("infoStatus").style.color = STATUS_COLORS.run;
+    $("infoRows").innerHTML =
+      rowHtml("类型", isAir45 ? "双门互锁风淋（滑动门）" : (sel.id === "passbox" ? "包材传递窗 · 铰链门 + 紫外灯" : "洁净间玻璃 Bloc 罩 · 铰链对开门")) +
+      rowHtml("互锁口径", isAir45 ? "相位串行：任一时刻两扇开度之和 ≤ 1，吹淋段双门锁闭" : "点选门面或联动目录均可开合；洁净间门默认开启位（巡检通行）") +
+      rowHtml("驱动", "真实秒呈现层缓动（CONFIG.r45.doors），不改人员/车辆路线");
+    $("infoBtns").innerHTML = '<button class="btn" id="doorToggleBtn45">' + (isAir45 ? "▶ 播放互锁演示" : "↔ 开 / 合此门") + '</button>';
   }
   card.classList.add("show");
 }
@@ -15221,7 +15815,17 @@ window.__r28 = function(){
 };
 window.__r28Probe = {
   navGate: function(){
-    var r = window.__r27Probe.navRun();
+    /* R45 B 项 · 探针场景确定性化：R44 实测本门间歇抖动（四跑 2 过 2 败，败局签名
+     * agvMinEquip −0.75 出库 AGV 对货架行 obs#3），且在 R43 原版构建同签名复现——定案为
+     * 探针场景 FIFO 取托随机性的既有竞态、非模拟回归。本轮只治理探针本身：以
+     * CONFIG.r45.navDet.seed 的 mulberry32 种子 RNG 包裹 navRun 的同步执行窗
+     * （shipRun/compRun 全程同步泵送、随机源仅 Math.random，包裹可证完备），执行毕
+     * 立即还原 Math.random——模拟本体、活页面随机行为、路点与障碍一字未动。
+     * 连跑口径 = __r45Probe.navGate5()（连跑 5 次须全过、四类净距全正）。 */
+    var origRandom = Math.random, seedState = (CONFIG.r45 && CONFIG.r45.navDet ? CONFIG.r45.navDet.seed : 45045) | 0;
+    Math.random = function(){ seedState |= 0; seedState = seedState + 0x6D2B79F5 | 0; var t = Math.imul(seedState ^ seedState >>> 15, 1 | seedState); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    var r;
+    try { r = window.__r27Probe.navRun(); } finally { Math.random = origRandom; }
     var segs = [r.ship && r.ship.nav, r.comp && r.comp.nav].filter(Boolean);
     var minsOk = segs.length === 2 && segs.every(function(s){
       return s.agvMinEquip >= 0 && s.forkMinEquip >= 0 && s.minVehicle >= 0 && s.personMinEquip >= 0;
@@ -15230,6 +15834,7 @@ window.__r28Probe = {
       return s.neg && s.neg.agvEquip === 0 && s.neg.forkEquip === 0 && s.neg.vehicle === 0 && s.neg.personEquip === 0;
     });
     var gate = { pass: !!(r.ok && minsOk && negOk), navRunOk: r.ok, minsOk: minsOk, negOk: negOk,
+                 det: { seeded: true, seed: CONFIG.r45 && CONFIG.r45.navDet ? CONFIG.r45.navDet.seed : null, scope: "探针场景同步执行窗（R45 B 项）" },
                  ship: r.ship, comp: r.comp,
                  exemptCrewWork: segs.map(function(s){ return s.exempt ? s.exempt.crewWork : null; }),
                  rule: "车辆无豁免、人员仅 crewWork 作业接触单列（不计入 personMinEquip）；豁免外任一最小值 <0 或负样本 >0 即不通过" };
