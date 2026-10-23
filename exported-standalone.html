@@ -1077,6 +1077,12 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
     <h3>生产日志</h3>
     <ul class="log" id="log"></ul>
 
+    <h3>现场标识与 Andon（R42 · 真实工厂对表）</h3>
+    <div class="econ">
+      <div class="dcell wide"><div class="l">Andon 三色塔灯图例</div><div class="v" id="andonLegend42" style="font-size:12.5px;line-height:1.6;font-weight:500"><b style="color:#00c853">绿</b> = 运行中 · <b style="color:#e0a800">黄</b> = 待料 / 阻塞 / 健康度预警 · <b style="color:#e60012">红</b> = 停机 / 故障 / 换型 / CIP 清洗中 · 全灭 = 待机 / 停线。塔灯立于双灌装线（灌装位 + 封盖位）、UHT/灭菌链与码垛机，颜色由真实状态驱动（lineStatus / stationStatus / palletizerState + 健康度），仅自发光小几何、无点光源。</div></div>
+      <div class="dcell wide"><div class="l">地面划线开关</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><button class="hbtn" id="markingsToggle42">划线：开</button> 主车道黄边线（100 mm）/ 人行绿道（净宽 1.4 m）/ 斑马线 / 白色定置框 / 红色禁堆区 / 黄黑警戒纹，按 GB 2894-2025 安全色与 5S 惯例绘制（参数在 CONFIG.r42）；大屏模式默认开。卫生三区地面着色（清洁浅色 / 准清洁灰绿 / 一般灰）与管道介质色（GB 7231）为常驻呈现、不随此开关。</div></div>
+    </div>
+
     <h3>交接文档（开发说明 · 完整版）</h3>
     <p class="hint">本页为单文件静态构建（index.html + assets/three.min.js），交接文档就内嵌在本节，不依赖任何外部文件。源码顶部另有架构总览注释，与本节内容一致。</p>
     <div class="econ">
@@ -1126,7 +1132,8 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <div class="dcell wide"><div class="l">R36 双线定版（两条线各自独立生产不同产品）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户定版——灌装线 4 条（含投资线）改回 <b>2 条</b>，且两条线要能<b>分别生产不同产品</b>。参数入口仍是 <b>CONFIG.lineCount = 2</b>。<b>① 线数定版</b>：基础线 3 → 2（LINE_Z / buildLine / 开线控件 / 标题全部按 CONFIG 派生自动跟随）；调度台「第 4 条灌装线」投资项撤销（EXP4 后端休眠、按钮禁用），码垛峰值/运力比按 2 线重算（267 箱/分）。<b>② 每线一产品</b>：Line 新增 pid（开局 1 号冰红茶 / 2 号橙汁）与 coLeft/coTo 本线换型态；fillRate 按本线产品 fillFactor；调度台新增「双线分工」卡（每线一排产品按钮 + 分区余量 + 状态，点按钮走 setLineProduct36），3D 里点线的信息卡也能直接改产本线。setLineProduct36 = 本线单独换型：只清本线在制（报废按旧线产品全成本入账 + AUDIT17 留痕，与全厂清线同口径）、只停本线 CO_MINUTES 分钟，另一条线照常。<b>③ 无菌罐按产品分区</b>：ASEPTIC.byProd 是唯一分区账（stock 恒 = Σ分区，asepticSync36 同步，旧读 stock 的液位/KPI/守恒口径不变）；杀菌产出只进当前上游产品分区，供料按线分开——每条线只抽自己 pid 的分区，分区空 → lineStatus 显示「等料 · 「X」无菌分区已空」、供料阀关、绝不串抽；质检隔离报废改从上游产品分区扣。<b>④ 上游换型不再全厂清线</b>：startChangeover 的报废只计供应/调配/杀菌在制，产线在制与无菌分区全部保留；step 的 changeover 分支里产线经 lineFlowStep36 继续从分区灌装（produced 真实传 stepR2，下游码垛不断流）；排空预约的排空口径改 drainWip36（只排当前上游产品一路：上游队列 + 该产品分区 + 选了该产品的产线）。<b>⑤ 按线结算</b>：各线本步产出 l._prod36 由 settleLineProd36 按线产品分别记 finished/收入（R21 促销按线产品判定）/非原料变动成本/报废，良品率 effQuality(p) 按线产品取（整改扣减仍全厂统一）；两条线产不同产品时两本台账同时增长，公用工程流量仍记上游产品账（与旧口径一致的近似，明示于此）。S.finished/orderDone 为全厂合计不变。<b>⑥ 关联口径</b>：经营挑战「四线满产」改「双线满产」（key 沿用 line4 存档兼容，判定 = 双线全开无故障/保养/换型连续 720 分）；新手任务 invest 改指仓库扩容/码垛改造；导览灌装车间站与扩容站文案改双线口径；每线饰条与供料管料色改本线产品色（__setProductColor 按线分色）。<b>⑦ 存档迁移</b>：saveValidate 接受 2~4 条线旧档，saveRestore 不再重建第 4 条线、无菌分区缺失时整额归当前产品分区、本线产品缺失时回开局分工（1 号冰红茶 / 2 号橙汁）；新档 lines 带 pid/coLeft/coTo、aseptic 带 byProd。<b>自检口</b>：window.__r36() = { lineCount, lines[{pid/产品/换型/队列/状态}], asepticByProd, asepticTotal, upstreamProduct, ledgerFinished }；window.__setLineProduct36(idx, pid) 定点给某线换产品。探针验法：开工跑一段，__r36().ledgerFinished 应有两个产品同时增长；把 2 号线分区抽空（或上游长期只产冰红茶）后 2 号线状态应为「等料」且其台账不再增长、1 号线不受影响。<b>【规格补齐段】</b><b>罐级分配</b>：ASEPTIC_TANKS36 为罐级唯一真相——每罐任一时刻只含一种产品（pid 认领），灭菌产出只进同产品罐或空罐（空罐此前装过异产品时认领先走 CIP 并记日志，asepticSterIn36）；sterRoom 按本产品罐群可用容量（asepticRoom36）封顶，别产品占满时本产品背压、绝不串罐；byProd/stock 由罐群派生（asepticSync36），液位柱按罐读 qty。开局认领：1 号罐冰红茶 3000 / 2 号罐橙汁 1500 / 其余空罐。<b>按线排空换型</b>：setLineDrain36（调度台分工卡每线带排空目标选择、探针 __setLineDrain36）——本线停进新料、在制灌完自动走 startLineCo36（与立即换型共用收口：清线报废/CO_MINUTES/本线停线），全套时序按线独立，另一条线采样连续性由 __r36Probe.drainSwapRun 证明；停机时退化立即换型（R6 边界同口径）。<b>谱系按线归属</b>：良品在 settleLineProd36 内经 traceAttributeLine36 按线产品记入该产品最近进入罐群的灭菌批次（ASEPTIC_FEED36 指针；无指针 = 期初罐群库存 0 号批，ster 快照如实留空），rec.lines 记灌出线名——旧 traceAttribute 单指针归属在双产品下必然串味，已退出 step 主链（函数保留兼容）。traceAudit34 新增三项 R36 硬断言同级常驻：罐单产品（tankAudit36 对账）、托产品一致（在库托 productId = 谱系批次 productId 逐托比对）、灌装线字段（有产量批次 lines 非空且只含 1/2 号线）。<b>存档迁移退款</b>：旧档含 exp4.built/building 时，saveRestore 在台账回填后按 EXP4.spent（缺失回退 CONFIG.r23.line4.costYuan）冲减当前产品 fixedCost 退款——现金派生口径（期初 + 累计利润 + 净借款 + 应付利息）下余额同额回升、与现金账 0 差自检同源；MIG36{line4Refund, count} 留痕随档往返，资金区 cashOut 行与 __r36().migration 可查，迁移同时写日志；EXP4 强制回休眠，线体不重建。<b>上游排队可见</b>：分工卡顶部常驻上游状态行（在调批次/阶段/杀菌队列/最近灭菌批次 + 逐罐认领与余量），文档口径：双产品并行时共享灭菌链是瓶颈、批次逐个排队。<b>基数重算</b>：灌装总峰值 2 × 1600 = 3200 瓶/分（旧四线 6400）；包装下线峰值 2 × 1600 ÷ 12 ≈ 267 箱/分（旧 533），码垛运力比 460/267 ≈ 1.72（改造后 640/267 ≈ 2.40）；名义产能/班次目标/交期/OEE/瓶颈候选全部遍历 lines 或 nominalCapPerMin 派生、自动按双线计；出库链相对产能：一波 20 托 = 6000 瓶口径不变，双线最大产量 3200 瓶/分下波次形成更快但装车速率口径未动（探针以 __whCheck 与链速回归为准）。<b>排空口径修正（首测逼出）</b>：上游排空换型的排空目标只算站队列在制（drainWip36）——旧产品已灭菌存量留其罐群供分到的线续用；若把分区算进目标且无任何线分到该产品，分区永不排空、上游换型死锁（演示日排空阶段首测超时实证，修正后演示全程 225 泵秒跑完、换型阶段如实完成）。<b>探针</b>：window.__r36Probe = { dualRun（双线异产品同跑采样 + B 线连续性）, starveRun（抽干某产品罐群验等料）, drainSwapRun / drainSwapRun2（排空换型全程见证线连续）, migTest（四线旧档迁移退款自证） }。</div></div>
       <div class="dcell wide"><div class="l">R37 PDCA 打包轮（灭菌排队可视化 + 第二灭菌链投资 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R36 双线定版后，调配→灭菌是两产品并行的共享瓶颈（批次逐个排队），但队列此前不可见、产能也不可扩。本轮先看清、再扩容。新参数全在 <b>CONFIG.r37</b>（ster2 投资 ¥95,000 / 工期 300 分 + priority.starveEtaMin=12 + doneSegKeep），读数口 <b>window.__r37()</b>，探针口 <b>window.__r37Probe</b>（queueRun / jumpRun），回归包 <b>window.__r37Check()</b>。<b>【A 项 · 灭菌排队可视化（STER37 段模型）】</b>：灭菌队列池 stations[2].queue 之上建<b>批次段账</b>——一段 = 一批调配料出料后进入灭菌队列的份额：blendMove 流入记到当前开放段（归属当刻 STER_FEED 批次），出料完成点 sterSegClose37 关闭开放段；不变量 <b>Σ seg.vol ≡ ster.queue</b> 由 stepSterChains37 每步 sterSegReconcile37 对账（旧档恢复等漂移按 STER_FEED 归属补段/裁尾，不静默丢量）。调度台新增「灭菌队列」卡（renderSterQueue37 签名守卫、同 renderKpis 节奏）：每条链的处理批次（产品/剩余瓶数/预计剩余分钟）或 CIP/空闲态、排队段列表（批次/产品/量/已等分钟/第 N 位）、两条线各自的无菌分区水位与<b>预计断供</b>（lineEta37 = 分区余量 ÷ 本线当前灌装速率，满速口径；线停/换型/故障不外推标「未在消耗」、已空标「已断供」）；灭菌工位信息卡同步加链/队列/双线断供三行。<b>等料因果日志</b>：sterStarveLogTick37 边沿触发（线进入等料且分区已空时只报一次）——文案由 sterQueueCause37 现算：该产品批次正在链 N 处理（剩余量/约时）/ 还在队列第 N 位（前面批数/队列总量）/ 还在调配阶段 / 上游未排产，四路与队列实况逐项对得上。<b>【B 项 · 第二灭菌链（STER2）】</b>：投资全流程与扩容/改造同模式——调度台「灭菌能力扩容」卡 → 确认弹窗（费用/工期/规则明示）→ startSter2Build37 扣款进当前产品台账 fixedCost（现金派生同源）→ stepSter2 工期走仿真时钟（灭菌区南侧围挡 + 2 名施工人员，第一链照常生产）→ completeSter2Build37 完工事件（建链 2 实体：三柱罐 + 顶管 + 状态灯的紧凑机组、taskMark30 invest 同挂）。<b>双链调度</b>：stepSterChains37 取代旧单池 sterMove——每链同时只处理一段，段速率 = 工位额定 × <b>该段产品</b> flowFactor × 爬坡系数（单链同式、且单链可一步跨段连续处理，与旧连续流口径一致；双链每链一段不跨段抢料）；产出按段产品 asepticSterIn36 入罐认领（双产品同刻入罐不串）；无菌罐群按段产品各自封顶背压。<b>排队规则明示</b>：先到先服务 + <b>断供优先</b>——某段产品对应产线已等料或分区预计断供 ≤ starveEtaMin（12 分）时该段可越过队首上链，每次插队 log 明示被越批次与原因 + STER37.jumps 结构化留痕（探针逐条核对 seg/over 键），不许静默插队。<b>CIP 按链独立</b>：链 1 沿用 stations[2].cipLeft 旧口径；链 2 在 sterCipTick37 走自己的 sinceCip/cipLeft（同间隔/时长/消耗入账），一链清洗时另一链继续处理（链 1 CIP 日志文案同步改双链口径）。工位故障/保养仍按工位整体口径停两链（如实：共用进料总管）。存档 ster2 + sterq37（段/完成留痕/插队留痕）随 payload 往返、open 段引用恢复点重建；重置 ster2Reset37 全清。<b>基数变化</b>：灭菌名义总产能 单链 S.sterilize × flowFactor → 双链建成后 2 × 同式（两段异产品时按各段 flowFactor 分别计）；nominalCapPerMin 的 ster 项建成后 ×2（交期/班次目标同源跟随），瓶颈判定读 stations[2].lastCap（现为双链实际合计），口径自动跟随。<b>探针</b>：queueRun——双产品各 2 批（6000 瓶/批，经 sterSegInject37 同一入队记账口构造、处理全走真实 step 双链调度；临时关故障/CIP 并置 S.tanks=0 断调配注水隔离变量，结束恢复）测单链总完工 vs 建链（走真实投资开工+泵到完工）后双链总完工、双线等料分钟对比、谱系灭菌实测缺失数（出料批次 rec.ster 必须 0 缺失）；jumpRun——长批占链 + 队首同产品批 + 后排异产品批（其线分区抽空断供）验后排批优先上链且 jumps 留痕 seg/over 键逐项对得上（探针隔离清队列池的写off量在返回值标注）。<b>【C 项 · 例行回归】</b>：沿全家桶逐项数字写交付汇报；__r37Check = __r36Check + r37assert（CONFIG/段池对账差/队列卡与投资钮在位）。<b>回归逼出的存量 bug（顺修）</b>：R34 自检结论随档恢复时只回填 atMin/ok、checks 仍为 null，renderTraceAudit34 随即读 checks.shippedWaveTrip 崩溃——凡「自检跑过后导出的存档」再导入必崩（R36 的 migTest 在新页会话里因 atMin=null 未触发，本轮长跑后序列实证）；已修：恢复点 atMin 非空时以恢复后状态重算自检（结论与现状态同源），渲染层加 !checks 兜底守卫。全部计时走仿真分钟（总表第 38 项）。</div></div>
       <div class="dcell wide"><div class="l">R38 PDCA 打包轮（排产建议 · 只建议 + R37 校验收口复验）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：双线 + 双链灭菌之后，「下一批该产什么」仍靠人脑同时盯订单交期、无菌水位与灭菌队列三处——本轮把这眼力做成建议（只建议），并先把 R37 的平台校验欠账复验收口。参数全在 <b>CONFIG.r38.sched</b>（临期窗口 240 分 / 有料线 1,500 瓶 / 队列长 3 段 / 缺口归一 20,000 瓶 + 七个权重），读数口 <b>window.__r38()</b>，探针口 <b>window.__r38Probe.schedRun</b>，采纳口 <b>window.__adoptSched38(线序)</b>，回归包 <b>window.__r38Check()</b>。<b>【A 项 · R37 复验】</b>：R37 交付后平台审计 dispatch 多次超时，本轮在最终源码上全套重跑（守恒 / navGate / traceAudit / 双线探针 / queueRun / jumpRun / 存档往返含 R34 自检恢复路径），结论单列于当轮交付汇报，不与新功能混报。<b>【B 项 · 排产建议（SCHED38）】</b>：<b>schedCompute38</b> 纯读既有源现算——订单侧 = 当前单剩余缺口与交期（产品 = 上游当前 product）+ ORDERQ 队列逐单（pid/target/dueMin），罚金口径读 CONFIG.r12.penaltyPerMinute ¥12/分；线侧 = lines 当前 pid 与状态；料侧 = asepticOf36 分区现存 + STER37 段账在途（排队段与链上段同读）；队列侧 = 排队段数与总量。逐线逐产品打分：临期分（剩余交期在 240 分窗内线性、逾期 ×1.25 拉满）× wUrgency 100 + 缺口分（缺口 / 20,000 归一）× wDemand 40 + 维持惯性 wStay 30 / 切换代价 −wSwitch 25 − 已被他线在产 wCovered 20（逾期单除外）− 水位罚分（现存 &lt;1,500 按缺额比例 × wThin 45、现存 + 在途 = 0 记 −wNoSupply 200）。<b>硬拦截（不进打分）</b>：某产品无菌现存 + 在途 = 0 且灭菌排队段 ≥ 3 段 —— 切过去也只能等料，绝不建议；拦截名单在卡上单列行并把缺口/交期/队列数字写明。已被前一条线建议切换的产品后线不再重复建议（逾期单除外，两线合力赶）。理由一句话必带数字（缺口瓶数 / 剩交期或逾期分 / 现存 + 在途瓶数 / 换型 15 分 + ¥1,500 代价）。调度台在灭菌队列卡下方新增「排产建议」卡（renderSched38 签名守卫、同 renderKpis 节奏）：每线一行建议 + 理由 + 采纳钮（仅切换建议有钮）。<b>采纳 = 只预置</b>：adoptSched38 只写 SCHED38.preset[线]——不自动换型、不自动下单；双线分工卡上预置产品按钮虚线描边 +「· 预置」标记、产线行输出带预置说明；玩家点该按钮后才走既有 setLineProduct36 换型流程，预置在点中成功的同一监听里消费清除（__r38Probe.schedRun 的 adopt 自证：preset 落位而线 pid / coTo / 订单队列长度三处零变化）。<b>刷新留痕</b>：建议方向（每线建议产品 + 拦截集合）每次变化写一条生产日志并记 SCHED38.hist（上限 24 条、带仿真分钟），纯数字波动不重复记（方向签名不含数字），__r38().hist/logCount 可复盘。<b>探针 schedRun 三场景</b>（构造手法同 migTest/jumpRun：直接置状态字段 + 走真实记账口 asepticAdd36 / sterSegInject37，结束全量还原并标注写off）——A：可乐单剩交期 30 分 + 无菌 6,000 瓶 → 有线建议切可乐；B：苏打单临期但无菌 0 + 灭菌注入 3 段长队 → 无线建议苏打、拦截名单含苏打、理由写明「无菌料 0 瓶」与队列数字；C：双线在产冰红茶/橙汁、两产品各有单且交期 +600 分 → 两线全维持。存档 sched38.preset 随 payload 往返（旧存档无字段保持当前态）；重置 schedReset38 清预置与留痕。<b>【C 项 · 例行回归】</b>：沿全家桶 + R37 queueRun 复跑，逐项数字写交付汇报；__r38Check = __r37Check + r38assert（CONFIG / 建议卡在位 / 每线建议合法且理由带数字 / 预置为纯数据）。全部计时走仿真分钟（总表第 39 项）。</div></div>
-      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检本体为读数时对 TRACE/SLOTS 现算、触发走仿真时钟（出料归档事件点 + 每 360 仿真分钟 tick，与第 31 项同类）—— ✔ 一致<br>37. 双供应商与审计包（R35 新增）— 无独立计时：供应商承诺/实际提前期在下单事件点抽定、实际到场仍由 RAW.tankerLeft 仿真分钟倒计时驱动（与第 7 项罐车同钟）、延迟判定与少送抽定在到场事件点、台账累计在卸料完成事件点；风险提前期为 CONFIG 常量纯读数；审计包为导出动作当刻对既有台账的只读快照（manifest 仿真时刻读 S.simMin、真实时刻仅作文件元数据）—— ✔ 一致<br>38. 第二灭菌链工期 + 双链 CIP/段调度（R37 新增）— 仿真分钟 stepSter2 / sterCipTick37 在 step 内推进（工期与第 24/25 项投资同口径、换型/停电步同点推进；链 2 CIP 间隔/时长与链 1 同参数同钟；段的入队/开工/完工时刻与断供外推全读 S.simMin 与既有仿真速率，无独立计时）—— ✔ 一致<br>39. 排产建议计算/刷新留痕 + 预置选品（R38 新增）— 无独立计时：建议为读数时对订单队列/当前单/无菌分区/灭菌段账的纯派生（与第 27/31 项同类），方向变化留痕时刻读 S.simMin；预置是纯选择状态、不触发任何流程与计时，玩家点产品按钮后走既有换型时钟（第 4 项）—— ✔ 一致</div></div>
+      <div class="dcell wide"><div class="l">R42 PDCA 打包轮（真实感对表 · 一：卫生三区 / 地面划线 / 管道标识 / Andon 塔灯）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：用户要求别闭门造车——先做真实饮料工厂调研（报告口径：GB 12695 三区划分与灌装间 ISO 7 背景 / ISO 5 局部、压差梯度为行业惯例值；GB 7231 管道色已并入 GB 2894-2025，Hex 为报告近似渲染值非国标色号；划线尺寸为中国工厂 5S 惯例），再按设计清单对表改造。参数全在 <b>CONFIG.r42</b>（zones / markings / pipes / cleanroom / corridor / andon），读数口 <b>window.__r42()</b>，探针口 <b>window.__r42Probe</b>（andonRun / markRun），划线开关 <b>window.__setMarkings42(v)</b>，回归包 <b>window.__r42Check()</b>。<b>【A 卫生三区】</b>：地面整面分区着色进 buildShell 地面颜色/粗糙度贴图——清洁区（灌装/封盖段 x −14~24、z ±27，两条线）浅色环氧 + 准清洁区（调配/UHT/无菌罐 x −74~46、z −44~34 + CIP 条带）灰绿 + 一般区灰底，边界描边、分界处地面色带（清洁南入口 / 准清洁南入口），吊牌三块（清洁/准清洁/一般，signMesh 双面）+ 压差牌（每线「灌装间 +10 Pa」、准清洁「+5 Pa」）。灌装间洁净间化：双线各加玻璃 Bloc 罩（北墙整面 + 南墙两段 + 气锁门洞 3 m + 滑开门扇 + 顶框梁/角柱，GLASSMAT 透明 0.22），2 号线外侧沿墙参观走廊（x −4~24、走廊面 2.4 m 宽 + 栏杆 + 解说牌「参观走廊」）——玻璃与栏杆<b>不登记</b>进 NAV_OBSTACLES / PERSON_OBSTACLES / COLLIDERS，南墙门洞对齐既有巡检路线穿越点（x −3.2~−0.2），车辆/人员路线零改动。<b>【B 地面划线】</b>：batch42 顶点色批量几何（单 MeshBasicMaterial 网格、零光源成本）：主车道黄边线 100 mm #F5C518（AGV 环线双道 + 交接横道 + B/C 巷 + 北横道，实线收口既有虚线环）、人行绿道 #2E9E5B 南侧净宽 1.4 m + 白边线、交接横道斑马线（x=61 垛位间隙）、白色定置框（下线暂存整框 + 逐位 L 角 + 码垛单元框）、红色禁堆框（消防点 ×2 / 锅炉配电柜 / 北安全出口）、黄黑警戒纹（无菌罐区围堰南缘 / 原料罐区东缘 / CIP 化学品区南界）、参观走廊地面带；独立开关（抽屉「现场标识与 Andon」节按钮 #markingsToggle42，大屏默认开，CONFIG.r42.markings.defaultOn）。<b>【C 管道介质标识 GB 7231】</b>：公用工程整管着色——蒸汽大红 #E60012（锅炉汽包立管 + 蒸汽总管 sm1/sm2/下行支管；分汽缸与机组进汽管保留保温色加红环意象）、压缩空气淡灰 #B5B5B5（母管 + 向南供气管）、生产用水艳绿 #00A651（水处理母管）；新增 CO₂ 支线（卧罐 + 中黄 #FFD200 母管 + 碳酸化机，报告 1.2 苏打水碳酸化）；不锈钢主管保持本色 + 色环（单个 InstancedMesh 实例色）：CIP 紫 #7D3C98（供液/汇管/去 UHT 共 5 环）、物料按产品色（主管冰红茶 + 双线支管本线产品色 + 机组产品管）、蒸汽红环 ×4；浓酸/碱出液管加危险带（黄带 + 两侧黑环）；流向箭头锥体 ×6（蒸汽/空气/水/CIP/CO₂/物料）；介质名牌 ×6（蒸汽/空气/水/CIP 酸碱/CO₂/碳酸化机）。共享材质 M(0xd9c9a8) 本体未动——仅定点换用新材质，热水管/分汽缸本体等共用件不受牵连。<b>【D Andon 塔灯】</b>：双线灌装位 + 封盖位（同线同状态）、UHT/灭菌链、码垛机共 6 塔，批量合并几何（底座/灯杆/三段一网格）+ 顶点色驱动（亮色 = MeshBasicMaterial 顶点色，零点光源）：绿 = 运行、黄 = 待料/阻塞/健康度 ≤ warnThreshold 预警、红 = 故障/换型/任一灭菌链 CIP 中/码垛改造中、全灭 = 待机/停线；状态源全为既有派生（lineStatus / stationStatus / palletizerState + healthOf），updateScene 每帧经 __andonTick42 刷新（状态不变零写入）；抽屉新增「现场标识与 Andon」节含图例行（#andonLegend42）与划线开关。静态件（洁净间/走廊/标识/箭头）登记 D.staticGroups 走既有合并；划线 +1 网格、塔灯 +1 网格、色环 +1 实例网格。<b>【E 校验】</b>：探针走自有无头浏览器路线补跑欠账（navGate / traceAudit / queueRun / schedRun 三场景）+ 例行回归全家桶，数字逐项写当轮交付汇报；DrawCall 双态守线（待机 ≤650 / 作业 ≤800）同口径实测。本轮无任何新增计时（总表第 40 项）。</div></div>
+      <div class="dcell wide"><div class="l">时间基准总表（R19 审计 · 防再犯）</div><div class="v" style="font-size:12.5px;line-height:1.7;font-weight:500">口径：<b>仿真时钟</b> = S.simMin（1 真实秒 = 0.55 仿真分钟 × 倍速）；凡决定产量/库存/钱/事件时点的计时必须在仿真时钟上，真实秒只许用于纯视觉与设备层。<br>1. 生产流量/队列/批次 — 仿真分钟 step(dtMin) — ✔ 一致<br>2. 故障/维修/保养 faultLeft·maintLeft·等待备件 — 仿真分钟 — ✔ 一致<br>3. CIP 间隔与时长 cipLeft — 仿真分钟 — ✔ 一致<br>4. 换型/排空预约/SMED 三段 — 仿真分钟 — ✔ 一致<br>5. 抽检间隔/整改期 — 仿真分钟 — ✔ 一致<br>6. 健康度衰减（×负荷） — 仿真分钟 — ✔ 一致<br>7. 罐车提前期/卸料/离场 RAW.tankerLeft — 仿真分钟 — ✔ 一致<br>8. 市场价格期（30/期） — 仿真分钟 — ✔ 一致<br>9. 班次轮换/昼夜光照 — simMin 纯派生 — ✔ 一致<br>10. 订单交期/延误罚金/满意度罚金窗 — 仿真分钟（按时率/抽检率为事件计数窗） — ✔ 一致<br>11. 冷库启停周期 — 仿真分钟 — ✔ 一致<br>12. 码垛机内核节拍 — 仿真分钟 — ✔ 一致<br>13. AGV/叉车/卡车周转 — R18 重挂仿真时钟 · R21 分段补偿曲线（≤2.2 线性同步、4× 放大至 3.2、附加电耗平方级入账） — ✔ 一致<br>14. 任务人员/巡检工人<b>移动</b> — 原真实秒 ✘ → <b>R19 已修</b>：移动与取样停留乘 S.speed 倍速因子（延时摄影口径，1× 不变）；其事件门控与作业存续（故障修完才收工等）始终与仿真状态同源。修前差：4× 时维修工相对世界慢 4 倍、常在故障已修完后仍未走到；修后人与世界同比例<br>15. 导览停留/解说字幕 — 真实秒 — 豁免（面向观看者的叙事节奏；轨迹推进含 speedF）<br>16. 相机阻尼/灯光闪烁/粒子/雷达转速/罐车与垛体滑动动画 — 真实秒 — 豁免（纯视觉，状态本体在仿真侧）<br>17. 帧率采样/画质自动降级 — 真实秒 — 豁免（设备性能层）<br>18. 仓库扩容工期（R20 新增）— 仿真分钟 stepExpansion（换型步同样推进）— ✔ 一致<br>19. 库龄计时（R20 新增）— simMin 纯派生（落位事件 inAtMin → 当前 simMin）— ✔ 一致<br>20. 促销计时（R21 新增）— 仿真分钟 promoTick（到期自动结束恢复原价；让利/到达调制为事件点同源）— ✔ 一致<br>21. 压力测试计时（R22 新增）— 仿真分钟 stressTick22（断供/爆单 until、停电 powerLeft、复电爬坡 powerRamp、连环二段 atMin 全在 step 内推进；停电分支内维修倒计时同口径）— ✔ 一致<br>22. 排班系数（R22 新增）— 无独立计时：labor 按班次段（仿真分钟分段）乘、repair/qc 按当前班系数调制既有仿真分钟倒计时/累计 — ✔ 一致<br>23. 停机归因与告警去重（R23 新增）— 仿真分钟 step 内 downTick23/alertLogTick23 推进（归因按步互斥分桶、严重告警同键 240 分钟去重入日志；班次目标为 simMin 纯派生 + 实例起点做差）— ✔ 一致<br>24. 第 4 条线工期（R23 新增）— 仿真分钟 stepLine4 在 step 内推进（换型/停电步同口径，施工不因换型停工）— ✔ 一致<br>25. 码垛改造工期 + 告警处置计时（R24 新增）— 仿真分钟 stepPalUp / alertCenterTick24 在 step 内推进（改造工期与第 4 条线同口径；告警确认时刻/未确认时长/当日处置计数全读 S.simMin，翻页清零点在 archiveDay）— ✔ 一致<br>26. 演示日阶段推进 + 存档（R25 新增）— 仿真分钟 demoTick25 在 step 内推进（阶段年龄/波次等待窗/阶段超时全读 S.simMin；解说字幕停留为真实秒，属第 15 项叙事豁免；用户接管为真实事件、只停脚本不改时钟）；存档为静态快照无独立计时，恢复后全部倒计时按 S.simMin 延续 — ✔ 一致<br>27. ESG 碳账/废水 + 组合建议（R26 新增）— 无独立计时：碳排是 S.powerKwh/steamKg 累计量的纯派生（读数时现算），废水在 CIP/换产事件点随 chargeUtilities 同步拆分累计，建议在 renderKpis 节奏读归档/库龄/库存/结算统计 — ✔ 一致（派生与事件点同源）<br>28. 防撞守卫/靠边钳制/人员步长（R27 新增）— 无独立计时：navSeparationBlocked 与 asidePointClear 是 agvDrive / moveVehicle / 靠边构造在车辆时钟步内的纯几何判定，crewWalk 步长钳制在人员移动时钟内，__navStats 采样随 updateScene 帧/泵推进 — ✔ 一致（与第 13/14 项同钟）<br>29. 运行时后处理 + 防撞断言门（R28 新增）— 无独立计时：postProcessRuntime28 只在第 4 条线完工/重置事件点一次性执行（审计/合并/剔除表重收），navGate 为探针复跑既有采样口径的判定读数—— ✔ 一致（事件点与读数口径，不另立时钟）<br>30. 贷款计息/到期还款 + 季节因子（R29 新增）— 仿真分钟 stepCash29 在 step 内推进（计提 = 本金 × 年化 ÷ 365 × 仿真天数；到期判定/逾期补还同点）；季节因子为 simMin 纯派生（日序/年内日/余弦曲线，读数时现算，与第 9 项同类）—— ✔ 一致<br>31. 复盘汇算 + 任务完成时刻（R30 新增）— 无独立计时：复盘为读数时对日报做差/归档求和的纯派生；任务完成时刻 = 既有事件发生的 S.simMin（订单结算/交接/换型/确认/保养/波次/归档全在仿真时钟事件点，导出/大屏为用户动作发生的当刻 simMin）—— ✔ 一致<br>32. 复盘环比 + 唤回钮显隐（R31 新增）— 无独立计时：环比为读数时对日报归档的纯派生（与第 31 项同类）；唤回钮显隐为 body 类驱动的纯 CSS 呈现，无任何计时 —— ✔ 一致<br>33. 码垛分段埋点 + 缓冲架/瓶账可视化 + 满位增援（R32 新增）— 无独立计时：埋点随 stepPalletizer 仿真步更新（与第 12 项同钟）、画面计数随 updateScene 帧节奏回写、增援为 assignAgv 派单判定（无计时）—— ✔ 一致<br>34. 经营挑战判定 + 命令面板（R32 打包轮新增）— 无独立计时：挑战当前值/连续段/现金/碳排全为读数时对既有归档与派生账的现算（与第 27/31 项同类）；四线满产连续时长在 renderChal32 渲染节奏按 S.simMin 差累计（与第 14 项人员移动同为呈现层读数、条件源为仿真状态）；P0 计数在 alertCenterTick24 仿真步内同点累计（与第 23/25 项同钟）；命令面板为纯 DOM 索引与导航，无计时 —— ✔ 一致<br>35. 批次召回 + 峰谷电价（R33 新增）— 仿真分钟/仿真钟点派生：召回发起/解除时刻、满意度召回事件窗（24 仿真小时）全读 S.simMin；隔离转运/返架走 AGV 既有车辆时钟（第 13 项）；电价档位为 simMin 钟点的纯派生（touTierAt 读数时现算、chargeUtilities 按入账时刻 S.simMin 定格计价，与第 30 项季节因子同类）—— ✔ 一致<br>36. 原料批账与上游召回 + 谱系自检（R34 新增）— 无独立计时：批账扣减/建批在 stepR2 的 RAW.level 增减同点（与第 7 项罐车同钟）、归属在 traceOnDischarge 出料事件点定版、冻结三闸在 step 流量同点判定、召回发起/解除时刻与满意度事件窗全读 S.simMin；自检本体为读数时对 TRACE/SLOTS 现算、触发走仿真时钟（出料归档事件点 + 每 360 仿真分钟 tick，与第 31 项同类）—— ✔ 一致<br>37. 双供应商与审计包（R35 新增）— 无独立计时：供应商承诺/实际提前期在下单事件点抽定、实际到场仍由 RAW.tankerLeft 仿真分钟倒计时驱动（与第 7 项罐车同钟）、延迟判定与少送抽定在到场事件点、台账累计在卸料完成事件点；风险提前期为 CONFIG 常量纯读数；审计包为导出动作当刻对既有台账的只读快照（manifest 仿真时刻读 S.simMin、真实时刻仅作文件元数据）—— ✔ 一致<br>38. 第二灭菌链工期 + 双链 CIP/段调度（R37 新增）— 仿真分钟 stepSter2 / sterCipTick37 在 step 内推进（工期与第 24/25 项投资同口径、换型/停电步同点推进；链 2 CIP 间隔/时长与链 1 同参数同钟；段的入队/开工/完工时刻与断供外推全读 S.simMin 与既有仿真速率，无独立计时）—— ✔ 一致<br>39. 排产建议计算/刷新留痕 + 预置选品（R38 新增）— 无独立计时：建议为读数时对订单队列/当前单/无菌分区/灭菌段账的纯派生（与第 27/31 项同类），方向变化留痕时刻读 S.simMin；预置是纯选择状态、不触发任何流程与计时，玩家点产品按钮后走既有换型时钟（第 4 项）—— ✔ 一致<br>40. 真实感对表呈现层（R42 新增）— 无独立计时：卫生三区着色/洁净间/参观走廊/划线/色环/标识全为建场期静态几何（无任何推进）；Andon 塔灯在 updateScene 帧节奏读既有状态派生（lineStatus / stationStatus / palletizerState + 健康度）写顶点色，与第 16 项纯视觉同类、状态本体全在仿真侧 —— ✔ 一致</div></div>
 
       <div class="dcell wide"><div class="l">R20 PDCA 打包轮（仓库扩容投资 + 库龄/滞销预警 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：货架容量原是写死的 99 位——连续生产把货架跑满后只能堵产，产能扩张无从投资；逐货位托盘有谱系无库龄，临期库存看不见。新参数全在 <b>CONFIG.r20</b>（扩容：单次 +33 位 / 费用 ¥48,000 / 工期 240 仿真分钟 / 上限 2 次；库龄：五产品保质期、临期 50% / 滞销 75% 比例阈值、周转 20 天持续 360 分钟），读数口 <b>window.__r20()</b>，探针口 <b>window.__r20Probe</b>（expandRun / expandAgvRun / ageRun），回归包 <b>window.__r20Check()</b>。<b>① 仓库扩容（A 项）</b>：调度台「仓库扩容投资」——按钮只弹确认弹窗（费用/工期/货位增量明示），确认后才扣款：¥48,000 进当前产品台账 fixedCost（与保养/备件同源）+ EXP.spent 累计，日报当日做差三处同源（抽屉格 / 下载 txt / 归档行）。工期走 step 仿真时钟（总表第 18 项），施工期新排区域有橙白围挡 + 2 名施工人员（臂摆动画），且新货位<b>不存在于</b> SLOTS/渲染位表——入库结构上落不进去（expandRun 中程断言：总数不变、maxRack ≤2、freeSlotForPut 只够既有排）。完工事件 completeExpansion 一次做四件事：货架 3D 显形（梁柱复用基础排材质、层板、车道标线、横道东延；实例网格容量建场时已按 220 预建不重建）、围挡施工队撤场、D.whCasePos/whTapePos +33、SLOTS +33（idx 连续、within 0..32、排名续 D/E），并把新排矩形并入 AGV 净距核算；此后入库/FIFO（全局 seq 序）/谱系（batchKey 承接）零改动覆盖新排——expandAgvRun 把基础排占满后泵送生产，入库 AGV 真把托送进新排且守恒不破。取货车道改 serviceLaneOf(rack) 派生（排面西侧 4.5，与基础三排逐值一致）。货位总数对账口径：SLOTS.length ≡ D.whCasePos.length（__r20().expand.slotsEqual）。重置 = 新工厂：resetWarehouseExpansion 先于 initRackSlots 执行（扩容排整组移除、位表截回基础 99、净距矩形撤下、EXP/AGE 清零）。<b>② 库龄与滞销（B 项）</b>：库龄与谱系同源——起算点 = AGV 落位事件（putXfer 写 slot.inAtMin = S.simMin，与 traceOnSlot 同一事件；期初 26 托种子以建账时刻起算、无谱系记录，卡面明示）。抽屉「库龄与滞销预警」出各产品在库托数/平均/最老库龄；库龄占保质期 ≥50% 临期（货架该托改琥珀色 + 红色倒锥标记）、≥75% 滞销（改红色 + 标记），预警集合签名变化即置 rackDirty 刷新标记，不依赖出入库事件；出库仍严格全局 FIFO——最老先出天然先消化临期（ageRun 定点回拨 60%/85% 两托，预警与标记、FIFO 最老托三者同源命中）。周转天数 = 在库托 ÷ 日均出库托（会话累计，开局 0.5 仿真天内不判定），持续高于 20 天满 360 仿真分钟 → 抽屉/看板出「建议减产/促销出货」（只提示，AGE.turnHighSince 持续计时在 renderKpis 节奏 tick）。日报三处加「最老在库批次库龄」行（同读 ageSummary().oldest）。点货架托盘的信息卡同步出本托库龄行。<b>③ 例行回归（C 项，活页面实跑）</b>：守恒 20,000 步（成品 5,414,748、无 NaN/负值、wh ok、谱系归档 60 批）；三段补证（入库 +144 托守恒恒等、FIFO 消失序首个 = 快照最小 seq 165、排空换型在制 4,200 → 切橙汁完成）；混合车队净距四值与 R18/R19 基线逐值相同（−0.75 / 1.05 / −1.5 / −0.35）；CSS 安全区 allOk；罚金三方 ¥416,023 = ¥416,023 = ¥416,023；市场三方 ¥2,179,144.87 残差 0；苏打在册且累计产出 1,221,774 瓶；谱系抽查 3 批 diff 全 0；健康度时序（90 衰减 → 65 预警带 warned → 20 后 50 步内劣化故障 +1、修复回 71）；满意度回路（两单逾期 80→63.3；高满意 12 单均 34,067 vs 低满意 7 单均 26,971）；出库链速复测 chainCapacity 2.03 托/分 ≥1.75；DrawCall 待机 592 ≤620（扩容后生产中 634，见真机性能区 R20 注）。</div></div>
       <div class="dcell wide"><div class="l">R21 PDCA 打包轮（4 倍速分段补偿曲线 + 促销出货 + 例行回归）</div><div class="v" style="font-size:12.5px;line-height:1.6;font-weight:500"><b>起因</b>：R18/R19 诚实边界收口（补偿封顶 2.2、4× 残余失配 ≈1.8×、暂存会涨）+ R20 滞销预警只报警、无消化手段。新参数全在 <b>CONFIG.r21</b>，读数口 <b>window.__r21()</b>，探针口 <b>window.__r21Probe</b>（comp4Run / promoRun / ageFifoRun），回归包 <b>window.__r21Check()</b>。<b>① 分段补偿曲线（A 项）</b>：vehComp 改分段——倍速 ≤ compLinearTo=2.2 与 R18 逐值一致（comp = 倍速、附加系数 A 恒 1、无附加电耗）；2.2–4 区间线性放大到 compCurveMax=3.2（4× 时 comp=3.2），残余失配降到 4/3.2 = <b>1.25×</b>。<b>新诚实边界（取代 R18 口径）</b>：4× 长跑残余 1.25× 仍在——车辆节拍仍慢于产量 25%，持续 4× 暂存仍会缓涨（比旧上限慢得多），外加货架容量边界不变。高速不免费：放大段 A = comp/min(倍速,2.2)（4× 时 1.45），车辆电耗在既有结算点再 ×（A²−1）附加（4× 约 +111% 于车辆电耗部分），经 chargeUtilities 唯一入口进电耗台账，VEH.surchargeKwh 累计、抽屉物流区补偿行明示系数/残余失配/附加 kWh。码垛联动上限 palCompCap 1.35 → <b>1.5</b>。探针 comp4Run 三组同口径对照（新曲线 / VEH.compMode="r18" 旧上限 / 关补偿）：满格率与车辆电耗增量逐组返回，数字写交付汇报、不在本节预填；1×/2× 路径与 R18/R19 逐值同构（曲线在 ≤2.2 段即恒等式），回归抽测沿用 __r19Check 基线口。<b>② 促销出货（B 项，与 R20 闭环）</b>：控制台「🏷 促销出货」——点击只弹确认弹窗（选品 chips、折扣/时长/该产品在库与临期滞销托数明示，默认选临期+滞销最多的产品），确认才开启。生效三点同源：收入结算点促销产品按价 ×(1−discount=0.15) 入账、让利额单列进该产品台账 <b>promo</b> 字段（利润自动按促销价结算、无第二套账）；客户单到达——间隔 ×intervalFactor=0.55、选品 productShare=0.6 概率倾斜促销产品、其单规模 ×sizeFactor=1.35（满意度公式/回路不动，两组因子并存相乘，调度台满意度注脚同步明示）；装车兑现点计促销产品出货托。时长 durationMin=480 仿真分钟由 promoTick 在 step 内到期自动结束恢复原价（总表第 20 项），活动中点按钮可提前结束。日报三处加促销行：抽屉格（当日让利/促销出货托/进行中状态）、下载 txt、归档摘要行——全部 dayrepDelta 当日做差（快照 promoYuan = Σ ledger.promo、promoShip = PROMO.totalShipPallets），与台账同源。探针 promoRun：基线相 vs 促销相的出库托/分、预警托数变化与让利台账↔日报 0 差判定，数字写交付汇报。重置 promoReset 全清（进行中促销取消、弹窗关闭、计数清零）。<b>③ 例行回归（C 项）</b>：__r21Check() = R20 全量回归包 + r21 读数；库龄抽测新增 ageFifoRun（回拨一托至保质期 60% 验预警标记命中与 FIFO 最老托同源、测后还原 inAtMin）；守恒/三段补证/会车/CSS/罚金/市场/苏打/谱系/健康度/满意度/出库链速/DrawCall 沿既有口逐项复跑，数字写交付汇报。</div></div>
@@ -1221,6 +1228,7 @@ body.big-mode .topbar,body.big-mode .kpi-strip,body.big-mode .dispatch,body.big-
       <li>R35 打包轮（双供应商 + 审计包导出）：调度台采购行有供应商选择段 #supSeg35（默认甲、已在途车按单时供应商不变）；window.__r35Probe.supRun() ok = true（甲 4 单逐笔 onTime = true / shortFrac = 0 / pm = 1；乙 14 单实测准时率落 [20%, 97%]（设定 65% 同数量级）、迟到与少送事件在 buysLog 逐笔可查（leadActual &gt; leadPromised / shortFrac &gt; 0 且日志有 bad 行）、实到/应到比落 [74%, 100%]、pm = 0.88；台账分列 splitDiffA / splitDiffB &lt; ¥0.01、合计与 MARKET.buySpent 增量 totalDiff &lt; ¥0.01；leadWiden = 32 分）；抽屉「供应商台账」节两家分列（量/额/准时率/缺斤率/平均提前期）+ 按供应商反查原料批次列表；__r34().lots 带 supplier 字段、原料召回下拉标注供应商；window.__r35Probe.auditRun() ok = true（审计包 10 份文件 manifest 校验和重算全对、procureDiff &lt; ¥0.01、谱系行数对账）；数据抽屉存档区有「导出审计包 JSON」钮、导出后状态行回写自验结论且生产日志有导出行；window.__r35Check() 全绿（r35pack.auditShaOk = true、leadWiden = 32）、时间基准总表已续第 37 项</li>
       <li>R37 打包轮（灭菌排队可视化 + 第二灭菌链）：调度台有「灭菌队列」卡 #sterQueue37（每链处理批次/剩余/预计分钟、排队段位次与等待、双线分区水位与预计断供，口径注记在卡下）；灭菌工位信息卡有灭菌链/队列/双线断供三行；线等料日志带因果（批次在链 N 处理中 / 队列第 N 位 / 还在调配 / 未排产，与 __r37().queue 实况对得上）；window.__r37Probe.queueRun() ok = true（双产品各 2 批 × 6000 瓶：双链总完工 &lt; 单链 × 0.8、双线等料分钟双链 ≤ 单链、谱系出料批次灭菌实测缺失 = 0）；window.__r37Probe.jumpRun() ok = true（断供产品批次越过队首上链、__r37().jumps 留痕 seg/over 键与构造一致）；调度台「灭菌能力扩容」卡点钮只弹确认、确认后 __r37().ster2.buildingLeftMin 出现且台账 fixedCost 增量 = ¥95,000、施工期第一链照常出料（ster.lastMove 有值）、完工后 chains 长度 = 2 且队列卡出现链 2 行；双链下一链 CIP 时另一链 lastMove 不为 0（sterCipTick37 独立周期）；存档往返后 __r37() 的 ster2/queue/jumps 与存档前一致；window.__r37Check() 全绿（r37assert.ok = true、segPoolDiff &lt; 0.5）、时间基准总表已续第 38 项</li>
       <li>R38 打包轮（排产建议 · 只建议）：调度台有「排产建议」卡 #schedCard38（每线一行：建议维持/切产品 + 带数字理由 + 采纳钮仅切换建议有）；window.__r38Probe.schedRun() ok = true（三场景：A 可乐临期 30 分 + 无菌 6,000 → 有线建议切可乐；B 苏打无菌 0 + 灭菌队列 3 段 → 无线建议苏打且 blocked 含苏打、理由含「无菌料 0 瓶」；C 双线在产双热销交期 +600 → 全维持；采纳自证 preset 落位且线 pid/coTo/订单队列零变化）；采纳后双线分工卡预置按钮带虚线描边与「· 预置」标记、点中后走既有换型且预置清除；建议方向变化进生产日志、__r38().hist 可复盘、logCount 递增；存档往返后 SCHED38.preset 与存档前一致；window.__r38Check() 全绿（r38assert.ok = true）、时间基准总表已续第 39 项</li>
+        <li>R42 打包轮（真实感对表 · 一）：地面三区着色在位（__r42().zones 三区 rect 与 CONFIG.r42 一致）、双线洁净间玻璃罩 + 参观走廊建成且 navGate 复跑通过（隔断零登记障碍、路线零改动）；划线开关往返 ok（__r42Probe.markRun()：before 开 → 关 → 开、quads &gt; 40）；Andon 四态映射 ok（__r42Probe.andonRun()：等料黄 / 故障红 / 运行绿 / 健康预警黄 / 待机全灭）、塔位 6 个、色环 ≥ 15；管道整管着色（蒸汽红 / 空气灰 / 水绿）与介质名牌在位；抽屉「现场标识与 Andon」节含图例 #andonLegend42 与划线开关 #markingsToggle42；window.__r42Check() 全绿（r42assert.ok = true）、时间基准总表已续第 40 项</li>
     </ul>
   </div>
 </aside>
@@ -1946,7 +1954,7 @@ var CONFIG = {
   r34: {
     rawInspectFeePerBatch: 350,      /* 在制冻结批次批检费 ¥/批（上游段损失之一） */
     rawTankHandlePerBottle: 0.15,    /* 罐存隔离处置费 ¥/瓶当量（上游段损失之二，按发起时该批罐存余量计） */
-    auditFieldCount: 10,             /* 谱系完整性审计字段数（配方/原料批/灭菌实测/灌装线/灌装时段/抽检/成托号/货位/波次车次/召回状态） */
+    auditFieldCount: 12,             /* 谱系完整性审计字段数（R34 十项：配方/原料批/灭菌实测/灌装线/灌装时段/抽检/成托号/货位/波次车次/召回状态 + R36 两项：无菌罐单产品/灌装线字段；R42 回归复跑发现 R36 增项后本常量未同步、auditRun 的 ok 恒假，已对齐字段表实数） */
     auditEveryMin: 360               /* 谱系自检常驻触发间隔（仿真分钟）：每批出料归档后跑一次 + step 内每 360 仿真分钟跑一次（traceAuditTick34） */
   },
   /* ---- R35 打包轮：双供应商体系 + 一键审计包导出 ----
@@ -2001,6 +2009,34 @@ var CONFIG = {
       needScaleBottles: 20000,  /* 订单缺口打分归一量（瓶） */
       wUrgency: 100, wDemand: 40, wStay: 30, wSwitch: 25, wCovered: 20, wThin: 45, wNoSupply: 200
     }
+  },
+  /* ================= R42 · 真实感对表（一）：卫生三区 / 地面划线 / 管道介质标识 / Andon 三色塔灯 =================
+   * 依据：同轮调研报告《真实工厂与优秀 3D 案例参考》（2026-10-23，源：GB 12695-2016 / GB 14881-2013 /
+   * GB 7231-2003（内容已并入 GB 2894-2025）/ 洁净行业惯例 / OSHA 划线解读 / Krones·PepsiCo·图扑案例）。
+   * 口径标注：三区划分与压差梯度 = 规范分区原则 + 许可审查惯例（灌装间 ISO 7 背景 / +10 Pa、准清洁 +5 Pa）；
+   * 划线线宽 100 mm 与人行净宽 1.2–1.5 m = 中国工厂 5S 惯例值（非国标强制）；管道色 Hex = 报告给出的
+   * Three.js 近似渲染值（国标只给色名/色号，不当规范值引用）。实现全在 buildRealism42 + 地面贴图分区，
+   * 读数口 window.__r42()、探针 window.__r42Probe、回归包 window.__r42Check()。 */
+  r42: {
+    zones: {   /* rect = [x0, z0, x1, z1] 世界坐标，边界对齐既有功能分区（罐区垫/杀菌链垫/产线带） */
+      clean:   { color: "#c9d6c4", band: "#2fbf8f", rect: [-14, -27, 24, 27],  label: "清洁作业区 · 灌装/封盖" },
+      quasi:   { color: "#87977f", band: "#7fb069", rect: [-74, -44, 46, 34],  label: "准清洁区 · 调配/UHT/无菌罐" },
+      quasiCip:{ rect: [-42, -58, -8, -44] },                                   /* CIP 站（清洗液侧）同属准清洁区 */
+      general: { color: "#969e97", label: "一般作业区 · 包装/仓储/月台" }        /* = 地面水泥基底色 */
+    },
+    markings: { defaultOn: true,           /* 大屏模式默认开（= 默认值），抽屉可显隐 */
+      lineW: 0.1,                          /* 主车道黄边线宽 100 mm（1:1 米制） */
+      walkW: 1.4,                          /* 人行绿道净宽（惯例区间 1.2–1.5 m） */
+      yellow: 0xF5C518, walkGreen: 0x2E9E5B, white: 0xF2F2F2, red: 0xD32F2F, black: 0x23272b, corridor: 0x9fb6bd },
+    pipes: { steam: 0xE60012, air: 0xB5B5B5, water: 0x00A651, gas: 0xFFD200,  /* GB 7231：蒸汽大红/空气淡灰/水艳绿/气体中黄 */
+             cip: 0x7D3C98,               /* 酸/碱 = 紫 */
+             ringLen: 0.22,               /* 色环长（规范 150 mm，略放大保可读） */
+             hazardLen: 0.5 },            /* 浓酸碱危险带：黄带 + 两侧黑环 */
+    cleanroom: { x0: -2, x1: 22, halfD: 5.2, h: 5.6, doorX0: -3.2, doorX1: -0.2 },  /* 灌装 Bloc 玻璃罩（每线，x 覆盖灌装+封盖、南墙留人员气锁门洞） */
+    corridor: { x0: -4, x1: 24, z0: 25.6, z1: 28.0 },                              /* 2 号线洁净间外侧参观走廊（宽 2.4 m） */
+    andon: { segH: 0.34, segW: 0.36, poleH: 2.7,                                  /* 塔灯：emissive 小几何批量合并、零点光源 */
+             on:  { r: 0xff2213, y: 0xffc400, g: 0x00c853 },
+             off: { r: 0x38120d, y: 0x38300e, g: 0x10301c }, pole: 0x23272b }
   },
   /* ---- 布局参数（间距放大轮：各区间距/设备坐标收敛到这里，接手改间距先改这里再核对 builder 内的硬坐标） ----
    * 厅内墙体跨度 hallW×hallD = 300×116（x ±150 / z ±58，buildShell 按此写线）；杀菌工艺链沿 chainZ 一字拉开：
@@ -7410,6 +7446,280 @@ function exitSign(parent, x, y, z, ry){
   return grp;
 }
 
+/* ================= R42 · 真实感对表（一）buildRealism42 =================
+ * 落地调研报告四项：A 卫生三区（地面着色在 buildShell 贴图、本函数补吊牌/压差牌/洁净间/参观走廊）/
+ * B 地面划线系统（薄片合并几何、独立开关）/ C 管道介质标识（整管着色在 buildUtilities、本函数补
+ * 色环/危险带/流向箭头/介质名牌 + CO₂ 支线）/ D Andon 三色塔灯（批量合并几何、顶点色驱动、零点光源）。
+ * 静态件进 D.staticGroups 走既有静态合并；划线与塔灯各 1 个合并网格（+1/+1 draw call 量级）。
+ * 洁净间为纯视觉隔断：不登记进 NAV_OBSTACLES / PERSON_OBSTACLES / COLLIDERS，南墙留人员气锁门洞
+ * 对齐既有巡检路线穿越点——不切断任何车辆/人员既有路线（navGate 口径不变，建成后复跑验证）。 */
+var MARK42 = { mesh: null, quads: 0 };
+var RING42 = { mesh: null, count: 0 };
+var ANDON42 = { mesh: null, segs: {}, cur: {} };
+/* 顶点色批量几何：划线用 flat quad、塔灯用 box，同一材料（MeshBasicMaterial vertexColors，无光源成本） */
+function batch42(){
+  return { pos: [], col: [], n: 0,
+    quad: function(x1, z1, x2, z2, x3, z3, x4, z4, y, color){
+      var c = new THREE.Color(color), P = this.pos, C = this.col;
+      var vs = [[x1,y,z1],[x2,y,z2],[x3,y,z3],[x1,y,z1],[x3,y,z3],[x4,y,z4]];
+      for(var i = 0; i < 6; i++){ P.push(vs[i][0], vs[i][1], vs[i][2]); C.push(c.r, c.g, c.b); }
+      this.n += 6;
+    },
+    strip: function(x0, z0, x1, z1, w, y, color){   /* 两点间宽 w 的带（中心线 → 四角） */
+      var dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz) || 1, px = -dz / len * w / 2, pz = dx / len * w / 2;
+      this.quad(x0 + px, z0 + pz, x1 + px, z1 + pz, x1 - px, z1 - pz, x0 - px, z0 - pz, y, color);
+    },
+    frame: function(x0, z0, x1, z1, w, y, color){
+      this.strip(x0, z0, x1, z0, w, y, color); this.strip(x1, z0, x1, z1, w, y, color);
+      this.strip(x1, z1, x0, z1, w, y, color); this.strip(x0, z1, x0, z0, w, y, color);
+    },
+    corners: function(x0, z0, x1, z1, cl, w, y, color){   /* L 形角标（定置框常用画法） */
+      this.strip(x0, z0, x0 + cl, z0, w, y, color); this.strip(x0, z0, x0, z0 + cl, w, y, color);
+      this.strip(x1, z0, x1 - cl, z0, w, y, color); this.strip(x1, z0, x1, z0 + cl, w, y, color);
+      this.strip(x1, z1, x1 - cl, z1, w, y, color); this.strip(x1, z1, x1, z1 - cl, w, y, color);
+      this.strip(x0, z1, x0 + cl, z1, w, y, color); this.strip(x0, z1, x0, z1 - cl, w, y, color);
+    },
+    hazard: function(x0, z0, x1, z1, w, y, cA, cB){   /* 黄黑警戒纹：沿带交替分段（45° 斜纹的俯视等效画法，与 R8 交接段边线同语言） */
+      var dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz), seg = 0.9, n = Math.max(1, Math.round(len / seg));
+      for(var i = 0; i < n; i++) this.strip(x0 + dx * i / n, z0 + dz * i / n, x0 + dx * (i + 1) / n, z0 + dz * (i + 1) / n, w, y, i % 2 ? cB : cA);
+    },
+    box: function(cx, cy, cz, w, h, d, color){   /* 返回起始顶点序（塔灯段位登记用） */
+      var start = this.n, c = new THREE.Color(color), P = this.pos, C = this.col;
+      var x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - h / 2, y1 = cy + h / 2, z0 = cz - d / 2, z1 = cz + d / 2;
+      var faces = [ [[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]], [[x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0]],
+                    [[x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1]], [[x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0]],
+                    [[x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0]], [[x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1]] ];
+      for(var f = 0; f < 6; f++){ var q = faces[f], tri = [q[0], q[1], q[2], q[0], q[2], q[3]];
+        for(var i = 0; i < 6; i++){ P.push(tri[i][0], tri[i][1], tri[i][2]); C.push(c.r, c.g, c.b); } this.n += 6; }
+      return start;
+    },
+    build: function(){
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(this.pos, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(this.col, 3));
+      var mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true }));
+      mesh.castShadow = false; mesh.receiveShadow = false;
+      return mesh;
+    } };
+}
+function buildRealism42(){
+  var C = CONFIG.r42, P = C.pipes, CR = C.cleanroom;
+  /* ---------- A1 洁净间玻璃罩 + 参观走廊 + CO₂ 支线（静态组，走既有合并） ---------- */
+  var gs = new THREE.Group(); scene.add(gs); D.staticGroups.push({ root: gs, label: "R42洁净间与走廊" });
+  if(!GLASSMAT) GLASSMAT = new THREE.MeshStandardMaterial({ color: 0xbfe6f2, roughness: CONFIG.mats.glass.rough, metalness: CONFIG.mats.glass.metal, transparent: true, opacity: 0.22 });
+  LINE_Z.forEach(function(lz){
+    var zN = lz - CR.halfD, zS = lz + CR.halfD, len = CR.x1 - CR.x0, cx = (CR.x0 + CR.x1) / 2;
+    var gn = new THREE.Mesh(new THREE.BoxGeometry(len, CR.h, 0.06), GLASSMAT); gn.position.set(cx, CR.h / 2, zN); gs.add(gn);   /* 北墙整面 */
+    var s1w = CR.doorX0 - CR.x0, s2w = CR.x1 - CR.doorX1;                                                                     /* 南墙两段 + 气锁门洞 */
+    var gw1 = new THREE.Mesh(new THREE.BoxGeometry(s1w, CR.h, 0.06), GLASSMAT); gw1.position.set(CR.x0 + s1w / 2, CR.h / 2, zS); gs.add(gw1);
+    var gw2 = new THREE.Mesh(new THREE.BoxGeometry(s2w, CR.h, 0.06), GLASSMAT); gw2.position.set(CR.doorX1 + s2w / 2, CR.h / 2, zS); gs.add(gw2);
+    var gd = new THREE.Mesh(new THREE.BoxGeometry(CR.doorX1 - CR.doorX0, CR.h, 0.05), GLASSMAT); gd.position.set((CR.doorX0 + CR.doorX1) / 2, CR.h / 2, zS + 0.38); gs.add(gd);  /* 门扇滑开位 */
+    B(gs, len, 0.16, 0.16, DARKSTEEL, cx, CR.h, zN).castShadow = false;
+    B(gs, len, 0.16, 0.16, DARKSTEEL, cx, CR.h, zS).castShadow = false;
+    [CR.x0, CR.x1].forEach(function(px){ CY(gs, 0.07, 0.07, CR.h, DARKSTEEL, px, 0, zN, 8).castShadow = false; CY(gs, 0.07, 0.07, CR.h, DARKSTEEL, px, 0, zS, 8).castShadow = false; });
+    [CR.doorX0, CR.doorX1].forEach(function(px){ CY(gs, 0.06, 0.06, CR.h, DARKSTEEL, px, 0, zS, 8).castShadow = false; });
+  });
+  railingRun(gs, C.corridor.x0, C.corridor.z1, C.corridor.x1, C.corridor.z1, 0, 1.05);   /* 参观走廊外侧栏杆（走廊面在划线层） */
+  /* CO₂ 储罐 + 中黄母管 + 碳酸化机（苏打水碳酸化支线，GB 7231 气体 = 中黄） */
+  var co2t = CY(gs, 0.95, 0.95, 3.6, STEEL, 24, 0.3, -52, 16); co2t.rotation.z = Math.PI / 2; co2t.position.set(24, 1.25, -52);
+  B(gs, 1.2, 0.9, 1.6, DARKSTEEL, 22.2, 0, -52).castShadow = false; B(gs, 1.2, 0.9, 1.6, DARKSTEEL, 25.8, 0, -52).castShadow = false;
+  var co2m = CY(gs, 0.13, 0.13, 18, M(P.gas, 0.5, 0.3), 15, 3.1, -50.5, 10); co2m.rotation.z = Math.PI / 2; co2m.position.set(15, 3.23, -50.5);
+  CY(gs, 0.11, 0.11, 2.0, M(P.gas, 0.5, 0.3), 24, 1.9, -51.2, 8).rotation.x = Math.PI / 2;
+  CY(gs, 0.11, 0.11, 1.3, M(P.gas, 0.5, 0.3), 20, 3.1, -49.9, 8).rotation.x = Math.PI / 2;
+  B(gs, 1.7, 1.9, 1.3, MACH, 20, 0, -47.6);                                              /* 碳酸化机 */
+  CY(gs, 0.11, 0.11, 1.5, M(P.gas, 0.5, 0.3), 20, 1.9, -48.6, 8);
+  /* 流向箭头（黑色锥体贴花，挂在主管旁） */
+  function arrow42(x, y, z, dir){
+    var c = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.45, 10), M(0x23272b, 0.8, 0));
+    c.position.set(x, y, z); if(dir === "s") c.rotation.x = Math.PI / 2; if(dir === "w") c.rotation.z = Math.PI / 2;
+    c.castShadow = false; gs.add(c);
+  }
+  arrow42(-25, 7.84, -20, "s"); arrow42(-52.5, 3.14, -46, "s"); arrow42(-84, 2.78, -46, "s");
+  arrow42(-29, 1.8, -39.5, "s"); arrow42(15, 3.23, -50.5, "w"); arrow42(4.5, 6.7, -6, "s");
+  /* ---------- A2 区域吊牌 + 压差牌 + 管道介质名牌（标识组，走既有合并） ---------- */
+  var gp = new THREE.Group(); scene.add(gp); D.staticGroups.push({ root: gp, label: "R42区域与管道标识" });
+  function hang42(text, sub, w, color, x, y, z){ var s = signMesh(text, sub, w, color); s.position.set(x, y, z); gp.add(s); return s; }
+  hang42("清洁作业区", "CLEAN · 灌装封盖 ISO 7 · 正压 +10 Pa", 11, "#2fbf8f", 5, 9.2, 27.6);
+  hang42("准清洁区", "SEMI-CLEAN · 调配 / UHT / 无菌罐 · +5 Pa", 11, "#7fb069", -14, 9.6, 34.6);
+  hang42("一般作业区", "GENERAL · 包装 / 仓储 / 发货月台", 11, "#8b9a92", 96, 10.5, 30);
+  function plate42(title, sub, x, y, z){ var p = nameplateMesh(title, sub, 2.4); p.position.set(x, y, z); gp.add(p); return p; }
+  LINE_Z.forEach(function(lz){ plate42("灌装间 +10 Pa", "正压 · ISO 7 洁净区", -1.7, 3.1, lz + CR.halfD + 0.25); });
+  plate42("准清洁区 +5 Pa", "调配 / 杀菌 · 缓冲更衣后进入", -46, 3.6, 33.8);
+  plate42("参观走廊", "VISITOR CORRIDOR · 隔窗参观", 10, 2.9, C.corridor.z1 + 0.3);
+  plate42("蒸汽 STEAM", "GB 7231 · 大红", -13, 8.7, -52.6);
+  plate42("压缩空气 AIR", "GB 7231 · 淡灰", -57.5, 4.7, -52.6);
+  plate42("生产用水 WATER", "GB 7231 · 艳绿", -88.5, 4.6, -52.6);
+  plate42("CIP 酸 · 碱", "GB 7231 · 紫环标识", -29, 3.3, -46.2);
+  plate42("CO₂ 碳酸气", "GB 7231 · 中黄", 19, 3.6, -49.9);
+  plate42("碳酸化机", "CARBONATOR · CO₂ 注入", 20, 2.6, -46.8);
+  /* ---------- B 地面划线系统（合并薄片几何，y=0.06 高于地面 2 张贴图、低于各地坪垫） ---------- */
+  var mb = batch42(), MY = 0.06, YEL = C.markings.yellow, WHT = C.markings.white, GRN = C.markings.walkGreen, RED = C.markings.red, BLK = C.markings.black, LW = C.markings.lineW;
+  /* 主车道黄边线（实线）：AGV 环线双道 + 交接横道 + B/C 巷 + 北横道 */
+  [[72.55, -26, 72.55, 31.4], [74.45, -26, 74.45, 31.4], [78.55, -26, 78.55, 31.4], [80.45, -26, 80.45, 31.4],
+   [73.5, -26.95, 79.5, -26.95], [73.5, -25.05, 79.5, -25.05],
+   [64, 30.45, 111, 30.45], [64, 32.35, 111, 32.35],
+   [94.55, -24, 94.55, 24], [96.45, -24, 96.45, 24], [110.55, -24, 110.55, 24], [112.45, -24, 112.45, 24],
+   [79.5, -31.95, 111.5, -31.95], [79.5, -30.05, 111.5, -30.05]
+  ].forEach(function(s){ mb.strip(s[0], s[1], s[2], s[3], LW, MY, YEL); });
+  /* 人行绿道（南侧，净宽 walkW + 白边线）+ 交接横道斑马线（x=61，垛位间隙） */
+  mb.strip(-20, 44, 60, 44, C.markings.walkW, MY, GRN);
+  mb.strip(-20, 44 - C.markings.walkW / 2 - 0.05, 60, 44 - C.markings.walkW / 2 - 0.05, 0.08, MY, WHT);
+  mb.strip(-20, 44 + C.markings.walkW / 2 + 0.05, 60, 44 + C.markings.walkW / 2 + 0.05, 0.08, MY, WHT);
+  for(var zb = 29.9; zb <= 32.9; zb += 0.85) mb.strip(61, zb - 0.25, 61, zb + 0.25, 2.0, MY, WHT);
+  /* 白色定置框：下线暂存区整框 + 逐位 L 角 + 码垛单元框 */
+  mb.frame(68.4, -29.2, 72.0, -3.8, LW, MY, WHT);
+  (CONFIG.r9 && CONFIG.r9.stagePos || [[70.2, -19], [70.2, -23.5], [70.2, -14.5], [70.2, -27.5], [70.2, -10], [70.2, -5.5]]).forEach(function(sp){ mb.corners(sp[0] - 0.85, sp[1] - 0.85, sp[0] + 0.85, sp[1] + 0.85, 0.5, LW, MY, WHT); });
+  mb.corners(63.2, -22.8, 70.0, -9.8, 0.7, LW, MY, WHT);
+  /* 红色禁堆区：消防点前 ×2 / 锅炉配电柜前 / 北安全出口前 */
+  mb.frame(56.6, -37.2, 59.4, -35.6, LW, MY, RED); mb.frame(-71.4, -37.2, -68.6, -35.6, LW, MY, RED);
+  mb.frame(-8.9, -48.4, -6.3, -47.0, LW, MY, RED); mb.frame(-31.6, -57.4, -28.4, -55.4, LW, MY, RED);
+  /* 黄黑警戒纹：无菌罐区围堰南缘 / 原料罐区东缘 / CIP 化学品区南界 */
+  mb.hazard(-68, -17.3, 28, -17.3, 0.5, MY, YEL, BLK);
+  mb.hazard(-58.6, -30, -58.6, 30, 0.5, MY, YEL, BLK);
+  mb.hazard(-40, -47.5, -12, -47.5, 0.5, MY, YEL, BLK);
+  /* 参观走廊地面带（浅色面 + 北缘白线） */
+  mb.strip(C.corridor.x0, (C.corridor.z0 + C.corridor.z1) / 2, C.corridor.x1, (C.corridor.z0 + C.corridor.z1) / 2, C.corridor.z1 - C.corridor.z0, 0.05, C.markings.corridor);
+  mb.strip(C.corridor.x0, C.corridor.z0 - 0.06, C.corridor.x1, C.corridor.z0 - 0.06, 0.08, 0.055, WHT);
+  MARK42.mesh = mb.build(); MARK42.quads = mb.n / 6; MARK42.mesh.visible = !!C.markings.defaultOn;
+  scene.add(MARK42.mesh);
+  /* ---------- C 管道色环 + 危险带（单个 InstancedMesh，实例色） ---------- */
+  var rings = [];
+  function ring42(x, y, z, axis, r, color, len){ rings.push({ x: x, y: y, z: z, axis: axis, r: r, color: color, len: len || P.ringLen }); }
+  ring42(7.3, 2.85, -51, "x", 0.66, P.steam); ring42(9.7, 2.85, -51, "x", 0.66, P.steam);            /* 分汽缸（保温本体）两端红环 */
+  ring42(-12.5, 7.2, 10.4, "y", 0.27, P.steam); ring42(-12.5, 9.7, 10.4, "y", 0.27, P.steam);        /* 机组进汽管红环 */
+  ring42(-29, 1.8, -45.6, "z", 0.18, P.cip); ring42(-29, 1.8, -41.4, "z", 0.18, P.cip);              /* CIP 供液紫环 */
+  ring42(-35, 1.65, -47.6, "x", 0.18, P.cip); ring42(-23, 1.65, -47.6, "x", 0.18, P.cip);           /* CIP 汇管紫环 */
+  ring42(-18, 3.23, -44, "x", 0.16, P.cip);                                                          /* CIP 去 UHT 紫环 */
+  [-37, -29].forEach(function(tx){                                                                  /* 浓酸/碱危险带：黄带 + 两侧黑环 */
+    ring42(tx, 0.9, -52.5, "z", 0.14, P.gas, P.hazardLen);
+    ring42(tx, 0.9, -52.5 - P.hazardLen / 2 - 0.04, "z", 0.145, 0x23272b, 0.08);
+    ring42(tx, 0.9, -52.5 + P.hazardLen / 2 + 0.04, "z", 0.145, 0x23272b, 0.08);
+  });
+  ring42(4.5, 6.7, -20, "z", 0.28, 0xd97706); ring42(4.5, 6.7, -9, "z", 0.28, 0xd97706);             /* 无菌物料主管：产品色环（开局上游 = 冰红茶） */
+  ring42(4, 7.6, LINE_Z[0], "y", 0.2, 0xd97706); ring42(4, 7.6, LINE_Z[1], "y", 0.2, 0xf97316);      /* 双线供料支管：本线产品色环（开局分工 冰红茶/橙汁） */
+  ring42(-3.5, 7.6, 10.4, "y", 0.24, 0xd97706);                                                      /* 机组产品管环 */
+  var ringGeo = new THREE.CylinderGeometry(1, 1, 1, 14); ringGeo.translate(0, 0, 0);
+  var ringInst = new THREE.InstancedMesh(ringGeo, new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.25 }), rings.length);
+  var rd = new THREE.Object3D();
+  rings.forEach(function(r, ri){
+    rd.position.set(r.x, r.y, r.z);
+    rd.rotation.set(r.axis === "z" ? Math.PI / 2 : 0, 0, r.axis === "x" ? Math.PI / 2 : 0);
+    rd.scale.set(r.r, r.len, r.r); rd.updateMatrix();
+    ringInst.setMatrixAt(ri, rd.matrix); ringInst.setColorAt(ri, new THREE.Color(r.color));
+  });
+  ringInst.castShadow = false; ringInst.instanceMatrix.needsUpdate = true;
+  if(ringInst.instanceColor) ringInst.instanceColor.needsUpdate = true;
+  scene.add(ringInst); RING42.mesh = ringInst; RING42.count = rings.length;
+  /* ---------- D Andon 三色塔灯（批量合并几何：灯杆 + 三段，顶点色驱动） ---------- */
+  var ab = batch42(), A = C.andon;
+  function tower42(key, x, z){
+    ab.box(x, 0.05, z, 0.56, 0.1, 0.56, A.pole);
+    ab.box(x, A.poleH / 2 + 0.1, z, 0.09, A.poleH, 0.09, A.pole);
+    var segs = {}, order = ["g", "y", "r"];   /* 自下而上 绿/黄/红（Andon 惯例） */
+    order.forEach(function(k, si){ segs[k] = ab.box(x, A.poleH + 0.1 + A.segH / 2 + si * A.segH, z, A.segW, A.segH, A.segW, A.off[k]); });
+    ANDON42.segs[key] = segs;
+  }
+  LINE_Z.forEach(function(lz, li){
+    tower42("line" + li + "f", CR.x0 + 0.4, lz - CR.halfD);   /* 灌装位（洁净间西北角） */
+    tower42("line" + li + "c", CR.x1 - 0.4, lz + CR.halfD);   /* 封盖位（洁净间东南角） */
+  });
+  tower42("ster", -16.5, 12.8);                                /* UHT / 灭菌链 */
+  tower42("pal", 62.9, -9.5);                                  /* 码垛机（单元西北角） */
+  ANDON42.mesh = ab.build(); scene.add(ANDON42.mesh);
+  window.__setMarkings42(!!C.markings.defaultOn);
+}
+/* Andon 状态映射：绿 = 运行、黄 = 待料/阻塞/健康预警、红 = 故障/停机/换型/CIP、全灭 = 待机/停线。
+ * 状态源全为既有派生（lineStatus / stationStatus / palletizerState + HEALTH），不新造判定。 */
+function andonFromStatus42(stKey, health){
+  if(stKey === "run") return (health != null && health <= CONFIG.r15.warnThreshold) ? "y" : "g";
+  if(stKey === "starved" || stKey === "blocked") return "y";
+  if(stKey === "fault" || stKey === "changeover") return "r";
+  return "off";
+}
+function andonCompute42(){
+  var out = {};
+  lines.forEach(function(l, i){
+    var h = healthOf(l), s = andonFromStatus42(lineStatus(l).key, h ? h.health : null);
+    out["line" + i + "f"] = s; out["line" + i + "c"] = s;
+  });
+  var sh = healthOf(stations[2]);
+  var ster = andonFromStatus42(stationStatus(stations[2]).key, sh ? sh.health : null);
+  if((stations[2].cipLeft || 0) > 0 || (typeof STER2 !== "undefined" && STER2.cipLeft > 0)) ster = "r";   /* 任一灭菌链 CIP 中 = 红 */
+  out.ster = ster;
+  var ps = palletizerState();
+  out.pal = ps === "working" ? "g" : (ps === "full" || ps === "sliding") ? "y" : ps === "upgrading" ? "r" : "off";
+  return out;
+}
+function setAndon42(key, state){
+  var segs = ANDON42.segs[key]; if(!segs || !ANDON42.mesh) return;
+  var A = CONFIG.r42.andon, attr = ANDON42.mesh.geometry.attributes.color;
+  ["r", "y", "g"].forEach(function(k){
+    var col = new THREE.Color(state === k ? A.on[k] : A.off[k]), start = segs[k];
+    for(var i = 0; i < 36; i++) attr.setXYZ(start + i, col.r, col.g, col.b);
+  });
+  attr.needsUpdate = true;
+}
+window.__andonTick42 = function(){
+  if(!ANDON42.mesh) return;
+  var s = andonCompute42();
+  Object.keys(s).forEach(function(k){ if(ANDON42.cur[k] !== s[k]){ ANDON42.cur[k] = s[k]; setAndon42(k, s[k]); } });
+};
+window.__setMarkings42 = function(v){
+  if(MARK42.mesh) MARK42.mesh.visible = !!v;
+  var b = document.getElementById("markingsToggle42");
+  if(b) b.textContent = "划线：" + ((MARK42.mesh && MARK42.mesh.visible) ? "开" : "关");
+  return MARK42.mesh ? MARK42.mesh.visible : null;
+};
+window.__r42 = function(){
+  return { cfg: CONFIG.r42,
+    zones: { clean: CONFIG.r42.zones.clean.rect, quasi: CONFIG.r42.zones.quasi.rect, quasiCip: CONFIG.r42.zones.quasiCip.rect },
+    markingsOn: MARK42.mesh ? MARK42.mesh.visible : null, markingQuads: MARK42.quads,
+    towers: ANDON42.cur, towerKeys: Object.keys(ANDON42.segs), rings: RING42.count,
+    legend: "绿=运行 · 黄=待料/健康预警 · 红=停机/故障/CIP · 全灭=待机/停线" };
+};
+/* R42 探针：andonRun 定点构造四态验映射（快照→置态→读→还原）；markRun 验划线开关往返。 */
+window.__r42Probe = {
+  andonRun: function(){
+    var l = lines[0], he = healthOf(l);
+    var saved = { fault: l.faultLeft, on: l.on, run: S.running, q: l.queue, mv: l.lastMove, co: l.coLeft || 0, drain: l.drainTo, maint: l.maintLeft || 0, health: he ? he.health : null };
+    S.running = true; l.on = true; l.faultLeft = 0; l.coLeft = 0; l.drainTo = null; l.maintLeft = 0;
+    l.queue = 0; l.lastMove = 0;                                            /* 等料（starved） */
+    var starved = andonCompute42()["line0f"];
+    l.faultLeft = 30; var fault = andonCompute42()["line0f"];               /* 故障 */
+    l.faultLeft = 0; l.queue = 50; l.lastMove = (l.lastCap || 100) * 2; if(he) he.health = 100;
+    var run = andonCompute42()["line0f"];                                   /* 运行（健康满） */
+    if(he) he.health = CONFIG.r15.warnThreshold - 5;
+    var warnY = andonCompute42()["line0f"];                                  /* 运行但健康预警 */
+    S.running = false; var idle = andonCompute42()["line0f"];               /* 待机 */
+    l.faultLeft = saved.fault; l.on = saved.on; S.running = saved.run; l.queue = saved.q; l.lastMove = saved.mv;
+    l.coLeft = saved.co; l.drainTo = saved.drain; l.maintLeft = saved.maint; if(he && saved.health != null) he.health = saved.health;
+    return { starved: starved, fault: fault, run: run, warnY: warnY, idle: idle,
+             ok: starved === "y" && fault === "r" && run === "g" && warnY === "y" && idle === "off",
+             towersNow: andonCompute42() };
+  },
+  markRun: function(){
+    var before = MARK42.mesh ? MARK42.mesh.visible : null;
+    var off = window.__setMarkings42(false), on = window.__setMarkings42(true);
+    return { before: before, off: off, on: on, quads: MARK42.quads, ok: before === true && off === false && on === true };
+  }
+};
+window.__r42Check = function(){
+  var c38 = window.__r38Check();
+  var out = {}; Object.keys(c38).forEach(function(k){ out[k] = c38[k]; });
+  out.r42 = window.__r42();
+  out.r42assert = {
+    configOk: !!(CONFIG.r42 && CONFIG.r42.pipes.steam === 0xE60012 && CONFIG.r42.pipes.air === 0xB5B5B5 && CONFIG.r42.pipes.water === 0x00A651 && CONFIG.r42.pipes.cip === 0x7D3C98 && CONFIG.r42.zones.clean.rect.length === 4),
+    markingsBuilt: MARK42.quads > 40 && !!MARK42.mesh,
+    towersOk: Object.keys(ANDON42.segs).length >= 6,
+    ringsOk: RING42.count >= 15,
+    legendEl: !!document.getElementById("andonLegend42"),
+    whOk: window.__whCheck().ok
+  };
+  out.r42assert.ok = out.r42assert.configOk && out.r42assert.markingsBuilt && out.r42assert.towersOk && out.r42assert.ringsOk && out.r42assert.legendEl && out.r42assert.whOk;
+  return out;
+};
+(function(){ var b = document.getElementById("markingsToggle42"); if(b) b.addEventListener("click", function(){ window.__setMarkings42(!(MARK42.mesh && MARK42.mesh.visible)); }); })();
+
 /* ---------------- [M2] 分区 builder · 厂房壳体 buildShell ---------------- */
 function buildShell(){
   var g = new THREE.Group(); scene.add(g);
@@ -7423,15 +7733,25 @@ function buildShell(){
   var FW = CONFIG.factory.floorW, FD = CONFIG.factory.floorD;
   function fx(x){ return (x + FW/2) / FW * 1024; }        // 世界 x → 画布 px
   function fz(z){ return (z + FD/2) / FD * 640; }         // 世界 z → 画布 py
-  var epoxyRect = [fx(-168), fz(-112), fx(66), fz(34)];   // 生产区（罐区/调配/杀菌/灌装）环氧范围
+  /* R42 卫生三区整面着色（调研报告 1.1/1.3）：一般作业区 = 水泥基底灰、准清洁区 = 灰绿环氧、
+   * 清洁作业区（灌装/封盖）= 浅色环氧，分界与既有功能边界对齐、门口带色带；粗糙度贴图同界。
+   * 分区范围只认 CONFIG.r42.zones（rect = 世界 [x0,z0,x1,z1]），改分区先改 CONFIG。 */
+  var Z42 = CONFIG.r42.zones;
+  function zr42(r){ return [fx(r[0]), fz(r[1]), fx(r[2]), fz(r[3])]; }
+  var zoneQuasi = zr42(Z42.quasi.rect), zoneCip = zr42(Z42.quasiCip.rect), zoneClean = zr42(Z42.clean.rect);
+  function fillZone42(ctx, z){ ctx.fillRect(z[0], z[1], z[2]-z[0], z[3]-z[1]); }
   var floorTex = canvasTex(1024,640,function(ctx,w,h){
-    ctx.fillStyle = "#969e97"; ctx.fillRect(0,0,w,h);                                   /* 水泥基底：仓储/月台/厂周 */
-    ctx.fillStyle = "#7d897f"; ctx.fillRect(epoxyRect[0], epoxyRect[1], epoxyRect[2]-epoxyRect[0], epoxyRect[3]-epoxyRect[1]); /* 环氧地坪：深灰绿 */
+    ctx.fillStyle = Z42.general.color; ctx.fillRect(0,0,w,h);                           /* 一般作业区：仓储/月台/厂周水泥 */
+    ctx.fillStyle = Z42.quasi.color; fillZone42(ctx, zoneQuasi); fillZone42(ctx, zoneCip); /* 准清洁区：灰绿环氧（调配/UHT/无菌罐/CIP） */
+    ctx.fillStyle = Z42.clean.color; fillZone42(ctx, zoneClean);                        /* 清洁作业区：浅色环氧（灌装/封盖） */
     ctx.fillStyle = "#9aa198"; ctx.fillRect(0, fz(34), w, h-fz(34));                     /* 月台装卸坪：水泥略暖 */
-    ctx.strokeStyle = "rgba(47,191,143,.4)"; ctx.lineWidth = 3;                          /* 环氧区边界色带（区域色带） */
-    ctx.strokeRect(epoxyRect[0], epoxyRect[1], epoxyRect[2]-epoxyRect[0], epoxyRect[3]-epoxyRect[1]);
+    ctx.lineWidth = 3;                                                                  /* 分区边界色带（与隔墙/功能界对齐） */
+    ctx.strokeStyle = Z42.quasi.band; ctx.globalAlpha = 0.55; ctx.strokeRect(zoneQuasi[0], zoneQuasi[1], zoneQuasi[2]-zoneQuasi[0], zoneQuasi[3]-zoneQuasi[1]); ctx.globalAlpha = 1;
+    ctx.strokeStyle = Z42.clean.band; ctx.strokeRect(zoneClean[0], zoneClean[1], zoneClean[2]-zoneClean[0], zoneClean[3]-zoneClean[1]);
+    ctx.fillStyle = Z42.clean.band; ctx.fillRect(fx(-3), fz(26.6), fx(7)-fx(-3), 5);     /* 清洁区南入口地面色带 */
+    ctx.fillStyle = Z42.quasi.band; ctx.fillRect(fx(-40), fz(33.6), fx(-16)-fx(-40), 5); /* 准清洁区南入口地面色带 */
     for(var i=0;i<2600;i++){ ctx.fillStyle = "rgba(0,0,0,"+(Math.random()*0.05)+")"; ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2); }
-    for(var s2=0;s2<5;s2++){ ctx.fillStyle = "rgba(255,255,255,.028)"; ctx.fillRect(epoxyRect[0]+30+s2*110, epoxyRect[1]+6, 46, epoxyRect[3]-epoxyRect[1]-12); } /* 环氧面极淡反光条（模拟顶光在地坪上的拉长反射） */
+    for(var s2=0;s2<5;s2++){ ctx.fillStyle = "rgba(255,255,255,.028)"; ctx.fillRect(zoneQuasi[0]+30+s2*110, zoneQuasi[1]+6, 46, zoneQuasi[3]-zoneQuasi[1]-12); } /* 环氧面极淡反光条（模拟顶光在地坪上的拉长反射） */
     ctx.strokeStyle = "rgba(70,78,72,.5)"; ctx.lineWidth = 2;                            /* 伸缩缝网格 */
     for(var x=0;x<=w;x+=128){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
     for(var y=0;y<=h;y+=128){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
@@ -7443,7 +7763,7 @@ function buildShell(){
   var floorRoughTex = canvasTex(1024,640,function(ctx,w,h){
     ctx.fillStyle = "#f2f2f2"; ctx.fillRect(0,0,w,h);                                    /* 水泥区：粗糙度 ≈ concrete.rough */
     var eg = Math.round(CONFIG.mats.epoxy.rough * 255);
-    ctx.fillStyle = "rgb("+eg+","+eg+","+eg+")"; ctx.fillRect(epoxyRect[0], epoxyRect[1], epoxyRect[2]-epoxyRect[0], epoxyRect[3]-epoxyRect[1]); /* 环氧区：半光 */
+    ctx.fillStyle = "rgb("+eg+","+eg+","+eg+")"; fillZone42(ctx, zoneQuasi); fillZone42(ctx, zoneCip); fillZone42(ctx, zoneClean); /* R42：准清洁/清洁环氧区半光（与颜色图同界） */
     ctx.fillStyle = "#c8c8c8"; ctx.fillRect(0, fz(34), w, h-fz(34));                     /* 月台坪：碾压后略光 */
     for(var i2=0;i2<1800;i2++){ var gv = 200+Math.floor(Math.random()*55); ctx.fillStyle = "rgba("+gv+","+gv+","+gv+",.25)"; ctx.fillRect(Math.random()*w, Math.random()*h, 3, 3); } /* 磨损噪声，避免大面纯色塑料感 */
   });
@@ -8745,7 +9065,7 @@ function buildUtilities(){
   var swGeo = new THREE.BoxGeometry(0.16,1,0.16); swGeo.translate(0,0.5,0);
   var swLiq = new THREE.Mesh(swGeo, new THREE.MeshStandardMaterial({ color:0x38bdf8, roughness:0.3 })); swLiq.position.set(-75.5, 0.45, -52.15); g.add(swLiq);
   D.utilDyn.softWaterLiq = swLiq;
-  var wp = CY(g, 0.16, 0.16, 27, pipeMat, -102, 3.4, -54, 10); wp.rotation.z = Math.PI/2; wp.position.set(-88.5, 3.56, -54); // 区内母管
+  var wp = CY(g, 0.16, 0.16, 27, M(CONFIG.r42.pipes.water,0.5,0.3), -102, 3.4, -54, 10); wp.rotation.z = Math.PI/2; wp.position.set(-88.5, 3.56, -54); // 区内母管（R42：水 = 艳绿 GB 7231）
   var wpIn = CY(g, 0.18, 0.18, 12, D.utilDyn.roFlowMat, -84, 2.6, -44.5, 10); wpIn.rotation.x = Math.PI/2; wpIn.position.set(-84, 2.78, -50.5); // 产水管向南进厂房（R2：RO 运行时显水蓝流动）
   hitbox(g, 36, 9, 21, -91, 0, -54, { kind:"zone", id:"water" });
 
@@ -8778,8 +9098,8 @@ function buildUtilities(){
   var adome = new THREE.Mesh(new THREE.SphereGeometry(1.5, 18, 9, 0, Math.PI*2, 0, Math.PI/2), M(0xdde3e6,0.45,0.3));
   adome.scale.y = 0.5; adome.position.set(-52.5, 5.25, -54); g.add(adome);
   handwheel(g, -52.5, 0.9, -52.3, 0.34, 0);
-  var ap = CY(g, 0.14, 0.14, 12, pipeMat, -63, 3.6, -54, 10); ap.rotation.z = Math.PI/2; ap.position.set(-57.5, 3.74, -54); // 压缩空气母管
-  var apIn = CY(g, 0.14, 0.14, 12, pipeMat, -52.5, 3.0, -44.5, 10); apIn.rotation.x = Math.PI/2; apIn.position.set(-52.5, 3.14, -50.5); // 向南供气（吹瓶/气动阀）
+  var ap = CY(g, 0.14, 0.14, 12, M(CONFIG.r42.pipes.air,0.5,0.4), -63, 3.6, -54, 10); ap.rotation.z = Math.PI/2; ap.position.set(-57.5, 3.74, -54); // 压缩空气母管（R42：空气 = 淡灰 GB 7231）
+  var apIn = CY(g, 0.14, 0.14, 12, M(CONFIG.r42.pipes.air,0.5,0.4), -52.5, 3.0, -44.5, 10); apIn.rotation.x = Math.PI/2; apIn.position.set(-52.5, 3.14, -50.5); // 向南供气（吹瓶/气动阀）
   hitbox(g, 22, 7, 19, -58, 0, -54, { kind:"zone", id:"air" });
 
   /* ---------- 锅炉 / 蒸汽站（卧式锅炉 + 烟囱 + 蒸汽总管 → UHT） ---------- */
@@ -8796,7 +9116,7 @@ function buildUtilities(){
   flame.position.set(6.14, 3.6, -54); flame.rotation.y = Math.PI/2; g.add(flame);
   D.utilDyn.flame = flame; D.utilDyn.flameMat = flameMat;
   var drum = CY(g, 0.62, 0.62, 2.6, STEEL, 0, 5.7, -54, 16); drum.rotation.z = Math.PI/2; drum.position.set(0, 6.25, -54); // 汽包（骑在锅炉顶部）
-  CY(g, 0.2, 0.2, 1.2, M(0xd9c9a8,0.7,0.1), 0, 6.8, -54, 10);                     // 汽包 → 蒸汽总管立管
+  CY(g, 0.2, 0.2, 1.2, M(CONFIG.r42.pipes.steam,0.62,0.12), 0, 6.8, -54, 10);     // 汽包 → 蒸汽总管立管（R42：蒸汽 = 大红 GB 7231）
   var bg1 = gaugeMesh(0.4); bg1.position.set(-3.4, 4.6, -51.7); g.add(bg1);
   D.utilDyn.boilerGauge = bg1;   /* R2：锅炉压力表与分汽缸表同源 UTIL.steamPressure */
   handwheel(g, -4.6, 3.4, -51.8, 0.4, 0); handwheel(g, 3.8, 2.2, -51.9, 0.34, 0);
@@ -8820,7 +9140,7 @@ function buildUtilities(){
   D.boilerSmoke = new THREE.Points(sGeo2, new THREE.PointsMaterial({ size:4.2, map:smokeTex, color:0xd3dde2, transparent:true, opacity:0.27, depthWrite:false }));
   scene.add(D.boilerSmoke);
   /* 蒸汽总管：锅炉汽包 → 向西沿北墙上方 → 向南下行到 UHT 顶部（与 UHT 自带蒸汽管在 -15 列对接） */
-  var steamMat = M(0xd9c9a8,0.7,0.1);
+  var steamMat = M(CONFIG.r42.pipes.steam,0.62,0.12);   /* R42：蒸汽总管整管大红（GB 7231）；分汽缸/机组进汽管保留保温色 + 红色环（见 buildRealism42 色环表） */
   var sm1 = CY(g, 0.24, 0.24, 26, steamMat, -13, 7.6, -54, 12); sm1.rotation.z = Math.PI/2; sm1.position.set(-13, 7.84, -54);
   var sm2 = CY(g, 0.24, 0.24, 44, steamMat, -25, 7.6, -32, 12); sm2.rotation.x = Math.PI/2; sm2.position.set(-25, 7.84, -32);
   CY(g, 0.24, 0.24, 2.2, steamMat, -25, 5.6, -12.2, 12);
@@ -10426,6 +10746,7 @@ function buildScene(){
   buildCrew();           /* R11 任务人员：维修工 / CIP 班组 / 质检员（makeWorker 同机制，D.crew 注册保动态不被合并） */
   buildSafety();         /* V5 安全标识体系：警戒围栏 / 消防点位 / 出口绿标 / 通道地灯 */
   buildSignage(); /* 区域立牌 + 设备铭牌（坐标对图，见 buildSignage） */
+  buildRealism42();      /* R42 真实感对表（一）：洁净间玻璃罩 + 参观走廊 + 区域吊牌/压差牌 + 地面划线 + 管道色环/箭头/名牌 + CO₂ 支线 + Andon 塔灯 */
   buildBackdrop();       /* R3 远景剪影：北侧缓丘 / 邻厂烟囱厂房 / 东侧水塔，给厂界纵深参照 */
   /* R3 环境反射强度统一收口：PMREM 环境贴图对全场 Standard 材质生效，强度只认 CONFIG.light.envIntensity 一处 */
   scene.traverse(function(o){
@@ -10764,6 +11085,7 @@ function updateScene(dt, t){
   var vdt18 = dt * vehTimeFactor();   /* R18：车辆改挂仿真时钟 × 倍速补偿（见 vehTimeFactor 注） */
   updatePalletAgvs(vdt18, t, dt);   /* R9：任务制调度自带门控（无任务回待命位），不再需要 whActive 门控参数 */
   updatePalletizerVisual(dt, t);   /* R14：码垛机桥架/抓手/箱实例/满托滑出，姿态全是 PAL 状态的函数 */
+  if(window.__andonTick42) window.__andonTick42();   /* R42：Andon 塔灯按真实状态刷新（状态不变零写入） */
   updateDockForklifts(vdt18, SHIP.active);
   /* R18：车辆耗电结算——忙碌时长（已按补偿后步长累计）× 平均功率，经 chargeUtilities
    * 唯一入口计入当前产品电耗台账；补偿倍速越高、车辆干的活越多、电耗越高。 */
